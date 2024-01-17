@@ -1,0 +1,21 @@
+{
+	"orography": {
+		"low-res": "/mnt/ssd4tb/ECMWFHRES_orog_o1279_2021-2022.grib",
+		"high-res": "/mnt/ssd4tb/ECMWF/orog_reduced_gaussian_grid_1km.grib"
+	},
+	"temperature": {
+		"2m": {
+			"path": "/mnt/ssd4tb/ECMWF/HRES_2m_temp_20211219.grib",
+			"select": {"step":  6, "time":  0}
+		},
+		"bulk": {
+			"path": "/mnt/ssd4tb/ECMWF/HRES_Model_Level_temp_20211219.grib",
+			"select": {"step":  6, "time":  0}
+		}
+	},
+	"humidity": {
+		"path":"/mnt/ssd4tb/ECMWF/19Dec21_06Z_q_model_levels_O1280.grib",
+		"select": {"hybrid":  [117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136]}
+	},
+	"pressure": "/mnt/ssd4tb/ECMWF/19Dec21_06Z_lnsp_O1280.grib"
+}

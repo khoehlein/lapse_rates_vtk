@@ -1,0 +1,25 @@
+--extra-index-url=https://pypi.nvidia.com
+pyvista[all]
+pyvistaqt
+trame
+trame-vtk
+trame-vuetify
+pyvirtualdisplay
+colorcet
+trimesh
+rtree
+pyembree
+torch
+torchaudio
+torchvision
+tensorboard
+# cudf-cu12==23.12.* 
+# dask-cudf-cu12==23.12.* 
+# cuml-cu12==23.12.*
+# cugraph-cu12==23.12.* 
+# cuspatial-cu12==23.12.* 
+# cuproj-cu12==23.12.*
+# cuxfilter-cu12==23.12.* 
+# cucim-cu12==23.12.* 
+# pylibraft-cu12==23.12.*
+# raft-dask-cu12==23.12.*
