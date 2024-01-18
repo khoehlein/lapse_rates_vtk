@@ -1,6 +1,6 @@
 {
 	"orography": {
-		"low-res": "/mnt/ssd4tb/ECMWFHRES_orog_o1279_2021-2022.grib",
+		"low-res": "/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib",
 		"high-res": "/mnt/ssd4tb/ECMWF/orog_reduced_gaussian_grid_1km.grib"
 	},
 	"temperature": {
