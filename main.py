@@ -83,7 +83,7 @@ def extrude_surface_mesh(mesh: pv.PolyData, z: np.ndarray, source_reference: np.
 
 
 # Load data for Dec 19, 2021, 0600 UTC
-path_to_data_config = os.path.join(os.path.dirname(__file__), 'cfg', 'data', '2021121906_windows.json')
+path_to_data_config = os.path.join(os.path.dirname(__file__), 'cfg', 'data', '2021121906_ubuntu.json')
 orography_lr, orography_hr, t2m, t3d, z_model_levels = load_data(path_to_data_config)
 
 
@@ -91,7 +91,7 @@ class SettingsMenu(QDockWidget):
 
     class SelectRegionMenu(QWidget):
 
-        class SelectAxis():
+        class SelectAxis(object):
 
             def __init__(
                     self,
