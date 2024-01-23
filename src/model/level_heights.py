@@ -8,9 +8,9 @@ import xarray as xr
 
 import matplotlib.pyplot as plt
 
-# from data.constants import THRESHOLD_LSM_LAND
-# from data.interface import load_temperatures
-# from data.storage import load_orography, Orography, load_lsm, LandSeaMask
+# from model.constants import THRESHOLD_LSM_LAND
+# from model.interface import load_temperatures
+# from model.storage import load_orography, Orography, load_lsm, LandSeaMask
 
 R_DRY_AIR = 287.0528 # J / (K * kg)
 R_WATER_VAPOR = 461.52 # J / (K * kg)

@@ -1,8 +1,10 @@
 import math
+from typing import Any
 
 from PyQt5 import QtWidgets, QtCore
+from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QDoubleValidator
-from PyQt5.QtWidgets import QLineEdit, QSlider
+from PyQt5.QtWidgets import QLineEdit, QSlider, QLabel, QWidget, QVBoxLayout, QDoubleSpinBox, QGridLayout, QHBoxLayout
 
 
 class CollapsibleBox(QtWidgets.QWidget):
@@ -80,42 +82,137 @@ class CollapsibleBox(QtWidgets.QWidget):
         content_animation.setEndValue(content_height)
 
 
-class LogSlider(QtWidgets.QWidget):
+class DoubleSliderWrapper(QWidget):
 
-    def __init__(self, min: float, max: float, steps: int = 128, parent=None):
+    value_changed = pyqtSignal(float)
+
+    def __init__(self, vmin: float = 0., vmax: float = 1., steps: int = 128, parent=None):
         super().__init__(parent)
-        self.min = float(min)
-        self.max = float(max)
-        self.steps = int(steps)
-        self._log_min = math.log(self.min)
-        self._log_max = math.log(self.max)
-        self.display = QLineEdit()
-        validator = QDoubleValidator()
-        validator.setRange(self.min, self.max)
-        self.display.setValidator(validator)
-        self.display.setAlignment(QtCore.Qt.AlignRight)
-        self.display.setMaximumWidth(64)
         self.slider = QSlider(QtCore.Qt.Horizontal)
-        self.slider.setRange(0, self.steps)
-        self.slider.sliderMoved.connect(self._update_display_on_slider_change)
-        self.display.editingFinished.connect(self._update_slider_on_display_change)
-        self.display.setText('4000.00')
-        self._update_slider_on_display_change()
-        layout = QtWidgets.QGridLayout()
-        layout.addWidget(self.display, 0, 0, 1, 1)
-        layout.addWidget(self.slider, 0, 1, 1, 4)
+        self.slider.setMinimum(0)
+        self.slider.setMaximum(int(steps))
+        self._vmin = float(vmin)
+        self._vmax = float(vmax)
+        self._steps = int(steps)
+        layout = QVBoxLayout()
+        layout.addWidget(self.slider)
         self.setLayout(layout)
 
-    def _get_slider_value(self):
-        return math.exp(self.slider.value() / self.steps * (self._log_max - self._log_min) + self._log_min)
+    def value(self):
+        return self._int_value_to_float(self.slider.value())
 
-    def _update_display_on_slider_change(self):
-        self.display.setText(f'{self._get_slider_value():.2f}')
+    def _int_value_to_float(self, value: int):
+        return (value / self._steps * (self._vmax - self._vmin)) + self._vmin
 
-    def _update_slider_on_display_change(self):
-        slider_value = (math.log(float(self.display.text())) - self._log_min) / (self._log_max - self._log_min)
-        slider_value = round(self.steps * slider_value)
-        self.slider.setValue(int(slider_value))
+    def _float_value_to_int(self, value: float):
+        return int(round((value - self._vmin) / (self._vmax - self._vmin) * self._steps))
 
-    def get_value(self):
-        return float(self.display.text())
+    def set_value(self, value: float):
+        self.slider.setValue(self._float_value_to_int(value))
+        self.value_changed.emit(self.value())
+
+
+class LogDoubleSliderWrapper(DoubleSliderWrapper):
+
+    def __init__(self, vmin: float = 1., vmax: float = 100., steps: int = 128, parent=None):
+        super().__init__(vmin, vmax, steps, parent)
+        self._log_vmin = math.log(vmin)
+        self._log_vmax = math.log(vmax)
+
+    def _int_value_to_float(self, value: int):
+        return math.exp((value / self._steps * (self._log_vmax - self._log_vmin)) + self._log_vmin)
+
+    def _float_value_to_int(self, value: float):
+        return int(round((math.log(value) - self._log_vmin) / (self._log_vmax - self._log_vmin) * self._steps))
+
+
+class DoubleSliderSpinner(QWidget):
+
+    def __init__(self, vmin: float = 0., vmax: float = 1., steps: int = 128, width: int = 2, parent=None) -> None:
+        super().__init__(parent)
+        self.slider_wrapper = DoubleSliderWrapper(vmin, vmax, steps, self)
+        self.spinbox = QDoubleSpinBox(value=vmin, minimum=vmin, maximum=vmax, decimals=2)
+        layout = QGridLayout()
+        layout.addWidget(self.spinbox, 0, 0, 1, 1)
+        layout.addWidget(self.slider_wrapper, 0, 1, width - 1, 1)
+        self.setLayout(layout)
+        self.slider_wrapper.slider.valueChanged.connect(self.update_spinbox)
+        self.spinbox.valueChanged.connect(self.update_value)
+
+    def update_spinbox(self, value: float) -> None:
+        self.spinbox.setValue(self.slider_wrapper.value())
+
+    def update_value(self, value: float) -> None:
+        self.slider_wrapper.slider.blockSignals(True)
+        self.slider_wrapper.set_value(self.spinbox.value())
+        self.slider_wrapper.slider.blockSignals(False)
+
+    def value(self) -> float:
+        return self.spinbox.value()
+
+    def set_value(self, new_value: float) -> None:
+        self.slider_wrapper.set_value(new_value)
+
+
+class LogDoubleSliderSpinner(QWidget):
+
+    def __init__(self, vmin: float = 1., vmax: float = 100., steps: int = 128, width: int = 2, parent=None) -> None:
+        super().__init__(parent)
+        self.slider_wrapper = DoubleSliderWrapper(vmin, vmax, steps, self)
+        self.spinbox = QDoubleSpinBox(value=vmin, minimum=vmin, maximum=vmax, decimals=2)
+        layout = QGridLayout()
+        layout.addWidget(self.spinbox, 0, 0, 1, 1)
+        layout.addWidget(self.slider_wrapper, 0, 1, width - 1, 1)
+        self.setLayout(layout)
+        self.slider_wrapper.slider.valueChanged.connect(self.update_spinbox)
+        self.spinbox.valueChanged.connect(self.update_value)
+
+    def update_spinbox(self, value: float) -> None:
+        self.spinbox.setValue(self.slider_wrapper.value())
+
+    def update_value(self, value: float) -> None:
+        self.slider_wrapper.slider.blockSignals(True)
+        self.slider_wrapper.set_value(self.spinbox.value())
+        self.slider_wrapper.slider.blockSignals(False)
+
+    def value(self) -> float:
+        return self.spinbox.value()
+
+    def set_value(self, new_value: float) -> None:
+        self.slider_wrapper.set_value(new_value)
+
+
+class RangeSpinner(object):
+
+    def __init__(
+            self,
+            parent: QtWidgets.QWidget,
+            default_min: float, default_max: float,
+            global_min: float, global_max: float,
+            step=0.5,
+    ):
+        self.global_min = global_min
+        self.global_max = global_max
+        self.step = step
+        self.min_spinner = QtWidgets.QDoubleSpinBox(parent)
+        self.min_spinner.setValue(default_min)
+        self.min_spinner.setRange(self.global_min, self.global_max - self.step)
+        self.min_spinner.setPrefix('min: ')
+        self.max_spinner = QtWidgets.QDoubleSpinBox(parent)
+        self.max_spinner.setValue(default_max)
+        self.max_spinner.setRange(self.global_min + self.step, self.global_max)
+        self.max_spinner.setPrefix('max: ')
+        self.min_spinner.valueChanged.connect(self._update_max_spinner)
+        self.max_spinner.valueChanged.connect(self._update_min_spinner)
+
+    def _update_max_spinner(self):
+        value = self.max_spinner.value()
+        new_min_value = self.min_spinner.value()
+        if value <= new_min_value:
+            self.max_spinner.setValue(min(new_min_value + self.step, self.global_max))
+
+    def _update_min_spinner(self):
+        value = self.min_spinner.value()
+        new_max_value = self.max_spinner.value()
+        if value >= new_max_value:
+            self.min_spinner.setValue(max(new_max_value - self.step, self.global_min))
