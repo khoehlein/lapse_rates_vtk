@@ -254,7 +254,7 @@ class RadialNeighborhoodLookup(NeighborhoodLookup):
         return self.query_neighborhood_graph(locations, self.lookup_radius)
 
 
-class RadialNeighborhoodLookupHandles(QWidget):
+class RadialNeighborhoodHandles(QWidget):
 
     def __init__(self, config: Dict[str, Any] = None, parent=None):
         super().__init__(parent)
@@ -275,7 +275,10 @@ class RadialNeighborhoodLookupHandles(QWidget):
         self.spinner_weight_scale.setMaximum(180.)
         self.spinner_weight_scale.setValue(30.)
         self.spinner_weight_scale.setSuffix(' km')
-        self.toggle_weighting = QCheckBox("Use weighting")
+        self.toggle_weighting = QCheckBox("use weighting")
+        self._set_layout()
+
+    def _set_layout(self):
         layout = QFormLayout(self)
         layout.addRow(QLabel('Radius'), self.spinner_radius)
         layout.addRow(QLabel('Land/sea threshold'), self.spinner_threshold)
@@ -290,7 +293,7 @@ class RadialNeighborhoodLookupHandles(QWidget):
         return RadialNeighborhoodProperties(self.spinner_radius.value(), self.spinner_threshold.value())
 
 
-class KNNNeighborhoodLookupHandles(QWidget):
+class KNNNeighborhoodHandles(QWidget):
 
     def __init__(self, config: Dict[str, Any] = None, parent=None):
         super().__init__(parent)
@@ -310,7 +313,10 @@ class KNNNeighborhoodLookupHandles(QWidget):
         self.spinner_weight_scale.setMaximum(180.)
         self.spinner_weight_scale.setValue(30.)
         self.spinner_weight_scale.setSuffix(' km')
-        self.toggle_weighting = QCheckBox("Use weighting")
+        self.toggle_weighting = QCheckBox("use weighting")
+        self._set_layout()
+
+    def _set_layout(self):
         layout = QFormLayout(self)
         layout.addRow(QLabel('Neighborhood size'), self.spinner_neighborhood_size)
         layout.addRow(QLabel('Land/sea threshold'), self.spinner_threshold)
@@ -320,6 +326,7 @@ class KNNNeighborhoodLookupHandles(QWidget):
         weighting_layout.addWidget(self.toggle_weighting)
         layout.addRow(weighting_layout)
         self.setLayout(layout)
+
 
 # class RadialNeighborhoodLookupHandles(QWidget):
 #
@@ -362,15 +369,19 @@ class NeighborhoodLookupView(QWidget):
     def __init__(self, config: Dict[str, Any] = None, parent=None):
         super().__init__(parent)
         self.combo_lookup_type = QComboBox()
-        self.combo_lookup_type.addItem('Radius')
-        self.combo_lookup_type.addItem('Nearest neighbors')
-        self.button_apply = QPushButton('Apply')
-        self.radial_interface = RadialNeighborhoodLookupHandles(config=config, parent=self)
-        self.knn_interface = KNNNeighborhoodLookupHandles(config=config, parent=self)
         self.interface_stack = QStackedLayout()
+        self.combo_lookup_type.addItem('Radius')
+        self.radial_interface = RadialNeighborhoodHandles(config=config, parent=self)
         self.interface_stack.addWidget(self.radial_interface)
+        self.combo_lookup_type.addItem('Nearest neighbors')
+        self.knn_interface = KNNNeighborhoodHandles(config=config, parent=self)
         self.interface_stack.addWidget(self.knn_interface)
         self.combo_lookup_type.currentIndexChanged.connect(self.interface_stack.setCurrentIndex)
+        self.button_apply = QPushButton('Apply')
+        self.button_apply.clicked.connect(self._on_button_apply)
+        self._set_layout()
+
+    def _set_layout(self):
         layout = QVBoxLayout()
         layout.addWidget(QLabel('Neighborhood method:'))
         layout.addWidget(self.combo_lookup_type)
@@ -381,6 +392,7 @@ class NeighborhoodLookupView(QWidget):
 
     def _on_button_apply(self):
         self.neighborhood_changed.emit()
+
 
 class WorldData(object):
 
