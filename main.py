@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QDockWidget
 import pyvista as pv
 
 from src.interaction.pyvista_display.view import PyvistaView
-from src.interaction.settings_menu import SettingsView
+from src.interaction.settings_menu import SettingsView, SettingsViewTabbed
 
 logging.basicConfig(level=logging.INFO)
 
@@ -36,7 +36,7 @@ class MainView(MainWindow):
         self.setCentralWidget(self.render_view.frame)
         self.signal_close.connect(self.render_view.plotter.close)
 
-        self.settings_menu = SettingsView(self)
+        self.settings_menu = SettingsViewTabbed(self)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.settings_menu)
         # self.settings_menu.request_new_region.connect(self._populate_plotter)
         # self.settings_menu.request_scale_change.connect(self._change_vertical_plot_scale)
