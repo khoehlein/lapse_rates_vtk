@@ -4,7 +4,7 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget, QDoubleSpinBox, QCheckBox, QLabel, QFormLayout, QHBoxLayout, QSpinBox, QComboBox, \
     QStackedLayout, QPushButton, QVBoxLayout
 
-from src.model.world_data import RadialNeighborhoodProperties, KNNNeighborhoodProperties
+from src.model.data_store.world_data import RadialNeighborhoodProperties, KNNNeighborhoodProperties
 from src.widgets import FileSelectionWidget
 
 

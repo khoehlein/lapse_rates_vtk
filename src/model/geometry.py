@@ -106,6 +106,9 @@ class LocationBatch(object):
         source_reference = self.source_reference[location_ids]
         return self.__class__(coords, source_reference)
 
+    def __len__(self):
+        return self.coords.__len__()
+
 
 class TriangleBatch(object):
 
