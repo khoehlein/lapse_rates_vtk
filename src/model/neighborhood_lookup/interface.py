@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QWidget
 from sklearn.neighbors import KDTree
 
 from src.model.geometry import LocationBatch, Coordinates
-from src.model.neighborhood_lookup.neighborhood_graphs import RadialNeighborhoodGraph
+from src.model.neighborhood_lookup.neighborhood_graphs import RadialNeighborhoodGraph, UniformNeighborhoodGraph
 
 
 class AboveThresholdFilter(QWidget):

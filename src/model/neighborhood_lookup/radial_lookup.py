@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 from typing import Dict, Any
+import xarray as xr
 
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 
 from src.model.geometry import LocationBatch
-from src.model.neighborhood_lookup.interface import NeighborhoodLookup, NeighborhoodGraph
+from src.model.neighborhood_lookup.interface import NeighborhoodLookup
+from src.model.neighborhood_lookup.neighborhood_graphs import RadialNeighborhoodGraph
 
 
 @dataclass(init=True, repr=True)
@@ -29,5 +31,5 @@ class RadialNeighborhoodLookup(NeighborhoodLookup):
             self.lookup_radius = radius_km
             self.lookup_radius_changed.emit()
 
-    def query_neighborhood(self, locations: LocationBatch) -> NeighborhoodGraph:
+    def query_neighborhood(self, locations: LocationBatch) -> RadialNeighborhoodGraph:
         return self.query_neighborhood_graph(locations, self.lookup_radius)

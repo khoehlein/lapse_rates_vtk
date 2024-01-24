@@ -20,8 +20,8 @@ class ViewSettingsView(QWidget):
         self.button_background_color = SelectColorButton(QColor(0, 0, 0))
         self.button_background_color.setText(' Select background color')
         layout = QFormLayout(self)
-        layout.addRow(QLabel('Vertical scale'), self.slider_z_scale)
-        layout.addRow(QLabel('Background color'), self.button_background_color)
+        layout.addRow(QLabel('Vertical scale:'), self.slider_z_scale)
+        layout.addRow(QLabel('Background color:'), self.button_background_color)
         self.setLayout(layout)
 
 
@@ -53,13 +53,14 @@ class SettingsViewTabbed(QDockWidget):
 
         layout = QVBoxLayout(self.scroll_area_contents)
         layout.addWidget(self.tab_widget)
-        layout.addStretch()
+        layout.addStretch(2)
         self.scroll_area_contents.setLayout(layout)
 
     def _to_tab_widget(self, widget: QWidget):
         wrapper = QWidget(self.tab_widget)
         layout = QVBoxLayout(wrapper)
         layout.addWidget(widget)
+        layout.setAlignment(Qt.AlignTop)
         layout.addStretch()
         wrapper.setLayout(layout)
         return wrapper

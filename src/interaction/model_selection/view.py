@@ -1,10 +1,11 @@
 from typing import Dict, Any
 
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import QWidget, QDoubleSpinBox, QCheckBox, QLabel, QFormLayout, QHBoxLayout, QSpinBox, QComboBox, \
-    QStackedLayout, QPushButton, QVBoxLayout
+    QStackedLayout, QPushButton, QVBoxLayout, QStackedWidget
 
-from src.model.data_store.world_data import RadialNeighborhoodProperties, KNNNeighborhoodProperties
+from src.model.neighborhood_lookup.knn_lookup import KNNNeighborhoodProperties
+from src.model.neighborhood_lookup.radial_lookup import RadialNeighborhoodProperties
 from src.widgets import FileSelectionWidget
 
 
@@ -44,8 +45,8 @@ class RadialNeighborhoodHandles(NeighborhoodMethodView):
 
     def _set_layout(self):
         layout = QFormLayout(self)
-        layout.addRow(QLabel('Radius'), self.spinner_radius)
-        layout.addRow(QLabel('Land/sea threshold'), self.spinner_threshold)
+        layout.addRow(QLabel('Radius:'), self.spinner_radius)
+        layout.addRow(QLabel('Land/sea threshold:'), self.spinner_threshold)
         self.setLayout(layout)
 
     def get_settings(self):
@@ -73,8 +74,8 @@ class KNNNeighborhoodHandles(NeighborhoodMethodView):
 
     def _set_layout(self):
         layout = QFormLayout(self)
-        layout.addRow(QLabel('Neighborhood size'), self.spinner_neighborhood_size)
-        layout.addRow(QLabel('Land/sea threshold'), self.spinner_threshold)
+        layout.addRow(QLabel('Neighborhood size:'), self.spinner_neighborhood_size)
+        layout.addRow(QLabel('Land/sea threshold:'), self.spinner_threshold)
         self.setLayout(layout)
 
     def get_settings(self):
@@ -101,12 +102,13 @@ class NeighborhoodLookupView(QWidget):
         self._set_layout()
 
     def _set_layout(self):
-        layout = QVBoxLayout()
+        layout = QVBoxLayout(self)
         layout.addWidget(QLabel('Neighborhood method:'))
         layout.addWidget(self.combo_lookup_type)
         layout.addLayout(self.interface_stack)
         layout.addWidget(self.button_apply)
         layout.addStretch()
+        layout.setAlignment(Qt.AlignTop)
         self.setLayout(layout)
 
     def _on_button_apply(self):
@@ -139,9 +141,9 @@ class LapseRateDownscalerView(DownscalerMethodView):
 
     def _set_layout(self):
         layout = QFormLayout()
+        layout.addRow('Use volume data:', self.toggle_volume_data)
         layout.addRow(QLabel('Use distance weighting:'), self.toggle_weighting)
-        layout.addRow('Weight scale', self.spinner_weight_scale)
-        layout.addRow('Use volume data', self.toggle_volume_data)
+        layout.addRow('Weight scale:', self.spinner_weight_scale)
         self.setLayout(layout)
 
 
