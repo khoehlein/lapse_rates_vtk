@@ -5,7 +5,7 @@ import xarray as xr
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 
 from src.model.geometry import LocationBatch
-from src.model.neighborhood_lookup.interface import NeighborhoodLookup
+from src.model.neighborhood_lookup.interface import NeighborhoodLookupModel
 from src.model.neighborhood_lookup.neighborhood_graphs import UniformNeighborhoodGraph
 
 
@@ -15,21 +15,18 @@ class KNNNeighborhoodProperties(object):
     lsm_threshold: float
 
 
-class KNNNeighborhoodLookup(NeighborhoodLookup):
+class KNNNeighborhoodLookup(NeighborhoodLookupModel):
 
-    neighborhood_size_changed = pyqtSignal()
+    def __init__(self,parent=None):
+        super().__init__(KNNNeighborhoodProperties, parent)
+        self.neighborhood_size = None
 
-    def __init__(self, land_sea_mask: xr.DataArray, config: Dict[str, Any] = None, parent=None):
-        if config is None:
-            config = {}
-        super().__init__(land_sea_mask, config, parent)
-        self.neighborhood_size = config.get('neighborhood_size', 32)
-
-    @pyqtSlot(float)
-    def set_neighborhood_size(self, k: int):
-        if k != self.neighborhood_size:
-            self.neighborhood_size = k
-            self.neighborhood_size_changed.emit()
+    def set_neighborhood_properties(self, properties: KNNNeighborhoodProperties):
+        self.validate_neighborhood_properties(properties)
+        self.neighborhood_size = properties.neighborhood_size
+        self.filter.set_threshold(properties.lsm_threshold)
+        self.update_tree_lookup()
+        return self
 
     def query_neighborhood(self, locations: LocationBatch) -> UniformNeighborhoodGraph:
         return self.query_nearest_neighbors(locations, self.neighborhood_size)

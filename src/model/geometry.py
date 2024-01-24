@@ -450,6 +450,9 @@ class TriangleMesh(object):
         faces[:, prefix_offset:] = self.vertices
         return faces
 
+    def get_locations(self) -> LocationBatch:
+        return LocationBatch(Coordinates(lat_lon_system, self.x, self.y), source_reference=self.source_reference)
+
     def to_pyvista(self, z: np.ndarray = None, transform=None) -> pv.PolyData:
         faces = np.concatenate([np.full((len(self.vertices), 1), 3, dtype=int), self.vertices], axis=-1)
         coords = self.get_coordinates(z, transform)

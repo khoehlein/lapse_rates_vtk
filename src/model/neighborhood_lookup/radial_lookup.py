@@ -5,7 +5,7 @@ import xarray as xr
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 
 from src.model.geometry import LocationBatch
-from src.model.neighborhood_lookup.interface import NeighborhoodLookup
+from src.model.neighborhood_lookup.interface import NeighborhoodLookupModel
 from src.model.neighborhood_lookup.neighborhood_graphs import RadialNeighborhoodGraph
 
 
@@ -15,21 +15,20 @@ class RadialNeighborhoodProperties(object):
     lsm_threshold: float
 
 
-class RadialNeighborhoodLookup(NeighborhoodLookup):
+class RadialNeighborhoodLookup(NeighborhoodLookupModel):
 
-    lookup_radius_changed = pyqtSignal()
-
-    def __init__(self, land_sea_mask: xr.DataArray, config: Dict[str, Any] = None, parent=None):
+    def __init__(self, config: Dict[str, Any] = None, parent=None):
         if config is None:
             config = {}
-        super().__init__(land_sea_mask, config, parent)
-        self.lookup_radius = config.get('lookup_radius', 30.)
+        super().__init__(RadialNeighborhoodProperties, config, parent)
+        self.lookup_radius = None
 
-    @pyqtSlot(float)
-    def set_lookup_radius(self, radius_km: float):
-        if radius_km != self.lookup_radius:
-            self.lookup_radius = radius_km
-            self.lookup_radius_changed.emit()
+    def set_neighborhood_properties(self, properties: RadialNeighborhoodProperties):
+        self.validate_neighborhood_properties(properties)
+        self.lookup_radius = properties.lookup_radius
+        self.filter.set_threshold(properties.lsm_threshold)
+        self.update_tree_lookup()
+        return self
 
     def query_neighborhood(self, locations: LocationBatch) -> RadialNeighborhoodGraph:
-        return self.query_neighborhood_graph(locations, self.lookup_radius)
+        return self.query_radial_neighbors(locations, self.lookup_radius)
