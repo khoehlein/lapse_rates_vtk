@@ -7,7 +7,7 @@ class BackendModel(QWidget):
     def __init__(
             self,
             data_store: WorldData,
-            downscaler:
+            downscaler,
             parent=None
     ):
         super().__init__(parent)

@@ -2,9 +2,10 @@ import math
 from typing import Any
 
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QFile
 from PyQt5.QtGui import QDoubleValidator
-from PyQt5.QtWidgets import QLineEdit, QSlider, QLabel, QWidget, QVBoxLayout, QDoubleSpinBox, QGridLayout, QHBoxLayout
+from PyQt5.QtWidgets import QLineEdit, QSlider, QLabel, QWidget, QVBoxLayout, QDoubleSpinBox, QGridLayout, QHBoxLayout, \
+    QPushButton, QFileDialog
 
 
 class CollapsibleBox(QtWidgets.QWidget):
@@ -216,3 +217,30 @@ class RangeSpinner(object):
         new_max_value = self.max_spinner.value()
         if value >= new_max_value:
             self.min_spinner.setValue(max(new_max_value - self.step, self.global_min))
+
+
+class FileSelectionWidget(QWidget):
+
+    file_selection_changed = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.current_file = None
+        self.line_edit = QLineEdit(self)
+        self.line_edit.setReadOnly(True)
+        self.button_select = QPushButton('...')
+        self.button_select.setFixedWidth(32)
+        self.button_select.clicked.connect(self._get_file_name)
+        self._set_layout()
+
+    def _set_layout(self):
+        self.layout = QHBoxLayout()
+        self.layout.addWidget(self.line_edit)
+        self.layout.addWidget(self.button_select)
+        self.setLayout(self.layout)
+
+    def _get_file_name(self):
+        fname = QFileDialog.getOpenFileName(self, caption='Open model file', filter='Checkpoint files (*.pt, *.pth)')
+        self.current_file = fname[0]
+        self.line_edit.setText(self.current_file)
+        self.file_selection_changed.emit(self.current_file)

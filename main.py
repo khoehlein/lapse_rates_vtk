@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QDockWidget
 import pyvista as pv
 
 from src.interaction.pyvista_display.view import PyvistaView
-from src.interaction.settings_menu import SettingsView, SettingsViewTabbed
+from src.interaction.settings_menu import SettingsViewTabbed
 
 logging.basicConfig(level=logging.INFO)
 

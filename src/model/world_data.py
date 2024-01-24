@@ -228,7 +228,8 @@ class NeighborhoodLookup(QWidget):
     def query_nearest_neighbors(self, locations: LocationBatch, k: int) -> UniformNeighborhoodGraph:
         raise NotImplementedError()
 
-@dataclass()
+
+@dataclass(init=True, repr=True)
 class RadialNeighborhoodProperties(object):
     lookup_radius: float
     lsm_threshold: float
@@ -254,144 +255,30 @@ class RadialNeighborhoodLookup(NeighborhoodLookup):
         return self.query_neighborhood_graph(locations, self.lookup_radius)
 
 
-class RadialNeighborhoodHandles(QWidget):
+@dataclass(init=True, repr=True)
+class KNNNeighborhoodProperties(object):
+    neighborhood_size: float
+    lsm_threshold: float
 
-    def __init__(self, config: Dict[str, Any] = None, parent=None):
-        super().__init__(parent)
+
+class KNNNeighborhoodLookup(NeighborhoodLookup):
+
+    neighborhood_size_changed = pyqtSignal()
+
+    def __init__(self, land_sea_mask: xr.DataArray, config: Dict[str, Any] = None, parent=None):
         if config is None:
             config = {}
-        self.spinner_radius = QDoubleSpinBox(self)
-        self.spinner_radius.setValue(config.get('lookup_radius', 30.))
-        self.spinner_radius.setMinimum(config.get('lookup_radius_min', 10.))
-        self.spinner_radius.setMaximum(config.get('lookup_radius_max', 180.))
-        self.spinner_radius.setSuffix(' km')
-        self.spinner_threshold = QDoubleSpinBox(self)
-        self.spinner_threshold.setValue(config.get('lsm_threshold', 0.))
-        self.spinner_threshold.setMinimum(0.)
-        self.spinner_threshold.setMaximum(1.)
-        self.spinner_threshold.setSingleStep(0.05)
-        self.spinner_weight_scale = QDoubleSpinBox(self)
-        self.spinner_weight_scale.setMinimum(1.)
-        self.spinner_weight_scale.setMaximum(180.)
-        self.spinner_weight_scale.setValue(30.)
-        self.spinner_weight_scale.setSuffix(' km')
-        self.toggle_weighting = QCheckBox("use weighting")
-        self._set_layout()
+        super().__init__(land_sea_mask, config, parent)
+        self.neighborhood_size = config.get('neighborhood_size', 32)
 
-    def _set_layout(self):
-        layout = QFormLayout(self)
-        layout.addRow(QLabel('Radius'), self.spinner_radius)
-        layout.addRow(QLabel('Land/sea threshold'), self.spinner_threshold)
-        weighting_layout = QHBoxLayout()
-        weighting_layout.addWidget(QLabel('Weight scale'))
-        weighting_layout.addWidget(self.spinner_weight_scale)
-        weighting_layout.addWidget(self.toggle_weighting)
-        layout.addRow(weighting_layout)
-        self.setLayout(layout)
+    @pyqtSlot(float)
+    def set_neighborhood_size(self, k: int):
+        if k != self.neighborhood_size:
+            self.neighborhood_size = k
+            self.neighborhood_size_changed.emit()
 
-    def get_properties(self):
-        return RadialNeighborhoodProperties(self.spinner_radius.value(), self.spinner_threshold.value())
-
-
-class KNNNeighborhoodHandles(QWidget):
-
-    def __init__(self, config: Dict[str, Any] = None, parent=None):
-        super().__init__(parent)
-        if config is None:
-            config = {}
-        self.spinner_neighborhood_size = QSpinBox(self)
-        self.spinner_neighborhood_size.setValue(config.get('neighborhood_size', 32))
-        self.spinner_neighborhood_size.setMinimum(config.get('neighborhood_size_min', 8))
-        self.spinner_neighborhood_size.setMaximum(config.get('neighborhood_size_max', 256))
-        self.spinner_threshold = QDoubleSpinBox(self)
-        self.spinner_threshold.setValue(config.get('lsm_threshold', 0.))
-        self.spinner_threshold.setMinimum(0.)
-        self.spinner_threshold.setMaximum(1.)
-        self.spinner_threshold.setSingleStep(0.05)
-        self.spinner_weight_scale = QDoubleSpinBox(self)
-        self.spinner_weight_scale.setMinimum(1.)
-        self.spinner_weight_scale.setMaximum(180.)
-        self.spinner_weight_scale.setValue(30.)
-        self.spinner_weight_scale.setSuffix(' km')
-        self.toggle_weighting = QCheckBox("use weighting")
-        self._set_layout()
-
-    def _set_layout(self):
-        layout = QFormLayout(self)
-        layout.addRow(QLabel('Neighborhood size'), self.spinner_neighborhood_size)
-        layout.addRow(QLabel('Land/sea threshold'), self.spinner_threshold)
-        weighting_layout = QHBoxLayout()
-        weighting_layout.addWidget(QLabel('Weight scale'))
-        weighting_layout.addWidget(self.spinner_weight_scale)
-        weighting_layout.addWidget(self.toggle_weighting)
-        layout.addRow(weighting_layout)
-        self.setLayout(layout)
-
-
-# class RadialNeighborhoodLookupHandles(QWidget):
-#
-#     neighborhood_changed = pyqtSignal()
-#
-#     def __init__(self, config: Dict[str, Any] = None, parent=None):
-#         super().__init__(parent)
-#         if config is None:
-#             config = {}
-#         self.radius_slider = LogDoubleSliderSpinner(
-#             config.get('lookup_radius_min', 10.),
-#             config.get('lookup_radius_max', 180.),
-#             config.get('lookup_radius_steps', 128),
-#             width=4, parent=self
-#         )
-#         self.radius_slider.set_value(config.get('lookup_radius', 30.))
-#         self.mask_slider = DoubleSliderSpinner(width=4, parent=self)
-#         self.mask_slider.set_value(config.get('lsm_threshold', 0.))
-#         self.button_apply = QPushButton('Apply')
-#         self.button_apply.clicked.connect(self._on_button_apply)
-#         layout = QGridLayout()
-#         layout.addWidget(QLabel('Radius (km)'), 0, 0, 1, 1)
-#         layout.addWidget(self.radius_slider, 0, 1, 1, 4)
-#         layout.addWidget(QLabel('Land/Sea threshold'), 1, 0, 1, 1)
-#         layout.addWidget(self.mask_slider, 1, 1, 4, 1)
-#         layout.addWidget(self.button_apply, 2, 0, 1, 5)
-#         self.setLayout(layout)
-#
-#     def _on_button_apply(self):
-#         self.neighborhood_changed.emit()
-#
-#     def get_properties(self):
-#         return RadialNeighborhoodProperties(self.radius_slider.value(), self.mask_slider.value())
-
-
-class NeighborhoodLookupView(QWidget):
-
-    neighborhood_changed = pyqtSignal()
-
-    def __init__(self, config: Dict[str, Any] = None, parent=None):
-        super().__init__(parent)
-        self.combo_lookup_type = QComboBox()
-        self.interface_stack = QStackedLayout()
-        self.combo_lookup_type.addItem('Radius')
-        self.radial_interface = RadialNeighborhoodHandles(config=config, parent=self)
-        self.interface_stack.addWidget(self.radial_interface)
-        self.combo_lookup_type.addItem('Nearest neighbors')
-        self.knn_interface = KNNNeighborhoodHandles(config=config, parent=self)
-        self.interface_stack.addWidget(self.knn_interface)
-        self.combo_lookup_type.currentIndexChanged.connect(self.interface_stack.setCurrentIndex)
-        self.button_apply = QPushButton('Apply')
-        self.button_apply.clicked.connect(self._on_button_apply)
-        self._set_layout()
-
-    def _set_layout(self):
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel('Neighborhood method:'))
-        layout.addWidget(self.combo_lookup_type)
-        layout.addLayout(self.interface_stack)
-        layout.addWidget(self.button_apply)
-        layout.addStretch()
-        self.setLayout(layout)
-
-    def _on_button_apply(self):
-        self.neighborhood_changed.emit()
+    def query_neighborhood(self, locations: LocationBatch) -> UniformNeighborhoodGraph:
+        return self.query_nearest_neighbors(locations, self.neighborhood_size)
 
 
 class WorldData(object):
