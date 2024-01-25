@@ -17,10 +17,8 @@ class RadialNeighborhoodProperties(object):
 
 class RadialNeighborhoodLookup(NeighborhoodLookupModel):
 
-    def __init__(self, config: Dict[str, Any] = None, parent=None):
-        if config is None:
-            config = {}
-        super().__init__(RadialNeighborhoodProperties, config, parent)
+    def __init__(self, parent=None):
+        super().__init__(RadialNeighborhoodProperties, parent)
         self.lookup_radius = None
 
     def set_neighborhood_properties(self, properties: RadialNeighborhoodProperties):

@@ -54,6 +54,7 @@ class WorldData(object):
         configs = config_reader.load_json_config(path_to_config_file)
         logging.info('Loading low-res model...')
         orography_lr = config_reader.load_data(configs['orography']['low-res']).z
+        lsm_lr = config_reader.load_data(configs['lsm']['low-res']).lsm
         t2m = config_reader.load_data(configs['temperature']['2m'])
         t3d = config_reader.load_data(configs['temperature']['bulk']).t.transpose('hybrid', 'values')
         lnsp = config_reader.load_data(configs['pressure']).lnsp
@@ -64,7 +65,7 @@ class WorldData(object):
             t3d.values, q3d.values
         )
         logging.info('Merging low-res model...')
-        data_lr = xr.merge([orography_lr, t2m, t3d, lnsp, q3d], compat='override')
+        data_lr = xr.merge([orography_lr, lsm_lr, t2m, t3d, lnsp, q3d], compat='override')
         data_lr = data_lr.assign(z_model_levels=(('hybrid', 'values'), z_model_levels))
         logging.info(f'Loading high-res model...')
         data_hr = config_reader.load_data(configs['orography']['high-res'])
@@ -100,3 +101,13 @@ class WorldData(object):
 
     def get_lowres_land_sea_data(self):
         return self.data_lr.lsm
+
+
+def _test():
+    world_data = WorldData.from_config_file('/home/hoehlein/PycharmProjects/local/lapse_rates_vtk/cfg/data/2021121906_ubuntu.json')
+    bounds = DomainBounds(45, 50, 20,25)
+    world_data.query_domain_data(bounds)
+
+
+if __name__ == '__main__':
+    _test()

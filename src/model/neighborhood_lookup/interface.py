@@ -2,7 +2,6 @@ from typing import Dict, Any
 
 import numpy as np
 import xarray as xr
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QWidget
 from sklearn.neighbors import KDTree
 
@@ -42,8 +41,8 @@ class AboveThresholdFilter(QWidget):
 
 class NeighborhoodLookupModel(QWidget):
 
-    def __init__(self, property_class,parent=None):
-        super().__init__(parent)
+    def __init__(self, property_class, parent=None):
+        super().__init__(parent=parent)
         self._property_class = property_class
         self.locations = None
         self.filter = AboveThresholdFilter(parent=self)

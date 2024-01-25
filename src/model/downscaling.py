@@ -40,3 +40,9 @@ class LapseRateDownscaler(DownscalerModel):
         self.use_weights = None
         self.weight_scale_km = None
 
+    def set_downscaler_properties(self, properties: LapseRateDownscalerProperties):
+        self.use_volume = properties.use_volume
+        self.use_weights = properties.use_weights
+        self.weight_scale_km = properties.weight_scale_km
+        return self
+

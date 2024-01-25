@@ -5,8 +5,11 @@ from PyQt5 import QtCore
 from PyQt5.QtWidgets import QDockWidget
 import pyvista as pv
 
+from src.interaction.domain_selection.controller import DownscalingController
 from src.interaction.pyvista_display.view import PyvistaView
 from src.interaction.settings_menu import SettingsViewTabbed
+from src.model.backend_model import DownscalingPipeline
+from src.model.data_store.world_data import WorldData
 
 logging.basicConfig(level=logging.INFO)
 
@@ -26,26 +29,36 @@ import numpy as np
 # world_data = WorldData.from_config_file(path_to_data_config)
 
 
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'cfg/data/2021121906_ubuntu.json')
+
+
 class MainView(MainWindow):
 
     def __init__(self, parent=None, show=True):
         QtWidgets.QMainWindow.__init__(self, parent)
 
-        # create the frame
+        self._build_central_widget()
+        self._build_menus()
+        self._build_downscaling_pipeline()
+        self._populate_plotter()
+
+        if show:
+            self.show()
+
+    def _build_menus(self):
+        self.settings_menu = SettingsViewTabbed(self)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.settings_menu)
+        self._build_main_menu()
+
+    def _build_central_widget(self):
         self.render_view = PyvistaView(self)
         self.setCentralWidget(self.render_view.frame)
         self.signal_close.connect(self.render_view.plotter.close)
 
-        self.settings_menu = SettingsViewTabbed(self)
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.settings_menu)
-        # self.settings_menu.request_new_region.connect(self._populate_plotter)
-        # self.settings_menu.request_scale_change.connect(self._change_vertical_plot_scale)
-
-        self._populate_plotter()
-        self._build_main_menu()
-
-        if show:
-            self.show()
+    def _build_downscaling_pipeline(self):
+        self.data_store = WorldData.from_config_file(CONFIG_FILE)
+        self.downscaling_pipeline = DownscalingPipeline(self.data_store)
+        self.downscaling_controller = DownscalingController(self.settings_menu, self.render_view, self.downscaling_pipeline, parent=self)
 
     def _toggle_orography_visibility(self):
         actor = self.plotter.actors['oro-lr']

@@ -10,7 +10,7 @@ from src.model.neighborhood_lookup.knn_lookup import KNNNeighborhoodProperties, 
 from src.model.neighborhood_lookup.radial_lookup import RadialNeighborhoodProperties, RadialNeighborhoodLookup
 
 
-class BackendModel(QObject):
+class DownscalingPipeline(QObject):
 
     def __init__(
             self,
@@ -34,8 +34,6 @@ class BackendModel(QObject):
         self._neighborhood_graph = None
         self._neighborhood_samples = None
         self._downscaler_output = None
-
-        self.visuals = []
 
     def set_data_store(self, data_store: WorldData):
         self.data_store = data_store
@@ -61,9 +59,9 @@ class BackendModel(QObject):
 
     def _build_neighborhood_lookup(self):
         if isinstance(self.neighborhood_properties, RadialNeighborhoodProperties):
-            self.neighborhood_lookup = RadialNeighborhoodLookup(self)
+            self.neighborhood_lookup = RadialNeighborhoodLookup()
         elif isinstance(self.neighborhood_properties, KNNNeighborhoodProperties):
-            self.neighborhood_lookup = KNNNeighborhoodLookup(self)
+            self.neighborhood_lookup = KNNNeighborhoodLookup()
         else:
             raise NotImplementedError()
         self.neighborhood_lookup.set_source_data(self.data_store.get_lowres_land_sea_data())

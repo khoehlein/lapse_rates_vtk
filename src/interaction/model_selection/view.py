@@ -4,6 +4,7 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import QWidget, QDoubleSpinBox, QCheckBox, QLabel, QFormLayout, QHBoxLayout, QSpinBox, QComboBox, \
     QStackedLayout, QPushButton, QVBoxLayout, QStackedWidget
 
+from src.model.downscaling import LapseRateDownscalerProperties
 from src.model.neighborhood_lookup.knn_lookup import KNNNeighborhoodProperties
 from src.model.neighborhood_lookup.radial_lookup import RadialNeighborhoodProperties
 from src.widgets import FileSelectionWidget
@@ -114,6 +115,9 @@ class NeighborhoodLookupView(QWidget):
     def _on_button_apply(self):
         self.neighborhood_changed.emit()
 
+    def get_neighborhood_properties(self):
+        return self.interface_stack.currentWidget().get_settings()
+
 
 class DownscalerMethodView(QWidget):
 
@@ -145,6 +149,13 @@ class LapseRateDownscalerView(DownscalerMethodView):
         layout.addRow(QLabel('Use distance weighting:'), self.toggle_weighting)
         layout.addRow('Weight scale:', self.spinner_weight_scale)
         self.setLayout(layout)
+
+    def get_settings(self):
+        return LapseRateDownscalerProperties(
+            self.toggle_volume_data.isChecked(),
+            self.toggle_weighting.isChecked(),
+            self.spinner_weight_scale.value()
+        )
 
 
 class NetworkDownscalerView(DownscalerMethodView):
@@ -197,3 +208,5 @@ class DownscalingSettingsView(QWidget):
         layout.addLayout(self.interface_stack)
         self.setLayout(layout)
 
+    def get_downscaler_properties(self):
+        return self.interface_stack.currentWidget().get_settings()

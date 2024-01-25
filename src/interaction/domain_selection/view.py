@@ -33,7 +33,6 @@ class DomainSelectionView(QWidget):
         self.setLayout(layout)
 
     def get_domain_boundaries(self):
-        print('Domain bounds retrieved')
         return DomainBounds(
             self.select_latitude.min_spinner.value(),
             self.select_latitude.max_spinner.value(),
