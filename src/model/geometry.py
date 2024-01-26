@@ -356,19 +356,20 @@ class OctahedralGrid(object):
 
         for n in range(first_latitude, last_latitude):
             northern_circle = GridCircle(self.degree, n)
+            first_index = northern_circle.first_index
             southern_circle = GridCircle(self.degree, n + 1)
             coords = get_coordinates(northern_circle, southern_circle)
             locations = LocationBatch(coords)
-            vertices = northern_circle.triangles_to_southern_circle() - northern_circle.first_index
+            vertices = northern_circle.triangles_to_southern_circle() - first_index
             triangles = TriangleBatch(locations, vertices)
             valid = bounds.intersects(triangles)
-            all_triangles.append(vertices[valid])
+            all_triangles.append(vertices[valid] + first_index)
             all_longitudes.append(triangles.x[valid])
             all_latitudes.append(triangles.y[valid])
-            vertices = southern_circle.triangles_to_northern_circle() - northern_circle.first_index
+            vertices = southern_circle.triangles_to_northern_circle() - first_index
             triangles = TriangleBatch(locations, vertices)
             valid = bounds.intersects(triangles)
-            all_triangles.append(vertices[valid])
+            all_triangles.append(vertices[valid] + first_index)
             all_longitudes.append(triangles.x[valid])
             all_latitudes.append(triangles.y[valid])
 

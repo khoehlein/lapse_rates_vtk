@@ -121,9 +121,5 @@ class DownscalingPipeline(QObject):
         return self
 
     def get_output(self):
-        x = np.array([1, 2, 1, 2])
-        y = np.array([1, 1, 2, 2])
-        coords = Coordinates(lat_lon_system, x, y)
-        locs = LocationBatch(coords)
-        mesh = TriangleMesh(locs, np.array([[0, 1, 2], [1, 2, 3]]))
-        return SurfaceDataset(mesh, np.array([1, 2, 3, 5]) * 4000)
+        # return self._downscaler_output
+        return SurfaceDataset(self._domain_data.surface_mesh_lr, self._domain_data.data_lr.z.values)
