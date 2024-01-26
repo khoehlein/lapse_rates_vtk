@@ -43,6 +43,7 @@ class SceneController(QObject):
         self.scene_model.surface_o8000 = self._build_surface_visualization(
             'surface_o8000', pipeline_output, self.settings_view.surface_o1280_settings
         )
+        self.plotter.render()
 
     def _build_surface_visualization(self, name: str, surface_data: SurfaceDataset, vis_settings: SurfaceVisSettingsView) -> SurfaceVisualization:
         logging.info('Building surface visualization for {}'.format(name))
@@ -62,8 +63,7 @@ class SceneController(QObject):
 
     def _handle_vis_properties_change(self):
         logging.info('Handling vis properties change')
-        vis_properties = self.settings_view.get_vis_properties()
+        vis_properties = self.settings_view.surface_o8000_settings.get_vis_properties()
         visualization = self.scene_model.surface_o8000
-        render_data = visualization.get_render_data()
-        render_data.update_properties(vis_properties)
-        self.plotter.render()
+        visualization.set_properties(vis_properties)
+        # self.plotter.render()

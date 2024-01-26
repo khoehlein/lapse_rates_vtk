@@ -34,6 +34,8 @@ class WireframeSurfaceHandles(SurfaceVisMethodView):
         self.spinner_line_width.setSingleStep(0.25)
         self.button_line_color = SelectColorButton(QColor(0, 0, 0), self)
         self.button_line_color.setText(' Select line color')
+        self.spinner_line_width.valueChanged.connect(self.properties_changed)
+        self.button_line_color.color_changed.connect(self.properties_changed)
         self._set_layout()
 
     def _set_layout(self):
@@ -77,7 +79,7 @@ class SurfaceVisSettingsView(QWidget):
         self.setLayout(layout)
 
     def get_vis_properties(self):
-        return self.wireframe_interface.get_settings()
+        return self.interface_stack.currentWidget().get_settings()
 
 
 class VisualizationSettingsView(QTabWidget):

@@ -37,7 +37,6 @@ class MainView(MainWindow):
         self._build_menus()
         self._build_downscaling_pipeline()
         self._build_vis_pipeline()
-        self._populate_plotter()
 
         if show:
             self.show()
@@ -77,38 +76,6 @@ class MainView(MainWindow):
         exitButton.setShortcut('Ctrl+Q')
         exitButton.triggered.connect(self.close)
         fileMenu.addAction(exitButton)
-
-    def _build_left_side_menu(self):
-        dock = QDockWidget("Settings")
-        dock.setFeatures(QDockWidget.NoDockWidgetFeatures)
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock)
-        scroll = QtWidgets.QScrollArea(dock)
-        dock.setWidget(scroll)
-        content = QtWidgets.QWidget(scroll)
-        scroll.setWidgetResizable(True)
-        vlay = QtWidgets.QVBoxLayout(content)
-
-    def _populate_plotter(self):
-        self.render_view.plotter.add_mesh(pv.Sphere())
-        # bounds = self.settings_menu.select_region.get_region_boundaries()
-        # self.render_view.plotter.clear_actors()
-        # # Build meshes
-        # logging.info('Building meshes...')
-        # scene_data = world_data.query_scene_data(bounds)
-        # mesh_lr = scene_data.get_orography_mesh_lr()
-        # self.render_view.add_mesh(mesh_lr)
-        # self.render_view.plotter.add_bounding_box()
-        # self._change_vertical_plot_scale()
-        # mesh_model_levels['scalars'] = t3d.values[:, source_reference_lr].ravel()
-        # self.plotter.add_mesh(mesh_lr, style='wireframe', color='w', name='oro-lr')
-        # self.plotter.add_mesh(mesh_hr, style='wireframe', color='r')
-        # self.plotter.add_volume(mesh_model_levels)
-        # self._change_vertical_plot_scale()
-
-    def _change_vertical_plot_scale(self):
-        scale = self.settings_menu.select_z_scale.get_value()
-        print('rescaling to scale {}'.format(scale))
-        self.render_view.rescale_z(scale)
 
 
 if __name__ == '__main__':

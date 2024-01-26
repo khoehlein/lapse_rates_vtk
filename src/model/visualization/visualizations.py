@@ -98,7 +98,7 @@ class WireframeSurface(SurfaceVisualization):
             for actor in self._actors:
                 actor_props = actor.prop
                 actor_props.line_width = self.properties.line_width
-                actor_props.edge_color = self.properties.color.name()
+                actor_props.color = self.properties.color.name()
             return self
 
         def draw(self, plotter: pv.Plotter, name: str = None) -> 'WireframeSurface.PyvistaReference':
