@@ -1,3 +1,4 @@
+import uuid
 from typing import Tuple, Union
 
 import numpy as np
@@ -336,46 +337,6 @@ class OctahedralGrid(object):
         counter += num_nodes
         return vertices
 
-    def get_subgrid_old(self, bounds: DomainBounds):
-        circle_latitudes = _get_legendre_latitudes(self.degree)
-        latitudes_in_bounds = np.argwhere(np.logical_and(circle_latitudes >= bounds.latitude.min, circle_latitudes <= bounds.latitude.max)).ravel()
-        first_latitude = max(0, latitudes_in_bounds[0] - 1)
-        last_latitude = min(2 * self.degree - 1, latitudes_in_bounds[-1] + 1)
-        all_triangles = []
-        all_latitudes = []
-        all_longitudes = []
-        for n in range(first_latitude, last_latitude):
-            northern_circle = GridCircle(self.degree, n)
-            southern_circle = GridCircle(self.degree, n + 1)
-            longitudes_north = northern_circle.longitudes
-            longitudes_south = southern_circle.longitudes
-            vertices = northern_circle.triangles_to_southern_circle()
-            triangles = TriangleBatch(np.zeros(vertices.shape), np.zeros(vertices.shape))
-            triangles.x[:, 0] = longitudes_south[vertices[:, 0] - southern_circle.first_index]
-            triangles.x[:, 1:] = longitudes_north[vertices[:, 1:] - northern_circle.first_index]
-            triangles.y[:, 0] = circle_latitudes[n + 1]
-            triangles.y[:, 1:] = circle_latitudes[n]
-            valid = bounds.intersects(triangles)
-            all_triangles.append(vertices[valid])
-            all_longitudes.append(triangles.x[valid])
-            all_latitudes.append(triangles.y[valid])
-            vertices = southern_circle.triangles_to_northern_circle()
-            triangles = TriangleBatch(np.zeros(vertices.shape), np.zeros(vertices.shape))
-            triangles.x[:, :-1] = longitudes_south[vertices[:, :-1] - southern_circle.first_index]
-            triangles.x[:, -1] = longitudes_north[vertices[:, -1] - northern_circle.first_index]
-            triangles.y[:, :2] = circle_latitudes[n + 1]
-            triangles.y[:, -1] = circle_latitudes[n]
-            valid = bounds.intersects(triangles)
-            all_triangles.append(vertices[valid])
-            all_longitudes.append(triangles.x[valid])
-            all_latitudes.append(triangles.y[valid])
-        all_triangles = np.concatenate(all_triangles, axis=0)
-        unique, indices, inverse = np.unique(all_triangles.ravel(), return_inverse=True, return_index=True)
-        all_triangles = np.reshape(inverse, all_triangles.shape)
-        all_latitudes = np.concatenate(all_latitudes, axis=0).ravel()[indices]
-        all_longitudes = np.concatenate(all_longitudes, axis=0).ravel()[indices]
-        return TriangleMesh(all_longitudes, all_latitudes, all_triangles, source_reference=unique)
-
     def get_subgrid(self, bounds: DomainBounds):
         circle_latitudes = _get_legendre_latitudes(self.degree)
         latitudes_in_bounds = np.argwhere(np.logical_and(circle_latitudes >= bounds.latitude.min, circle_latitudes <= bounds.latitude.max)).ravel()
@@ -416,16 +377,34 @@ class OctahedralGrid(object):
         all_triangles = np.reshape(inverse, all_triangles.shape)
         all_latitudes = np.concatenate(all_latitudes, axis=0).ravel()[indices]
         all_longitudes = np.concatenate(all_longitudes, axis=0).ravel()[indices]
-        return TriangleMesh(all_longitudes, all_latitudes, all_triangles, source_reference=unique)
+        locations = LocationBatch(
+            Coordinates(lat_lon_system, all_longitudes, all_latitudes),
+            source_reference=unique
+        )
+        return TriangleMesh(locations, all_triangles)
 
 
 class TriangleMesh(object):
 
-    def __init__(self, x: np.ndarray, y: np.ndarray, vertices: np.ndarray, source_reference: np.ndarray = None):
-        self.x = x
-        self.y = y
+    def __init__(self, locations: LocationBatch, vertices: np.ndarray):
+        self.locations = locations
         self.vertices = vertices
-        self.source_reference = source_reference
+
+    @property
+    def x(self):
+        return self.locations.x
+
+    @property
+    def y(self):
+        return self.locations.y
+
+    @property
+    def source_reference(self):
+        return self.locations.source_reference
+
+    @property
+    def coordinates(self):
+        return self.locations.coords
 
     @property
     def num_nodes(self):
@@ -436,13 +415,14 @@ class TriangleMesh(object):
             return transform(self.x, self.y)
         return self.x, self.y
 
-    def get_coordinates(self, z: np.ndarray = None, transform=None) -> np.ndarray:
+    def get_vertex_positions(self, z: np.ndarray = None, transform=None) -> np.ndarray:
+        coords = self.coordinates
         if z is None:
-            z = np.zeros_like(self.x)
-        coordinates = np.stack([*self.get_horizontal_coordinates(transform), z], axis=-1)
+            z = np.zeros_like(coords.x)
+        coordinates = np.stack([*coords.components, z], axis=-1)
         return coordinates
 
-    def get_faces(self, add_prefix: bool = False) -> np.ndarray:
+    def get_triangle_vertices(self, add_prefix: bool = False) -> np.ndarray:
         prefix_offset = int(add_prefix)
         faces = np.zeros((len(self.vertices), 3 + prefix_offset), dtype=int)
         if add_prefix:
@@ -450,20 +430,30 @@ class TriangleMesh(object):
         faces[:, prefix_offset:] = self.vertices
         return faces
 
-    def get_locations(self) -> LocationBatch:
-        return LocationBatch(Coordinates(lat_lon_system, self.x, self.y), source_reference=self.source_reference)
-
-    def to_pyvista(self, z: np.ndarray = None, transform=None) -> pv.PolyData:
+    def to_polydata(self, z: np.ndarray = None, transform=None) -> pv.PolyData:
         faces = np.concatenate([np.full((len(self.vertices), 1), 3, dtype=int), self.vertices], axis=-1)
-        coords = self.get_coordinates(z, transform)
+        coords = self.get_vertex_positions(z, transform)
         return pv.PolyData(coords, faces)
 
 
-class SurfaceGeometry(object):
+class SurfaceDataset(object):
 
     def __init__(self, mesh: TriangleMesh, z: np.ndarray):
         self.mesh = mesh
         self.z = z
+        self.scalars = {}
+
+    def add_scalar_field(self, field_data: np.ndarray, name: str = None) -> str:
+        if name is None:
+            name = str(uuid.uuid4())
+        self.scalars[name] = field_data
+        return name
+
+    def get_polydata(self) -> pv.PolyData:
+        polydata = self.mesh.to_polydata(self.z)
+        for key in self.scalars:
+            polydata[key] = self.scalars[key]
+        return polydata
 
 
 class WedgeMesh(object):
@@ -473,7 +463,7 @@ class WedgeMesh(object):
         self.num_levels = num_levels
 
     def get_coordinates(self, z: np.ndarray = None, transform=None) -> np.ndarray:
-        level_coordinates = self.base_mesh.get_coordinates(z=None, transform=transform)
+        level_coordinates = self.base_mesh.get_vertex_positions(z=None, transform=transform)
         coordinates = np.tile(level_coordinates, (self.num_levels, 1))
         if z is not None:
             assert len(z) == self.num_levels

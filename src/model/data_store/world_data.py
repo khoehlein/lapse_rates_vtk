@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xr
 
 from src.model.data_store.config_interface import ConfigReader, DataConfiguration
-from src.model.geometry import OctahedralGrid, DomainBounds, TriangleMesh, WedgeMesh, LocationBatch, SurfaceGeometry
+from src.model.geometry import OctahedralGrid, DomainBounds, TriangleMesh, WedgeMesh, LocationBatch, SurfaceDataset
 from src.model.level_heights import compute_physical_level_height
 from src.model.neighborhood_lookup.neighborhood_graphs import NeighborhoodGraph
 
@@ -30,12 +30,11 @@ class DomainData(object):
         self.data_lr = data_lr
         self.data_hr = data_hr
 
-    def get_highres_orography(self):
-        return SurfaceGeometry(self.surface_mesh_hr, self.data_hr.z.values)
+    def get_highres_orography(self) -> SurfaceDataset:
+        return SurfaceDataset(self.surface_mesh_hr, self.data_hr.z.values)
 
-    def get_orography_mesh_lr(self, z_scale = 1.):
-        z_lr = self.data_lr.z.values
-        return self.surface_mesh_lr.to_pyvista(z=(z_lr / z_scale))
+    def get_lowres_orography(self) -> SurfaceDataset:
+        return SurfaceDataset(self.surface_mesh_lr, self.data_lr.z.values)
 
 
 class SampleBatch(object):
@@ -97,7 +96,9 @@ class WorldData(object):
         )
 
     def query_sample_data(self, neighborhood: NeighborhoodGraph):
-        raise NotImplementedError()
+        site_samples = self.data_lr.isel(values=(('site',), neighborhood.locations.source_reference))
+        neighbor_samples = self.data_lr.isel(values=(('link',), neighborhood.links['neighbor'].values))
+        return SampleBatch(neighborhood.locations, (site_samples, neighbor_samples), neighborhood)
 
     def get_lowres_land_sea_data(self):
         return self.data_lr.lsm

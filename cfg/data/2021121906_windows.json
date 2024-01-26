@@ -3,6 +3,9 @@
 		"low-res": "C:\\Users\\kevin\\data\\ECMWF\\HRES_orog_o1279_2021-2022.grib",
 		"high-res": "C:\\Users\\kevin\\data\\ECMWF\\orog_reduced_gaussian_grid_1km.grib"
 	},
+	"lsm": {
+		"low-res": "C:\\Users\\kevin\\data\\ECMWF\\LSM_HRES_Sep2022.grib"
+	},
 	"temperature": {
 		"2m": {
 			"path": "C:\\Users\\kevin\\data\\ECMWF\\HRES_2m_temp_20211219.grib",

@@ -99,7 +99,7 @@ class NeighborhoodLookupView(QWidget):
         self.interface_stack.addWidget(self.knn_interface)
         self.combo_lookup_type.currentIndexChanged.connect(self.interface_stack.setCurrentIndex)
         self.button_apply = QPushButton('Apply')
-        self.button_apply.clicked.connect(self._on_button_apply)
+        self.button_apply.clicked.connect(self.neighborhood_changed.emit)
         self._set_layout()
 
     def _set_layout(self):
@@ -107,13 +107,10 @@ class NeighborhoodLookupView(QWidget):
         layout.addWidget(QLabel('Neighborhood method:'))
         layout.addWidget(self.combo_lookup_type)
         layout.addLayout(self.interface_stack)
-        layout.addWidget(self.button_apply)
         layout.addStretch()
+        layout.addWidget(self.button_apply)
         layout.setAlignment(Qt.AlignTop)
         self.setLayout(layout)
-
-    def _on_button_apply(self):
-        self.neighborhood_changed.emit()
 
     def get_neighborhood_properties(self):
         return self.interface_stack.currentWidget().get_settings()
@@ -154,7 +151,8 @@ class LapseRateDownscalerView(DownscalerMethodView):
         return LapseRateDownscalerProperties(
             self.toggle_volume_data.isChecked(),
             self.toggle_weighting.isChecked(),
-            self.spinner_weight_scale.value()
+            self.spinner_weight_scale.value(),
+            10, True, -0.0065
         )
 
 
@@ -185,6 +183,7 @@ class DownscalingSettingsView(QWidget):
         super().__init__(parent)
         self.combo_downscaler_method = QComboBox()
         self.interface_stack = QStackedLayout()
+        self.button_apply = QPushButton('Apply')
         self.combo_downscaler_method.currentIndexChanged.connect(self.interface_stack.setCurrentIndex)
         self.combo_downscaler_method.currentIndexChanged.connect(self.method_changed.emit)
         self._set_method_views()
@@ -206,6 +205,9 @@ class DownscalingSettingsView(QWidget):
         layout.addWidget(QLabel('Downscaling method:'))
         layout.addWidget(self.combo_downscaler_method)
         layout.addLayout(self.interface_stack)
+        layout.addStretch()
+        layout.addWidget(self.button_apply)
+        layout.setAlignment(Qt.AlignTop)
         self.setLayout(layout)
 
     def get_downscaler_properties(self):

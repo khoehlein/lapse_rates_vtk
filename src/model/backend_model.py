@@ -1,10 +1,12 @@
+import logging
+
 from PyQt5.QtCore import QObject
 
 from src.interaction.pyvista_display.view import PyvistaView
 from src.interaction.settings_menu import SettingsViewTabbed
 from src.model.data_store.world_data import WorldData, DomainData
 from src.model.downscaling import DownscalerModel, LapseRateDownscalerProperties, LapseRateDownscaler
-from src.model.geometry import DomainBounds
+from src.model.geometry import DomainBounds, SurfaceDataset
 from src.model.neighborhood_lookup.interface import NeighborhoodLookupModel
 from src.model.neighborhood_lookup.knn_lookup import KNNNeighborhoodProperties, KNNNeighborhoodLookup
 from src.model.neighborhood_lookup.radial_lookup import RadialNeighborhoodProperties, RadialNeighborhoodLookup
@@ -95,24 +97,27 @@ class DownscalingPipeline(QObject):
     def _update_neighborhood_graph(self):
         self._update_domain_data()
         if self._neighborhood_graph is None:
-            query_locations = self._domain_data.surface_mesh_lr
+            query_locations = self._domain_data.surface_mesh_lr.locations
             self._neighborhood_graph = self.neighborhood_lookup.query_neighborhood(query_locations)
             self._neighborhood_samples = None
 
     def _update_neighborhood_samples(self):
         self._update_neighborhood_graph()
         if self._neighborhood_samples is None:
-            self.data_store.query_sample_data(self._neighborhood_graph)
+            self._neighborhood_samples = self.data_store.query_sample_data(self._neighborhood_graph)
             self._downscaler_output = None
 
     def _update_downscaler_output(self):
         self._update_domain_data()
         self._update_neighborhood_samples()
         if self._downscaler_output is None:
-            target = self._domain_data.get_highres_orography()
+            target = self._domain_data.get_lowres_orography()
             self._downscaler_output = self.downscaler.compute_temperatures(target, self._neighborhood_samples)
 
     def update(self):
         self._update_downscaler_output()
+        logging.info('Pipeline update completed')
         return self
 
+    def get_output(self):
+        return SurfaceDataset(self._domain_data.surface_mesh_lr, self._domain_data.data_lr.z.values)

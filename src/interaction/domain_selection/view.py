@@ -1,12 +1,11 @@
 import logging
 
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QWidget, QPushButton, QGridLayout, QLabel
+from PyQt5.QtWidgets import QWidget, QPushButton, QGridLayout, QLabel, QVBoxLayout
 
 from src.model.geometry import DomainBounds
 from src.widgets import RangeSpinner
 
-logging.logLevel = logging.INFO
 
 class DomainSelectionView(QWidget):
 
@@ -22,15 +21,19 @@ class DomainSelectionView(QWidget):
         self._set_layout()
 
     def _set_layout(self):
-        layout = QGridLayout(self)
+        layout = QGridLayout()
         layout.addWidget(QLabel('Latitude:', self), 0, 0)
         layout.addWidget(self.select_latitude.min_spinner, 0, 1, 1, 2)
         layout.addWidget(self.select_latitude.max_spinner, 0, 3, 1, 2)
         layout.addWidget(QLabel('Longitude:', self), 1, 0)
         layout.addWidget(self.select_longitude.min_spinner, 1, 1, 1, 2)
         layout.addWidget(self.select_longitude.max_spinner, 1, 3, 1, 2)
-        layout.addWidget(self.button_apply, 2, 0, 1, 5)
-        self.setLayout(layout)
+        outer = QVBoxLayout()
+        outer.addWidget(QLabel('Domain boundaries:'))
+        outer.addLayout(layout)
+        outer.addStretch(2)
+        outer.addWidget(self.button_apply)
+        self.setLayout(outer)
 
     def get_domain_boundaries(self):
         return DomainBounds(

@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, Any
 
 import numpy as np
@@ -58,6 +59,7 @@ class NeighborhoodLookupModel(QWidget):
         assert isinstance(properties, self._property_class)
 
     def update_tree_lookup(self):
+        logging.debug('Building tree lookup')
         if self.locations is not None and self.filter.is_valid():
             self.tree_lookup = KDTree(self.locations[self.filter.mask], leaf_size=100)
         else:
@@ -65,10 +67,12 @@ class NeighborhoodLookupModel(QWidget):
         return self
 
     def query_radial_neighbors(self, locations: LocationBatch, radius_km: float) -> RadialNeighborhoodGraph:
+        logging.info('Executing radial neighbor query')
         graph = RadialNeighborhoodGraph.from_tree_query(locations, self.tree_lookup, radius_km)
         return graph
 
     def query_nearest_neighbors(self, locations: LocationBatch, k: int) -> UniformNeighborhoodGraph:
+        logging.info('Executing nearest neighbor query')
         return UniformNeighborhoodGraph.from_tree_query(locations, self.tree_lookup, k)
 
     def query_neighborhood(self, locations: LocationBatch) -> RadialNeighborhoodGraph:

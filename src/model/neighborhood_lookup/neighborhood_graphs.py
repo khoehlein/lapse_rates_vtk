@@ -1,3 +1,4 @@
+from itertools import chain
 from typing import List
 import numpy as np
 import pandas as pd
@@ -92,26 +93,18 @@ class RadialNeighborhoodGraph(NeighborhoodGraph):
             counter += num_links
         return pd.DataFrame({
             'location': flat_locids,
-            'neighbor': np.fromiter(self.neighbors, count=self.total_links, dtype=int)
+            'neighbor': np.fromiter(chain.from_iterable(self.neighbors), count=self.total_links, dtype=int)
         })
 
     def _compute_index_stats(self):
-        neighbor_props = np.fromiter(
-            ((len(nids), nids[0] if len(nids) else -1) for nids in self.neighbors),
-            count=len(self.neighbors), dtype=int
-        )
-        self.num_links = neighbor_props[:, 0]
-        self.nearest_neighbor = neighbor_props[:, -1]
+        self.num_links = np.fromiter((len(nids) for nids in self.neighbors), count=len(self.neighbors), dtype=int)
+        self.nearest_neighbor = np.fromiter(((nids[0] if len(nids) else -1) for nids in self.neighbors), count=len(self.neighbors), dtype=int)
         self.total_links = np.sum(self.num_links)
         self.links = self._compute_links()
 
     def _compute_distance_stats(self):
-        extremes = np.fromiter((
-            (d[0], d[-1]) if len(d) else (-1., -1.) for d in self.distances)
-            , count=len(self.neighbors), dtype=float
-        )
-        self.min_distance = extremes[:, 0]
-        self.max_distance = extremes[:, -1]
+        self.min_distance = np.fromiter(((d[0] if len(d) else -1.) for d in self.distances), count=len(self.distances), dtype=float)
+        self.max_distance = np.fromiter(((d[-1] if len(d) else -1.) for d in self.distances), count=len(self.distances), dtype=float)
 
     @classmethod
     def from_tree_query(cls, locations: LocationBatch, tree: KDTree, radius_km: float):
