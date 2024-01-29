@@ -1,24 +1,19 @@
-from typing import List
+from typing import List, Dict
 
 from PyQt5.QtCore import QObject
 from src.model.visualization.lighting import LightingModel
-from src.model.visualization.visualizations import SurfaceVisualization
+from src.model.visualization.visualizations import VisualizationModel
 
 
 class SceneModel(QObject):
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
-        self.surface_o1280: SurfaceVisualization = None
-        self.surface_o8000: SurfaceVisualization = None
+        self.visuals: Dict[str, VisualizationModel] = {}
         self.lighting: LightingModel = None
 
-    @property
-    def visuals(self):
-        return [self.surface_o1280, self.surface_o8000]
-
     def reset_vertical_scale(self, new_scale: float) -> 'SceneModel':
-        for v in self.visuals:
+        for v in self.visuals.values():
             if v is not None:
                 v.reset_vertical_scale(new_scale)
         return self

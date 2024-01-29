@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QDockWidget, QScrollArea, QWidget, QVBoxLayout, QTab
 from src.interaction.domain_selection.view import DomainSelectionView
 from src.interaction.model_selection.view import DownscalingSettingsView, NeighborhoodLookupView
 from src.interaction.view_settings.view import ViewSettingsView
-from src.interaction.visualizations.view import VisualizationSettingsView
+from src.interaction.visualizations.view import SceneSettingsView
 
 
 class GeneralSettingsView(QTabWidget):
@@ -47,7 +47,7 @@ class SettingsViewTabbed(QDockWidget):
 
     def _populate_scroll_area(self):
         self.general_settings = GeneralSettingsView(self.scroll_area_contents)
-        self.visualization_settings = VisualizationSettingsView(self.scroll_area_contents)
+        self.visualization_settings = SceneSettingsView(self.scroll_area_contents)
         layout = QVBoxLayout(self.scroll_area_contents)
         layout.addWidget(QLabel('General settings'))
         layout.addWidget(self.general_settings)

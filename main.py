@@ -62,7 +62,8 @@ class MainView(MainWindow):
     def _build_vis_pipeline(self):
         self.scene_model = SceneModel(self)
         self.scene_controller = SceneController(
-            self.settings_menu, self.render_view,
+            self.settings_menu.visualization_settings,
+            self.render_view,
             self.downscaling_controller,
             self.downscaling_pipeline, self.scene_model,
             parent=self
