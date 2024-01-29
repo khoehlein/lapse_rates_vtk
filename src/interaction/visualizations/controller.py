@@ -29,6 +29,7 @@ class VisualizationController(QObject):
         vis_properties = self.settings_view.get_vis_properties()
         visualization = self.scene_model.visuals[self.key]
         visualization.set_properties(vis_properties)
+        self.visualization_changed.emit(self.key)
 
     def _handle_visibility_change(self):
         visible = self.settings_view.checkbox_visibility.isChecked()
@@ -63,8 +64,8 @@ class VisualizationController(QObject):
         self.scene_model.visuals.update({self.key: visualization})
         return visualization
 
-    def update_visualization_data(self, visualization: SurfaceVisualization):
-        raise NotImplementedError()
+    def update_visualization_data(self, surface_data: SurfaceDataset):
+        return self.build_visualization(surface_data)
 
 
 class SceneController(QObject):
@@ -100,7 +101,7 @@ class SceneController(QObject):
         self.plotter.clear()
         domain_data = self.pipeline_model.get_output()
         for controller in self.vis_controllers.values():
-            visualization = controller.build_visualization(domain_data)
+            visualization = controller.build_visualization(domain_data[controller.key])
             visualization.draw(self.plotter)
         self.plotter.render()
         return self

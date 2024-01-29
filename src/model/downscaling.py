@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Dict
 
 import numpy as np
 from PyQt5.QtCore import QObject
@@ -23,7 +23,7 @@ class DownscalerModel(QObject):
     def validate_downscaler_properties(self, properties):
         assert isinstance(properties, self._properties_class)
 
-    def compute_temperatures(self, target: SurfaceDataset, samples: SampleBatch) -> np.ndarray:
+    def compute_temperatures(self, target: SurfaceDataset, source: SurfaceDataset, samples: SampleBatch) -> np.ndarray:
         raise NotImplementedError()
 
 
@@ -57,12 +57,12 @@ class LapseRateDownscaler(DownscalerModel):
         self.default_lapse_rate = properties.default_lapse_rate
         return self
 
-    def compute_temperatures(self, target: SurfaceDataset, samples: SampleBatch) -> SurfaceDataset:
-        output = self._compute_lapse_rates_at_sample_locations(samples)
+    def compute_temperatures(self, target: SurfaceDataset, source: SurfaceDataset, samples: SampleBatch) -> Dict[str, SurfaceDataset]:
+        output = self._compute_lapse_rates_at_sample_locations(source, samples)
         output = self._interpolate_to_target_locations(output, target)
-        return output
+        return {'surface_o8000': output, 'surface_o1280': source}
 
-    def _compute_lapse_rates_at_sample_locations(self, samples: SampleBatch) -> Tuple[LocationBatch, np.ndarray, np.ndarray, np.ndarray]:
+    def _compute_lapse_rates_at_sample_locations(self, source: SurfaceDataset, samples: SampleBatch) -> Tuple[LocationBatch, np.ndarray, np.ndarray, np.ndarray]:
         logging.info('Computing lapse rate at sample locations')
         num_links = samples.source_reference.num_links
         site_id_at_link = samples.source_reference.links['location'].values
@@ -80,6 +80,9 @@ class LapseRateDownscaler(DownscalerModel):
             (self._estimate_lapse_rate(dt, dz) for dt, dz in zip(dt_around_site, dz_around_site)),
             count=count, dtype=float
         )
+        source.add_scalar_field(lapse_rates, 'lapse_rate')
+        source.add_scalar_field(t2m_at_site, 't2m_o1280')
+        source.add_scalar_field(z_at_site, 'z_o1280')
         return samples.locations, t2m_at_site, z_at_site, lapse_rates
 
     def _interpolate_to_target_locations(self, output, target: SurfaceDataset) -> SurfaceDataset:

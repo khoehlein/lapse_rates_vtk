@@ -9,6 +9,7 @@ from PyQt5.QtGui import QColor
 from pyvista.plotting import Plotter
 
 from src.model.geometry import SurfaceDataset
+from src.model.visualization.colors import ColormapModel, UniformColormap, DivergingColormap, SequentialColormap
 from src.model.visualization.transforms import SceneSpaceTransform, AffineLinear
 
 
@@ -68,8 +69,9 @@ class SurfaceVisualization(VisualizationModel):
 
     def update(self) -> 'WireframeSurface.PyvistaReference':
         self._update_geometry_coordinates()
-        self._update_actor_props()
         self._update_actor_visibility()
+        if self.properties is not None:
+            self._update_actor_props()
         return self
 
     def set_vertical_offset(self, offset: float) -> 'WireframeSurface':
@@ -102,6 +104,21 @@ class SurfaceVisualization(VisualizationModel):
         for actor in self._actors:
             actor.visibility = self.is_visible
 
+    def _update_colors(self):
+        colormap = self.properties.color
+        if isinstance(colormap, UniformColormap):
+            self.polydata_reference.set_active_scalars(None)
+            color = colormap.color.name()
+            for actor in self._actors:
+                actor.prop.color = color
+        elif isinstance(colormap, SequentialColormap):
+            cmap = colormap.get_cmap()
+            # self.polydata_reference.set_active_scalars(colormap.scalar_name)
+            scalar_data = self.dataset.scalars[colormap.scalar_name]
+            print(scalar_data.min(), scalar_data.max())
+            for actor in self._actors:
+                actor.mapper.set_scalars(scalar_data, colormap.scalar_name, cmap=cmap)
+
 
 class WireframeSurface(SurfaceVisualization):
 
@@ -109,18 +126,18 @@ class WireframeSurface(SurfaceVisualization):
     class Properties(object):
         line_width: float = None
         opacity: float = None
-        color: QColor = None
+        color: ColormapModel = None
 
     def _update_actor_props(self):
+        self._update_colors()
         for actor in self._actors:
             actor_props = actor.prop
             actor_props.line_width = self.properties.line_width
             actor_props.opacity = self.properties.opacity
-            actor_props.color = self.properties.color.name()
 
     def draw(self, plotter: pv.Plotter) -> 'WireframeSurface.PyvistaReference':
         actor = plotter.add_mesh(self.polydata_reference, name=self.plotter_key, style='wireframe')
-        self._actors.append(actor)
+        self._actors = [actor]
         self._update_actor_props()
         self._update_actor_visibility()
         return self
@@ -152,12 +169,14 @@ class TranslucentSurface(SurfaceVisualization):
         return self
 
     def _update_actor_props(self):
+        self._update_colors()
         for actor in self._actors:
             actor_props = actor.prop
             actor_props.opacity = self.properties.opacity
-            actor_props.color = self.properties.color.name()
             actor_props.show_edges = self.properties.show_edges
             actor_props.edge_color = 'k'
+
+
 
 
 

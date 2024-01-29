@@ -112,8 +112,9 @@ class DownscalingPipeline(QObject):
         self._update_domain_data()
         self._update_neighborhood_samples()
         if self._downscaler_output is None:
-            target = self._domain_data.get_lowres_orography()
-            self._downscaler_output = self.downscaler.compute_temperatures(target, self._neighborhood_samples)
+            target = self._domain_data.get_highres_orography()
+            source = self._domain_data.get_lowres_orography()
+            self._downscaler_output = self.downscaler.compute_temperatures(target, source, self._neighborhood_samples)
 
     def update(self):
         self._update_downscaler_output()
@@ -121,5 +122,4 @@ class DownscalingPipeline(QObject):
         return self
 
     def get_output(self):
-        # return self._downscaler_output
-        return SurfaceDataset(self._domain_data.surface_mesh_lr, self._domain_data.data_lr.z.values)
+        return self._downscaler_output

@@ -6,7 +6,7 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QTabWidget, QWidget, QComboBox, QStackedLayout, QVBoxLayout, QLabel, QDoubleSpinBox, \
     QFormLayout, QCheckBox
 
-from src.interaction.background_color.view import SelectColorButton
+from src.interaction.background_color.view import SelectColorButton, ColorSelectionMenu
 from src.model.visualization.visualizations import WireframeSurface, TranslucentSurface
 
 
@@ -38,16 +38,15 @@ class WireframeSurfaceHandles(SurfaceVisMethodView):
         self.spinner_opacity.setMaximum(1.)
         self.spinner_opacity.setValue(1.)
         self.spinner_opacity.setSingleStep(0.05)
-        self.button_line_color = SelectColorButton(QColor(0, 0, 0), self)
-        self.button_line_color.setText(' Select line color')
+        self.menu_color_selection = ColorSelectionMenu(self)
         self.spinner_line_width.valueChanged.connect(self.properties_changed)
         self.spinner_opacity.valueChanged.connect(self.properties_changed)
-        self.button_line_color.color_changed.connect(self.properties_changed)
+        self.menu_color_selection.colormap_changed.connect(self.properties_changed)
         self._set_layout()
 
     def _set_layout(self):
         layout = QFormLayout()
-        layout.addRow(QLabel('Line color:'), self.button_line_color)
+        layout.addRow(QLabel('Line color:'), self.menu_color_selection)
         layout.addRow(QLabel('Opacity:'), self.spinner_opacity)
         layout.addRow(QLabel('Line width:'), self.spinner_line_width)
         self.setLayout(layout)
@@ -56,7 +55,7 @@ class WireframeSurfaceHandles(SurfaceVisMethodView):
         return WireframeSurface.Properties(
             self.spinner_line_width.value(),
             self.spinner_opacity.value(),
-            self.button_line_color.current_color,
+            self.menu_color_selection.get_colormap(),
         )
 
 
@@ -69,17 +68,16 @@ class TranslucentSurfaceHandles(SurfaceVisMethodView):
         self.spinner_opacity.setMaximum(1.)
         self.spinner_opacity.setValue(0.5)
         self.spinner_opacity.setSingleStep(0.05)
-        self.button_line_color = SelectColorButton(QColor(1, 1, 1), self)
-        self.button_line_color.setText(' Select surface color')
+        self.menu_color_selection = ColorSelectionMenu(self)
         self.checkbox_show_edges = QCheckBox()
         self.spinner_opacity.valueChanged.connect(self.properties_changed)
-        self.button_line_color.color_changed.connect(self.properties_changed)
         self.checkbox_show_edges.stateChanged.connect(self.properties_changed)
+        self.menu_color_selection.colormap_changed.connect(self.properties_changed)
         self._set_layout()
 
     def _set_layout(self):
         layout = QFormLayout()
-        layout.addRow(QLabel('Color:'), self.button_line_color)
+        layout.addRow(QLabel('Color:'), self.menu_color_selection)
         layout.addRow(QLabel('Opacity:'), self.spinner_opacity)
         layout.addRow(QLabel('Show edges:'), self.checkbox_show_edges)
         self.setLayout(layout)
@@ -88,7 +86,7 @@ class TranslucentSurfaceHandles(SurfaceVisMethodView):
         logging.info('Reading translucent surface properties')
         return TranslucentSurface.Properties(
             self.spinner_opacity.value(),
-            self.button_line_color.current_color,
+            self.menu_color_selection.get_colormap(),
             self.checkbox_show_edges.isChecked()
         )
 
