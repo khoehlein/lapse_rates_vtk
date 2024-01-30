@@ -433,8 +433,8 @@ class TriangleMesh(object):
 
     def to_polydata(self, z: np.ndarray = None, transform=None) -> pv.PolyData:
         faces = np.concatenate([np.full((len(self.vertices), 1), 3, dtype=int), self.vertices], axis=-1)
-        coords = self.get_vertex_positions(z, transform)
-        return pv.PolyData(coords, faces)
+        points = self.get_vertex_positions(z, transform)
+        return pv.PolyData(points, faces)
 
 
 class SurfaceDataset(object):

@@ -2,14 +2,12 @@ import copy
 import uuid
 from dataclasses import dataclass
 
+import numpy as np
 from PyQt5.QtCore import QObject
 
 import pyvista as pv
-from PyQt5.QtGui import QColor
-from pyvista.plotting import Plotter
-
 from src.model.geometry import SurfaceDataset
-from src.model.visualization.colors import ColormapModel, UniformColormap, DivergingColormap, SequentialColormap
+from src.model.visualization.colors import ColormapModel
 from src.model.visualization.transforms import SceneSpaceTransform, AffineLinear
 
 
@@ -31,11 +29,7 @@ class VisualizationModel(QObject):
         self.properties = None
         self.is_visible = True
 
-    def set_properties(self, properties) -> 'VisualizationModel':
-        self.properties = properties
-        return self
-
-    def set_visible(self, visible: bool) -> 'VisualizationModel':
+    def set_visibility(self, visible: bool) -> 'VisualizationModel':
         self.is_visible = visible
         return self
 
@@ -47,11 +41,62 @@ class VisualizationModel(QObject):
         self._vertical_transform.offset = offset
         return self
 
-    def draw(self, plotter: Plotter) -> 'VisualizationModel':
-        raise NotImplementedError()
+    def set_properties(self, properties) -> 'VisualizationModel':
+        self.properties = properties
+        return self
 
 
 class SurfaceVisualization(VisualizationModel):
+
+    @dataclass
+    class Properties(object):
+        colormap: ColormapModel = None
+
+    class PyvistaReference(object):
+
+        def __init__(self, dataset: pv.DataSet, actor: pv.Actor):
+            self.dataset = dataset
+            self.actor = actor
+
+        def set_vertical_coordinate(self, z: np.ndarray) -> 'SurfaceVisualization.PyvistaReference':
+            self.dataset.points[:, -1] = z
+            return self
+
+        def set_visibility(self, visible: bool) -> 'SurfaceVisualization.PyvistaReference':
+            self.actor.visibility = visible
+            return self
+
+        def set_properties(self, properties: 'SurfaceVisualization.Properties') -> 'SurfaceVisualization.PyvistaReference':
+            raise NotImplementedError()
+
+        def update_colormap(self, colormap: ColormapModel) -> 'SurfaceVisualization.PyvistaReference':
+            if colormap.is_uniform:
+                self.dataset.set_active_scalars(None)
+                color = colormap.color.name()
+                self.actor.prop.color = color
+            else:
+                scalar_name = colormap.scalar_name
+                self.dataset.set_active_scalars(scalar_name)
+                scalar_data = self.dataset.point_data[scalar_name]
+                mapper = self.actor.mapper
+                lookup_table = pv.LookupTable(
+                    cmap=colormap.name,
+                    below_range_color=colormap.color_below_range.name(),
+                    above_range_color=colormap.color_above_range.name(),
+                    scalar_range=(colormap.vmin, colormap.vmax),
+                )
+                mapper.set_scalars(scalar_data, scalar_name, cmap=lookup_table)
+                # mapper.array_name = scalar_name
+                mapper.update()
+            return self
+
+        @classmethod
+        def from_plotter_call(
+                cls,
+                visualization: 'SurfaceVisualization',
+                plotter: pv.Plotter
+        ) -> 'SurfaceVisualization.PyvistaReference':
+            raise NotImplementedError()
 
     def __init__(
             self,
@@ -62,121 +107,115 @@ class SurfaceVisualization(VisualizationModel):
     ):
         super().__init__(vertical_transform, plotter_key, parent)
         self.dataset = surface_data
-        self.polydata_reference = self.dataset.get_polydata()
-        self._world_coordinates = copy.deepcopy(self.polydata_reference.points)
-        self._actors = []
-        self.update()
-
-    def update(self) -> 'WireframeSurface.PyvistaReference':
-        self._update_geometry_coordinates()
-        self._update_actor_visibility()
-        if self.properties is not None:
-            self._update_actor_props()
-        return self
+        self.properties: 'SurfaceVisualization.Properties' = None
+        self.colormap: ColormapModel = None
+        self.plotter_handle: 'SurfaceVisualization.PyvistaReference' = None
 
     def set_vertical_offset(self, offset: float) -> 'WireframeSurface':
         super().set_vertical_offset(offset)
-        self._update_geometry_coordinates()
+        if self.plotter_handle is not None:
+            z_new = self._vertical_transform.apply(self.dataset.z)
+            self.plotter_handle.set_vertical_coordinate(z_new)
         return self
 
     def set_vertical_scale(self, scale: float) -> 'WireframeSurface':
         super().set_vertical_scale(scale)
-        self._update_geometry_coordinates()
+        if self.plotter_handle is not None:
+            z_new = self._vertical_transform.apply(self.dataset.z)
+            self.plotter_handle.set_vertical_coordinate(z_new)
         return self
 
-    def _update_geometry_coordinates(self):
-        self.polydata_reference.points[:, -1] = self._vertical_transform.apply(self._world_coordinates[:, -1])
-
-    def set_properties(self, properties: 'WireframeSurface.Properties') -> 'WireframeSurface':
-        super().set_properties(properties)
-        self._update_actor_props()
+    def set_visibility(self, visible: bool):
+        super().set_visibility(visible)
+        if self.plotter_handle is not None:
+            self.plotter_handle.set_visibility(self.is_visible)
         return self
 
-    def _update_actor_props(self):
-        raise NotImplementedError()
-
-    def set_visible(self, visible: bool):
-        super().set_visible(visible)
-        self._update_actor_visibility()
+    def set_properties(self, properties: 'SurfaceVisualization.Properties') -> 'SurfaceVisualization':
+        self.properties = properties
+        if self.plotter_handle is not None:
+            self.plotter_handle.set_properties(properties)
+            self.plotter_handle.update_colormap(properties.colormap)
         return self
 
-    def _update_actor_visibility(self):
-        for actor in self._actors:
-            actor.visibility = self.is_visible
+    def draw(self, plotter: pv.Plotter) -> 'SurfaceVisualization':
+        plotter.suppress_rendering = True
+        # plotter.add_mesh(
+        #     self.get_polydata(),
+        # )
+        self.plotter_handle = self.PyvistaReference.from_plotter_call(self, plotter)
+        z_new = self._vertical_transform.apply(self.dataset.z)
+        # self.plotter_handle.set_vertical_coordinate(z_new)
+        self.plotter_handle.set_visibility(self.is_visible)
+        self.plotter_handle.set_properties(self.properties)
+        self.plotter_handle.update_colormap(self.properties.colormap)
+        plotter.update_bounds_axes()
+        plotter.suppress_rendering = False
+        return self
 
-    def _update_colors(self):
-        colormap = self.properties.color
-        if isinstance(colormap, UniformColormap):
-            self.polydata_reference.set_active_scalars(None)
-            color = colormap.color.name()
-            for actor in self._actors:
-                actor.prop.color = color
-        elif isinstance(colormap, SequentialColormap):
-            cmap = colormap.get_cmap()
-            # self.polydata_reference.set_active_scalars(colormap.scalar_name)
-            scalar_data = self.dataset.scalars[colormap.scalar_name]
-            print(scalar_data.min(), scalar_data.max())
-            for actor in self._actors:
-                actor.mapper.set_scalars(scalar_data, colormap.scalar_name, cmap=cmap)
+    def get_polydata(self) -> pv.PolyData:
+        polydata = self.dataset.get_polydata()
+        polydata.points[:, -1] = self._vertical_transform.apply(self.dataset.z)
+        return polydata
 
 
 class WireframeSurface(SurfaceVisualization):
 
     @dataclass(init=True, repr=False, eq=True)
-    class Properties(object):
+    class Properties(SurfaceVisualization.Properties):
         line_width: float = None
         opacity: float = None
-        color: ColormapModel = None
 
-    def _update_actor_props(self):
-        self._update_colors()
-        for actor in self._actors:
-            actor_props = actor.prop
-            actor_props.line_width = self.properties.line_width
-            actor_props.opacity = self.properties.opacity
+    class PyvistaReference(SurfaceVisualization.PyvistaReference):
 
-    def draw(self, plotter: pv.Plotter) -> 'WireframeSurface.PyvistaReference':
-        actor = plotter.add_mesh(self.polydata_reference, name=self.plotter_key, style='wireframe')
-        self._actors = [actor]
-        self._update_actor_props()
-        self._update_actor_visibility()
-        return self
+        @classmethod
+        def from_plotter_call(
+                cls,
+                visualization: 'WireframeSurface',
+                plotter: pv.Plotter
+        ) -> 'WireframeSurface.PyvistaReference':
+            dataset = visualization.get_polydata()
+            actor = plotter.add_mesh(dataset, style='wireframe', name=visualization.plotter_key, color='k')
+            return cls(dataset, actor)
+
+        def set_properties(self, properties: 'WireframeSurface.Properties') -> 'WireframeSurface.PyvistaReference':
+            actor_props = self.actor.prop
+            actor_props.line_width = properties.line_width
+            actor_props.opacity = properties.opacity
 
 
 class TranslucentSurface(SurfaceVisualization):
 
     @dataclass(init=True, repr=False, eq=True)
-    class Properties(object):
+    class Properties(SurfaceVisualization.Properties):
         opacity: float = None
-        color: QColor = None
         show_edges: bool = None
 
-    def __init__(
-            self,
-            surface_data: SurfaceDataset,
-            vertical_transform: SceneSpaceTransform = None,
-            plotter_key: str = None,
-            parent=None
-    ):
-        self.colormap = None
-        super().__init__(surface_data, vertical_transform, plotter_key, parent)
+    class PyvistaReference(SurfaceVisualization.PyvistaReference):
 
-    def draw(self, plotter: pv.Plotter) -> 'WireframeSurface.PyvistaReference':
-        actor = plotter.add_mesh(self.polydata_reference, name=self.plotter_key, style='surface')
-        self._actors.append(actor)
-        self._update_actor_props()
-        self._update_actor_visibility()
-        return self
+        @classmethod
+        def from_plotter_call(
+                cls,
+                visualization: 'TranslucentSurface',
+                plotter: pv.Plotter
+        ) -> 'TranslucentSurface.PyvistaReference':
+            dataset = visualization.get_polydata()
+            actor = plotter.add_mesh(dataset, style='surface', name=visualization.plotter_key, color='k')
+            return cls(dataset, actor)
 
-    def _update_actor_props(self):
-        self._update_colors()
-        for actor in self._actors:
-            actor_props = actor.prop
-            actor_props.opacity = self.properties.opacity
-            actor_props.show_edges = self.properties.show_edges
+        def set_properties(self, properties: 'TranslucentSurface.Properties') -> 'WireframeSurface.PyvistaReference':
+            actor_props = self.actor.prop
+            actor_props.opacity = properties.opacity
+            actor_props.show_edges = properties.show_edges
             actor_props.edge_color = 'k'
 
 
+class BallSurface(SurfaceVisualization):
+
+    @dataclass(init=True, repr=False, eq=True)
+    class Properties(SurfaceVisualization.Properties):
+        opacity: float = None
+        point_size: float = None
 
 
 

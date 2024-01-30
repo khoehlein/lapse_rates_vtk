@@ -46,16 +46,16 @@ class WireframeSurfaceHandles(SurfaceVisMethodView):
 
     def _set_layout(self):
         layout = QFormLayout()
-        layout.addRow(QLabel('Line color:'), self.menu_color_selection)
+        layout.addRow(QLabel('Color:'), self.menu_color_selection)
         layout.addRow(QLabel('Opacity:'), self.spinner_opacity)
         layout.addRow(QLabel('Line width:'), self.spinner_line_width)
         self.setLayout(layout)
 
     def get_settings(self):
         return WireframeSurface.Properties(
+            self.menu_color_selection.get_colormap(),
             self.spinner_line_width.value(),
             self.spinner_opacity.value(),
-            self.menu_color_selection.get_colormap(),
         )
 
 
@@ -85,8 +85,8 @@ class TranslucentSurfaceHandles(SurfaceVisMethodView):
     def get_settings(self):
         logging.info('Reading translucent surface properties')
         return TranslucentSurface.Properties(
-            self.spinner_opacity.value(),
             self.menu_color_selection.get_colormap(),
+            self.spinner_opacity.value(),
             self.checkbox_show_edges.isChecked()
         )
 

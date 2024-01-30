@@ -66,7 +66,7 @@ class UniformNeighborhoodGraph(NeighborhoodGraph):
 
     def _compute_links(self) -> pd.DataFrame:
         flat_locids = np.repeat(np.arange(len(self.locations)), self.uniform_size)
-        return pd.DataFrame({'location': flat_locids, 'neighbor': self.neighbors.ravel()})
+        return pd.DataFrame({'location': flat_locids, 'neighbor': self.neighbors.ravel(), 'distance': self.distances.ravel()})
 
     def _compute_distance_stats(self):
         self.min_distance = self.distances[0]
@@ -93,7 +93,8 @@ class RadialNeighborhoodGraph(NeighborhoodGraph):
             counter += num_links
         return pd.DataFrame({
             'location': flat_locids,
-            'neighbor': np.fromiter(chain.from_iterable(self.neighbors), count=self.total_links, dtype=int)
+            'neighbor': np.fromiter(chain.from_iterable(self.neighbors), count=self.total_links, dtype=int),
+            'distance': np.fromiter(chain.from_iterable(self.distances), count=self.total_links, dtype=float)
         })
 
     def _compute_index_stats(self):

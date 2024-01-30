@@ -82,8 +82,8 @@ class ScalarColormapSelector(QWidget):
         self.spinner_center = QDoubleSpinBox()
         self.spinner_center.setPrefix('center: ')
         self.spinner_vmin.setMinimum(-99999)
-        self.spinner_vmax.valueChanged.connect(self.spinner_vmin.setMaximum)
         self.spinner_vmax.setMaximum(99999)
+        self.spinner_vmax.valueChanged.connect(self.spinner_vmin.setMaximum)
         self.spinner_vmin.valueChanged.connect(self.spinner_vmax.setMinimum)
         self.spinner_vmin.valueChanged.connect(self.spinner_center.setMinimum)
         self.spinner_vmax.valueChanged.connect(self.spinner_center.setMaximum)
@@ -120,16 +120,16 @@ class ScalarColormapSelector(QWidget):
                 self.combo_cmap_name.currentText(),
                 self.spinner_vmin.value(),
                 self.spinner_vmax.value(),
-                color_below_min=self.button_color_below.current_color,
-                color_above_max=self.button_color_above.current_color,
+                color_below_range=self.button_color_below.current_color,
+                color_above_range=self.button_color_above.current_color,
             )
         return DivergingColormap(
             self.combo_cmap_name.currentText(),
             self.spinner_vmin.value(),
             self.spinner_vmax.value(),
             self.spinner_center.value(),
-            color_below_min=self.button_color_below.current_color,
-            color_above_max=self.button_color_above.current_color,
+            color_below_range=self.button_color_below.current_color,
+            color_above_range=self.button_color_above.current_color,
         )
 
     def _set_layout(self):
@@ -145,10 +145,11 @@ class ScalarColormapSelector(QWidget):
 
     def load_defaults(self, cmap):
         self.combo_cmap_name.setCurrentText(cmap.name)
+        self.spinner_vmin.setMaximum(float(cmap.vmax))
         self.spinner_vmin.setValue(float(cmap.vmin))
         self.spinner_vmax.setValue(float(cmap.vmax))
-        self.button_color_below.current_color = cmap.color_below_min
-        self.button_color_above.current_color = cmap.color_above_max
+        self.button_color_below.current_color = cmap.color_below_range
+        self.button_color_above.current_color = cmap.color_above_range
         if isinstance(cmap, DivergingColormap):
             self.spinner_center.setValue(float(cmap.center))
         else:

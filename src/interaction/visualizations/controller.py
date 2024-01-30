@@ -34,7 +34,7 @@ class VisualizationController(QObject):
     def _handle_visibility_change(self):
         visible = self.settings_view.checkbox_visibility.isChecked()
         visualization = self.scene_model.visuals[self.key]
-        visualization.set_visible(visible)
+        visualization.set_visibility(visible)
 
     def _handle_vis_method_change(self):
         surface_data = self.scene_model.visuals[self.key].dataset
@@ -60,12 +60,13 @@ class VisualizationController(QObject):
             raise NotImplementedError()
         visualization.set_properties(vis_properties)
         visualization.set_vertical_scale(4000.)
-        visualization.set_visible(self.settings_view.get_visibility())
+        visualization.set_visibility(self.settings_view.get_visibility())
         self.scene_model.visuals.update({self.key: visualization})
         return visualization
 
     def update_visualization_data(self, surface_data: SurfaceDataset):
-        return self.build_visualization(surface_data)
+        self.build_visualization(surface_data)
+        self.visualization_changed.emit(self.key)
 
 
 class SceneController(QObject):
@@ -83,7 +84,11 @@ class SceneController(QObject):
         self.pipeline_model = pipeline_model
         self.render_view = render_view
         self.vis_controllers = {
-            key: VisualizationController(key, self.settings_view.vis_settings[key], scene_model)
+            key: VisualizationController(
+                key,
+                self.settings_view.vis_settings[key],
+                scene_model
+            )
             for key in self.settings_view.keys()
         }
         for key in self.vis_controllers:
@@ -108,6 +113,7 @@ class SceneController(QObject):
 
     def _on_visualization_changed(self, key: str):
         self._scene_model.visuals[key].draw(self.plotter)
+        self.plotter.render()
 
     def _handle_domain_change(self):
         return self.reset_scene()

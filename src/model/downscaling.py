@@ -66,6 +66,7 @@ class LapseRateDownscaler(DownscalerModel):
         logging.info('Computing lapse rate at sample locations')
         num_links = samples.source_reference.num_links
         site_id_at_link = samples.source_reference.links['location'].values
+        distance_at_link = samples.source_reference.links['distance'].values
         t2m_at_site = samples.data[0].t2m.values
         t2m_site_at_link = t2m_at_site[site_id_at_link]
         z_at_site = samples.data[0].z.values
@@ -73,17 +74,32 @@ class LapseRateDownscaler(DownscalerModel):
         split_indices = np.unique(np.cumsum(num_links))
         dt_around_site = np.split(samples.data[1].t2m.values - t2m_site_at_link, split_indices)
         dz_around_site = np.split(samples.data[1].z.values - z_site_at_link, split_indices)
+        distance_around_site = np.split(distance_at_link, split_indices)
         lapse_rates = np.full_like(t2m_at_site, - 0.0065)
         mask = num_links > 0
         count = int(np.sum(mask))
         lapse_rates[mask] = np.fromiter(
-            (self._estimate_lapse_rate(dt, dz) for dt, dz in zip(dt_around_site, dz_around_site)),
+            (
+                self._estimate_lapse_rate(dt, dz, d)
+                for dt, dz, d in zip(dt_around_site, dz_around_site, distance_around_site)
+            ),
             count=count, dtype=float
         )
         source.add_scalar_field(lapse_rates, 'lapse_rate')
         source.add_scalar_field(t2m_at_site, 't2m_o1280')
         source.add_scalar_field(z_at_site, 'z_o1280')
         return samples.locations, t2m_at_site, z_at_site, lapse_rates
+
+    def _estimate_lapse_rate(self, dt, dz, d):
+        if len(dt) < self.min_num_neighbors:
+            return self.default_lapse_rate
+        lm = LinearRegression(fit_intercept=self.fit_intercept)
+        if self.use_weights:
+            weights = np.exp(-(d / (self.weight_scale_km * 1000.)) ** 2.)
+        else:
+            weights = None
+        lm.fit(dz[:, None], dt, sample_weight=weights)
+        return lm.coef_[0]
 
     def _interpolate_to_target_locations(self, output, target: SurfaceDataset) -> SurfaceDataset:
         logging.info('Interpolating data to target locations')
@@ -99,12 +115,8 @@ class LapseRateDownscaler(DownscalerModel):
         target.add_scalar_field(lapse_rate_at_target, 'lapse_rate')
         target.add_scalar_field(t2m_lowres_at_target, 't2m_o1280')
         target.add_scalar_field(t2m_highres_at_target, 't2m_o8000')
+        target.add_scalar_field(t2m_highres_at_target - t2m_lowres_at_target, 't2m_difference')
         target.add_scalar_field(z_lowres_at_target, 'z_o1280')
+        target.add_scalar_field(target.z, 'z_o8000')
+        target.add_scalar_field(target.z - z_lowres_at_target, 'z_difference')
         return target
-
-    def _estimate_lapse_rate(self, dt, dz):
-        if len(dt) < self.min_num_neighbors:
-            return self.default_lapse_rate
-        lm = LinearRegression(fit_intercept=self.fit_intercept)
-        lm.fit(dz[:, None], dt)
-        return lm.coef_[0]
