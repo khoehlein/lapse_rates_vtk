@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import QDockWidget
 import pyvista as pv
 
 from src.interaction.domain_selection.controller import DownscalingController
+from src.interaction.plotter_controls.controller import PlotterController
 from src.interaction.pyvista_display.view import PyvistaView
 from src.interaction.settings_menu import SettingsViewTabbed
 from src.interaction.visualizations.controller_new import VisualizationController, SceneController
@@ -70,6 +71,10 @@ class MainView(MainWindow):
             self.downscaling_pipeline,
             self.scene_model,
             parent=self
+        )
+        self.plotter_controller = PlotterController(
+            self.settings_menu.general_settings.plotter_settings,
+            self.render_view.plotter, parent=self
         )
 
     def _build_main_menu(self):

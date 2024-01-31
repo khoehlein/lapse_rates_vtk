@@ -10,7 +10,6 @@ from src.model.visualization.colors import UniformColormap, SequentialColormap, 
 class SelectColorButton(QPushButton):
 
     color_changed = pyqtSignal(QColor)
-    size_changed = pyqtSignal(QSize)
 
     def __init__(self, color: QColor = None, parent=None):
         super().__init__(parent)
@@ -24,6 +23,7 @@ class SelectColorButton(QPushButton):
     def set_current_color(self, color: QColor):
         self.current_color = color
         self._update_button_icon()
+        self.color_changed.emit(color)
         return self
 
     def resizeEvent(self, a0=None):

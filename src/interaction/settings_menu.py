@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QDockWidget, QScrollArea, QWidget, QVBoxLayout, QTab
 
 from src.interaction.domain_selection.view import DomainSelectionView
 from src.interaction.model_selection.view import DownscalingSettingsView, NeighborhoodLookupView
+from src.interaction.plotter_controls.view import PlotterSettingsView
 from src.interaction.view_settings.view import ViewSettingsView
 from src.interaction.visualizations.view import SceneSettingsView
 from src.interaction.visualizations.view_new import VisualizationSettingsView
@@ -15,11 +16,11 @@ class GeneralSettingsView(QTabWidget):
         self.domain_settings = DomainSelectionView(self)
         self.neighborhood_settings = NeighborhoodLookupView(parent=self)
         self.downscaler_settings = DownscalingSettingsView(parent=self)
-        self.view_settings = ViewSettingsView(self)
+        self.plotter_settings = PlotterSettingsView(parent=self)
+        self.addTab(self._to_tab_widget(self.plotter_settings), 'View')
         self.addTab(self._to_tab_widget(self.domain_settings), 'Domain')
         self.addTab(self._to_tab_widget(self.neighborhood_settings), 'Neighborhood')
         self.addTab(self._to_tab_widget(self.downscaler_settings), 'Downscaling')
-        self.addTab(self._to_tab_widget(self.view_settings), 'View')
 
     def _to_tab_widget(self, widget: QWidget):
         wrapper = QWidget(self)
