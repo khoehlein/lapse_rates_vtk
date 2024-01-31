@@ -12,6 +12,7 @@ class PyvistaView(QWidget):
         vlayout = QVBoxLayout()
         # add the pyvista interactor object
         self.plotter = QtInteractor(self.frame)
+        self.plotter.enable_lightkit()
         vlayout.addWidget(self.plotter.interactor)
         self.frame.setLayout(vlayout)
         self.vertical_scale = 1.

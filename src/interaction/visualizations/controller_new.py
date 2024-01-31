@@ -1,28 +1,28 @@
 import logging
 
 from PyQt5.QtCore import QObject, pyqtSignal
-
-from src.interaction.domain_selection.controller import DownscalingController
+import pyvista as pv
 from src.interaction.pyvista_display.view import PyvistaView
-from src.interaction.visualizations.view import SurfaceVisSettingsView, SceneSettingsView
+from src.interaction.visualizations.view_new import VisualizationSettingsView
 from src.model.backend_model import DownscalingPipeline
 from src.model.geometry import SurfaceDataset
-from src.model.visualization.scene_model import SceneModel
-from src.model.visualization.visualizations import WireframeSurface, SurfaceVisualization, TranslucentSurface
+from src.model.visualization.scene_model_new import SceneModel, WireframeSurface, TranslucentSurface, PointsSurface, \
+    SurfaceGeometry
 
 
 class VisualizationController(QObject):
 
     visualization_changed = pyqtSignal(str)
 
-    def __init__(self, key: str, settings_view: SurfaceVisSettingsView, scene_model: SceneModel, parent=None):
+    def __init__(self, key: str, settings_view: VisualizationSettingsView, scene_model: SceneModel, parent=None):
         super().__init__(parent)
         self.key = str(key)
         self.settings_view = settings_view
         self.scene_model = scene_model
         self.settings_view.vis_properties_changed.connect(self._handle_vis_properties_change)
-        self.settings_view.vis_method_changed.connect(self._handle_vis_method_change)
-        self.settings_view.visibility_changed.connect(self._handle_visibility_change)
+        self.settings_view.representation_changed.connect(self._handle_vis_method_change)
+        # self.settings_view.vis_method_changed.connect(self._handle_vis_method_change)
+        # self.settings_view.visibility_changed.connect(self._handle_visibility_change)
 
     def _handle_vis_properties_change(self):
         logging.info('Handling vis properties change')
@@ -37,23 +37,31 @@ class VisualizationController(QObject):
         visualization.set_visibility(visible)
 
     def _handle_vis_method_change(self):
-        surface_data = self.scene_model.visuals[self.key].dataset
-        self.build_visualization(surface_data)
+        visualisation = self.scene_model.visuals[self.key]
+        host = visualisation.clear_host()
+        surface_data = visualisation._dataset
+        self.build_visualization(surface_data, host)
         self.visualization_changed.emit(self.key)
 
-    def build_visualization(self, surface_data: SurfaceDataset) -> SurfaceVisualization:
+    def build_visualization(self, surface_data: SurfaceDataset, plotter: pv.Plotter) -> SurfaceGeometry:
         logging.info('Building visualization for {}'.format(self.key))
         vis_properties = self.settings_view.get_vis_properties()
         if isinstance(vis_properties, WireframeSurface.Properties):
             visualization = WireframeSurface(
                 surface_data,
-                plotter_key=self.key,
+                visual_key=self.key,
                 parent=self.scene_model
             )
         elif isinstance(vis_properties, TranslucentSurface.Properties):
             visualization = TranslucentSurface(
                 surface_data,
-                plotter_key=self.key,
+                visual_key=self.key,
+                parent=self.scene_model
+            )
+        elif isinstance(vis_properties, PointsSurface.Properties):
+            visualization = PointsSurface(
+                surface_data,
+                visual_key=self.key,
                 parent=self.scene_model
             )
         else:
@@ -61,6 +69,7 @@ class VisualizationController(QObject):
         visualization.set_properties(vis_properties)
         visualization.set_vertical_scale(4000.)
         visualization.set_visibility(self.settings_view.get_visibility())
+        visualization.set_host(plotter)
         self.scene_model.visuals.update({self.key: visualization})
         return visualization
 
@@ -73,7 +82,7 @@ class SceneController(QObject):
 
     def __init__(
             self,
-            settings_view: SceneSettingsView, render_view: PyvistaView,
+            settings_view: VisualizationSettingsView, render_view: PyvistaView,
             pipeline_model: DownscalingPipeline, scene_model: SceneModel,
             parent=None,
     ):
@@ -81,16 +90,12 @@ class SceneController(QObject):
         self.settings_view = settings_view
         self.pipeline_model = pipeline_model
         self.render_view = render_view
-        self.vis_controllers = {
-            key: VisualizationController(
-                key,
-                self.settings_view.vis_settings[key],
-                scene_model
-            )
-            for key in self.settings_view.keys()
-        }
-        for key in self.vis_controllers:
-            self.vis_controllers[key].visualization_changed.connect(self._on_visualization_changed)
+        self.vis_controller = VisualizationController(
+            'surface_o8000',
+            self.settings_view,
+            scene_model
+        )
+        # self.vis_controller.visualization_changed.connect(self._on_visualization_changed)
         self._scene_model = scene_model
         self.reset_scene()
 
@@ -101,9 +106,7 @@ class SceneController(QObject):
     def reset_scene(self):
         self.plotter.clear()
         domain_data = self.pipeline_model.get_output()
-        for controller in self.vis_controllers.values():
-            visualization = controller.build_visualization(domain_data[controller.key])
-            visualization.draw(self.plotter)
+        visualization = self.vis_controller.build_visualization(domain_data['surface_o8000'], self.plotter)
         self.plotter.render()
         return self
 

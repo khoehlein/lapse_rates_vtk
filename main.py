@@ -8,8 +8,9 @@ import pyvista as pv
 from src.interaction.domain_selection.controller import DownscalingController
 from src.interaction.pyvista_display.view import PyvistaView
 from src.interaction.settings_menu import SettingsViewTabbed
-from src.interaction.visualizations.controller import SceneController
+from src.interaction.visualizations.controller_new import VisualizationController, SceneController
 from src.model.backend_model import DownscalingPipeline
+from src.model.data_store.dummy import DummyPipeline, DummyController
 from src.model.data_store.world_data import WorldData
 from src.model.visualization.scene_model import SceneModel
 
@@ -52,20 +53,22 @@ class MainView(MainWindow):
         self.signal_close.connect(self.render_view.plotter.close)
 
     def _build_downscaling_pipeline(self):
-        self.data_store = WorldData.from_config_file(CONFIG_FILE)
-        self.downscaling_pipeline = DownscalingPipeline(self.data_store)
-        self.downscaling_controller = DownscalingController(
-            self.settings_menu, self.render_view,
-            self.downscaling_pipeline, parent=self
-        )
+        # self.data_store = WorldData.from_config_file(CONFIG_FILE)
+        # self.downscaling_pipeline = DownscalingPipeline(self.data_store)
+        # self.downscaling_controller = DownscalingController(
+        #     self.settings_menu, self.render_view,
+        #     self.downscaling_pipeline, parent=self
+        # )
+        self.downscaling_pipeline = DummyPipeline()
+        self.downscaling_controller = DummyController(self.downscaling_pipeline)
 
     def _build_vis_pipeline(self):
         self.scene_model = SceneModel(self)
         self.scene_controller = SceneController(
             self.settings_menu.visualization_settings,
             self.render_view,
-            self.downscaling_controller,
-            self.downscaling_pipeline, self.scene_model,
+            self.downscaling_pipeline,
+            self.scene_model,
             parent=self
         )
 

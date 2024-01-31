@@ -12,8 +12,10 @@ class SelectColorButton(QPushButton):
     color_changed = pyqtSignal(QColor)
     size_changed = pyqtSignal(QSize)
 
-    def __init__(self, color: QColor, parent=None):
+    def __init__(self, color: QColor = None, parent=None):
         super().__init__(parent)
+        if color is None:
+            color = QColor(0, 0, 0)
         self.current_color = color
         # self.display_button = QToolButton(self)
         self._update_button_icon()

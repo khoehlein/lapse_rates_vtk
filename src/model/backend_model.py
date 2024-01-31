@@ -1,13 +1,10 @@
 import logging
 
-import numpy as np
 from PyQt5.QtCore import QObject
 
-from src.interaction.pyvista_display.view import PyvistaView
-from src.interaction.settings_menu import SettingsViewTabbed
-from src.model.data_store.world_data import WorldData, DomainData
+from src.model.data_store.world_data import WorldData
 from src.model.downscaling import DownscalerModel, LapseRateDownscalerProperties, LapseRateDownscaler
-from src.model.geometry import DomainBounds, SurfaceDataset, Coordinates, lat_lon_system, LocationBatch, TriangleMesh
+from src.model.geometry import DomainBounds
 from src.model.neighborhood_lookup.interface import NeighborhoodLookupModel
 from src.model.neighborhood_lookup.knn_lookup import KNNNeighborhoodProperties, KNNNeighborhoodLookup
 from src.model.neighborhood_lookup.radial_lookup import RadialNeighborhoodProperties, RadialNeighborhoodLookup

@@ -337,7 +337,7 @@ class OctahedralGrid(object):
         counter += num_nodes
         return vertices
 
-    def get_subgrid(self, bounds: DomainBounds):
+    def get_subgrid(self, bounds: DomainBounds) -> 'TriangleMesh':
         circle_latitudes = _get_legendre_latitudes(self.degree)
         latitudes_in_bounds = np.argwhere(np.logical_and(circle_latitudes >= bounds.latitude.min, circle_latitudes <= bounds.latitude.max)).ravel()
         first_latitude = max(0, latitudes_in_bounds[0] - 1)
