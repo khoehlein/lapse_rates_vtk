@@ -108,6 +108,12 @@ _keyword_adapter = KeywordAdapter(
 )
 
 
+class GeometryStyle(Enum):
+    WIREFRAME = 'wireframe'
+    SURFACE = 'surface'
+    POINTS = 'points'
+
+
 class MeshVisualizationModel(VisualizationModel):
 
     class ActorKey(Enum):
@@ -124,11 +130,12 @@ class MeshVisualizationModel(VisualizationModel):
         specular_power: float = None
         lighting: bool = None
 
-    def __init__(self, dataset: SurfaceDataset, visual_key: str = None, parent=None):
+    def __init__(self, dataset: SurfaceDataset, style: GeometryStyle, visual_key: str = None, parent=None):
         super().__init__(visual_key, parent)
         self._dataset = dataset
         self._mesh = dataset.get_polydata()
         self._vertical_transform = AffineLinear.identity()
+        self._geometry_style = style
 
     def set_vertical_scale(self, scale: float):
         self._vertical_transform.scale = float(scale)
@@ -137,12 +144,13 @@ class MeshVisualizationModel(VisualizationModel):
 
     def _write_to_host(self):
         property_kws = _keyword_adapter.read(self._properties)
+        color_kws = self._get_color_kws()
         plotter_kws = self._get_plotter_kws()
-        actor = self._host.add_mesh(self._mesh, **property_kws, **plotter_kws, reset_camera=True)
+        actor = self._host.add_mesh(self._mesh, **property_kws, **plotter_kws, **color_kws)
         self._host_actors[self.ActorKey.MESH] = actor
 
     def _get_plotter_kws(self) -> Dict[str, Any]:
-        return {'name': self.key}
+        return {'name': self.key, 'reset_camera': True, 'style': self._geometry_style.value}
 
     def _update_actor_properties(self):
         actor = self._host_actors[self.ActorKey.MESH]
@@ -151,70 +159,114 @@ class MeshVisualizationModel(VisualizationModel):
         for key, value in new_actor_props.items():
             setattr(actor_props, key, value)
 
+    def set_color(self, properties) -> 'MeshVisualizationModel':
+        raise NotImplementedError()
 
-class GeometryStyle(Enum):
-    WIREFRAME = 'wireframe'
-    SURFACE = 'surface'
-    POINTS = 'points'
+    def _get_color_kws(self) -> Dict[str, Any]:
+        raise NotImplementedError()
 
 
-class SurfaceGeometry(MeshVisualizationModel):
+@dataclass
+class UniformColorMixin():
+    color: str = None
+    opacity: float = None
+
+
+class GeometryVisualizationModel(MeshVisualizationModel):
 
     @dataclass
-    class Properties(MeshVisualizationModel.Properties):
-        color: str = None
-        opacity: float = None
+    class ColorProperties(UniformColorMixin):
+        pass
 
     def __init__(self, dataset: SurfaceDataset, style: GeometryStyle, visual_key: str = None, parent=None):
-        super().__init__(dataset, visual_key, parent)
-        self._geometry_style = style
+        super().__init__(dataset, style, visual_key, parent)
+        self._color_properties = None
 
-    def _get_plotter_kws(self) -> Dict[str, Any]:
-        kws = super()._get_plotter_kws()
-        kws.update({'style': self._geometry_style.value})
+    def set_color(self, properties: 'GeometryVisualizationModel.ColorProperties') -> 'GeometryVisualizationModel':
+        self._color_properties = properties
+        if self._host is not None:
+            self._update_actor_color()
+        return self
+
+    def _update_actor_color(self):
+        actor = self._host_actors[self.ActorKey.MESH]
+        actor_props = actor.prop
+        new_actor_props = _keyword_adapter.read(self._color_properties)
+        for key, value in new_actor_props.items():
+            setattr(actor_props, key, value)
+
+    def _get_color_kws(self) -> Dict[str, Any]:
+        if self._color_properties is None:
+            return {}
+        kws = _keyword_adapter.read(self._color_properties)
         return kws
 
 
-class WireframeSurface(SurfaceGeometry):
+@dataclass
+class WireframeMixin(object):
+    line_width: float = None
+    render_lines_as_tubes: bool = None
+
+
+@dataclass
+class TranslucentSurfaceMixin(object):
+    show_edges: bool = None
+    edge_color: str = None
+    edge_opacity: float = None
+
+
+@dataclass
+class PointsSurfaceMixin(object):
+    point_size: float = None
+    render_points_as_spheres: bool = None
+
+
+class WireframeGeometry(GeometryVisualizationModel):
 
     @dataclass
-    class Properties(SurfaceGeometry.Properties):
-        line_width: float = None
-        render_lines_as_tubes: bool = None
+    class Properties(MeshVisualizationModel.Properties, UniformColorMixin, WireframeMixin):
+        pass
 
     def __init__(self, dataset: SurfaceDataset, visual_key: str = None, parent=None):
         super().__init__(dataset, GeometryStyle.WIREFRAME, visual_key, parent)
 
-    def set_properties(self, properties: 'WireframeSurface.Properties') -> 'VisualizationModel':
+    def set_properties(self, properties: 'WireframeGeometry.Properties') -> 'VisualizationModel':
         return super().set_properties(properties)
 
 
-class TranslucentSurface(SurfaceGeometry):
+class SurfaceGeometry(GeometryVisualizationModel):
 
     @dataclass
-    class Properties(SurfaceGeometry.Properties):
-        show_edges: bool = None
-        edge_color: str = None
-        edge_opacity: float = None
+    class Properties(MeshVisualizationModel.Properties, UniformColorMixin, TranslucentSurfaceMixin):
+        pass
 
     def __init__(self, dataset: SurfaceDataset, visual_key: str = None, parent=None):
         super().__init__(dataset, GeometryStyle.SURFACE, visual_key, parent)
 
-    def set_properties(self, properties: 'TranslucentSurface.Properties') -> 'VisualizationModel':
+    def set_properties(self, properties: 'SurfaceGeometry.Properties') -> 'VisualizationModel':
         return super().set_properties(properties)
 
 
-class PointsSurface(SurfaceGeometry):
+class PointsGeometry(GeometryVisualizationModel):
+
     @dataclass
-    class Properties(SurfaceGeometry.Properties):
-        point_size: float = None
-        render_points_as_spheres: bool = None
+    class Properties(MeshVisualizationModel.Properties, UniformColorMixin, PointsSurfaceMixin):
+        pass
 
     def __init__(self, dataset: SurfaceDataset, visual_key: str = None, parent=None):
         super().__init__(dataset, GeometryStyle.POINTS, visual_key, parent)
 
-    def set_properties(self, properties: 'PointsSurface.Properties') -> 'VisualizationModel':
+    def set_properties(self, properties: 'PointsGeometry.Properties') -> 'VisualizationModel':
         return super().set_properties(properties)
+
+
+class ScalarFieldModel(MeshVisualizationModel):
+
+    def __init__(self, dataset: SurfaceDataset, style: GeometryStyle, visual_key: str = None, parent=None):
+        super().__init__(dataset, style, visual_key, parent)
+        self._colormap = None
+        self._lookup_reference = None
+
 
 
 class SceneModel(QObject):

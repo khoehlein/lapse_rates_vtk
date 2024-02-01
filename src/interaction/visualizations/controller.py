@@ -7,7 +7,7 @@ import pyvista as pv
 from src.interaction.visualizations.view import VisualizationSettingsView, DataConfiguration
 from src.model.backend_model import DownscalingPipeline
 from src.model.geometry import SurfaceDataset
-from src.model.visualization.scene_model import SceneModel, WireframeSurface, TranslucentSurface, PointsSurface, \
+from src.model.visualization.scene_model import SceneModel, WireframeGeometry, SurfaceGeometry, PointsGeometry, \
     SurfaceGeometry, VisualizationModel
 
 
@@ -37,12 +37,12 @@ class VisualizationController(QObject):
         vis_properties = self.settings_view.get_vis_properties()
         source_properties = self.settings_view.get_source_properties()
         surface_data = self._select_source_data(domain_data, source_properties)
-        if isinstance(vis_properties, WireframeSurface.Properties):
-            visualization = WireframeSurface(*surface_data, visual_key=self.key)
-        elif isinstance(vis_properties, TranslucentSurface.Properties):
-            visualization = TranslucentSurface(*surface_data, visual_key=self.key)
-        elif isinstance(vis_properties, PointsSurface.Properties):
-            visualization = PointsSurface(*surface_data, visual_key=self.key)
+        if isinstance(vis_properties, WireframeGeometry.Properties):
+            visualization = WireframeGeometry(*surface_data, visual_key=self.key)
+        elif isinstance(vis_properties, SurfaceGeometry.Properties):
+            visualization = SurfaceGeometry(*surface_data, visual_key=self.key)
+        elif isinstance(vis_properties, PointsGeometry.Properties):
+            visualization = PointsGeometry(*surface_data, visual_key=self.key)
         else:
             raise NotImplementedError()
         visualization.set_properties(vis_properties)

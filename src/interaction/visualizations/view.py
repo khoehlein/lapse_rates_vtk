@@ -9,7 +9,7 @@ import pyvista as pv
 from pyvista.plotting.opts import InterpolationType
 
 from src.interaction.background_color.view import SelectColorButton
-from src.model.visualization.scene_model import ShadingMethod, WireframeSurface, TranslucentSurface, PointsSurface
+from src.model.visualization.scene_model import ShadingMethod, WireframeGeometry, SurfaceGeometry, PointsGeometry
 
 
 class LightingSettingsView(QWidget):
@@ -97,7 +97,7 @@ class LightingSettingsView(QWidget):
 
 
 class WireframeSettingsView(QWidget):
-    REPRESENTATION_CLASS = WireframeSurface.Properties
+    REPRESENTATION_CLASS = WireframeGeometry.Properties
 
     representation_changed = pyqtSignal()
 
@@ -146,7 +146,7 @@ class WireframeSettingsView(QWidget):
 
 
 class SurfaceSettingsView(QWidget):
-    REPRESENTATION_CLASS = TranslucentSurface.Properties
+    REPRESENTATION_CLASS = SurfaceGeometry.Properties
 
     representation_changed = pyqtSignal()
 
@@ -208,7 +208,7 @@ class SurfaceSettingsView(QWidget):
 
 
 class PointsSettingsView(QWidget):
-    REPRESENTATION_CLASS = PointsSurface.Properties
+    REPRESENTATION_CLASS = PointsGeometry.Properties
 
     representation_changed = pyqtSignal()
 
