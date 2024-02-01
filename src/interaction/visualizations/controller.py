@@ -7,7 +7,7 @@ import pyvista as pv
 from src.interaction.visualizations.view import VisualizationSettingsView, DataConfiguration
 from src.model.backend_model import DownscalingPipeline
 from src.model.geometry import SurfaceDataset
-from src.model.visualization.scene_model_new import SceneModel, WireframeSurface, TranslucentSurface, PointsSurface, \
+from src.model.visualization.scene_model import SceneModel, WireframeSurface, TranslucentSurface, PointsSurface, \
     SurfaceGeometry, VisualizationModel
 
 

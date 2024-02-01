@@ -13,7 +13,7 @@ from src.interaction.visualizations.controller import VisualizationController, S
 from src.model.backend_model import DownscalingPipeline
 from src.model.data_store.dummy import DummyPipeline, DummyController
 from src.model.data_store.world_data import WorldData
-from src.model.visualization.scene_model_new import SceneModel
+from src.model.visualization.scene_model import SceneModel
 
 logging.basicConfig(level=logging.INFO)
 

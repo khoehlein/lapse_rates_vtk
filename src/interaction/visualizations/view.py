@@ -9,7 +9,7 @@ import pyvista as pv
 from pyvista.plotting.opts import InterpolationType
 
 from src.interaction.background_color.view import SelectColorButton
-from src.model.visualization.scene_model_new import ShadingMethod, WireframeSurface, TranslucentSurface, PointsSurface
+from src.model.visualization.scene_model import ShadingMethod, WireframeSurface, TranslucentSurface, PointsSurface
 
 
 class LightingSettingsView(QWidget):
