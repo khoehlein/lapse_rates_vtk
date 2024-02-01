@@ -149,7 +149,7 @@ class MeshVisualizationModel(VisualizationModel):
         new_actor_props = _keyword_adapter.read(self._properties)
         for key, value in new_actor_props.items():
             setattr(actor_props, key, value)
-        print(actor.prop.interpolation)
+
 
 class GeometryStyle(Enum):
     WIREFRAME = 'wireframe'
@@ -223,13 +223,36 @@ class SceneModel(QObject):
         self.host = host
         self.visuals: Dict[str, VisualizationModel] = {}
 
-    def add_visualization(self, visualization: VisualizationModel) -> 'SceneModel':
+    def add_visualization(self, visualization: VisualizationModel) -> VisualizationModel:
+        return self._add_visualization(visualization)
+
+    def add_or_replace_visualization(self, visualization: VisualizationModel):
+        key = visualization.key
+        if key in self.visuals:
+            self.remove_visualization(key)
+        self._add_visualization(visualization)
+        return visualization
+
+    def replace_visualization(self, visualization: VisualizationModel):
+        key = visualization.key
+        assert key in self.visuals
+        self.remove_visualization(key)
+        self._add_visualization(visualization)
+        return visualization
+
+    def _add_visualization(self, visualization: VisualizationModel) -> 'SceneModel':
         self.visuals[visualization.key] = visualization
         visualization.set_host(self.host)
+        return visualization
 
-    def update_visualization(self, visual_key: str, update: VisualizationUpdateModel) -> bool:
-        visualization = self.visuals.get(visual_key)
-        if visualization is None:
-            return False
-        return visualization.update(update)
+    def remove_visualization(self, key: str):
+        if key in self.visuals:
+            visualization = self.visuals[key]
+            visualization.clear_host()
+            del self.visuals[key]
+
+    def reset(self):
+        self.visuals.clear()
+        self.host.clear_actors()
+        self.host.scalar_bars.clear()
 

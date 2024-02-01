@@ -9,11 +9,11 @@ from src.interaction.domain_selection.controller import DownscalingController
 from src.interaction.plotter_controls.controller import PlotterController
 from src.interaction.pyvista_display.view import PyvistaView
 from src.interaction.settings_menu import SettingsViewTabbed
-from src.interaction.visualizations.controller_new import VisualizationController, SceneController
+from src.interaction.visualizations.controller import VisualizationController, SceneController
 from src.model.backend_model import DownscalingPipeline
 from src.model.data_store.dummy import DummyPipeline, DummyController
 from src.model.data_store.world_data import WorldData
-from src.model.visualization.scene_model import SceneModel
+from src.model.visualization.scene_model_new import SceneModel
 
 logging.basicConfig(level=logging.INFO)
 
@@ -64,18 +64,14 @@ class MainView(MainWindow):
         self.downscaling_controller = DummyController(self.downscaling_pipeline)
 
     def _build_vis_pipeline(self):
-        self.scene_model = SceneModel(self)
-        self.scene_controller = SceneController(
-            self.settings_menu.visualization_settings,
-            self.render_view,
-            self.downscaling_pipeline,
-            self.scene_model,
-            parent=self
-        )
         self.plotter_controller = PlotterController(
             self.settings_menu.general_settings.plotter_settings,
             self.render_view.plotter, parent=self
         )
+        self.scene_model = SceneModel(self.render_view.plotter, parent=self)
+        self.scene_controller = SceneController(self.downscaling_pipeline, self.scene_model, parent=self)
+        self.scene_controller.register_settings_view(self.settings_menu.visualization_settings)
+        self.scene_controller.reset_scene()
 
     def _build_main_menu(self):
         # simple menu to demo functions

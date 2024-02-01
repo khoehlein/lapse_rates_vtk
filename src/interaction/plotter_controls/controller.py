@@ -1,5 +1,9 @@
+import logging
+
 from PyQt5.QtCore import QObject
 import pyvista as pv
+from PyQt5.QtGui import QColor
+
 from src.interaction.plotter_controls.view import PlotterSettingsView
 
 
@@ -8,103 +12,88 @@ class PlotterController(QObject):
     def __init__(self, plotter_settings: PlotterSettingsView, plotter: pv.Plotter, parent=None):
         super().__init__(parent)
         self.plotter_settings = plotter_settings
-        self.plotter = plotter
+        self._plotter = plotter
         self._grid_actor = None
         self._link_actions()
-        self._update_plotter()
+        self._reset_plotter()
+        self.plotter_settings.set_defaults()
+
+    @property
+    def plotter(self):
+        logging.info('Acting on plotter: PlotterController')
+        return self._plotter
 
     def _link_actions(self):
         ps = self.plotter_settings
-        ps.combo_anti_aliasing.currentTextChanged.connect(self._toggle_anti_aliasing)
-        # ps.combo_lighting_mode.currentTextChanged.connect(self._toggle_lighting_mode)
-        ps.combo_interaction_style.currentTextChanged.connect(self._toggle_interaction_style)
-        ps.checkbox_boundary_box.stateChanged.connect(self._toggle_boundary_box)
-        ps.checkbox_grid.stateChanged.connect(self._toggle_grid)
-        ps.checkbox_camera_widget.stateChanged.connect(self._toggle_camera_orientation_widget)
-        # ps.checkbox_depth_of_field.stateChanged.connect(self._toggle_depth_of_field)
-        # ps.checkbox_eye_dome_lighting.stateChanged.connect(self._toggle_eye_dome_lighting)
-        ps.checkbox_hidden_line_removal.stateChanged.connect(self._toggle_hidden_line_removal)
-        ps.checkbox_parallel_projection.stateChanged.connect(self._toggle_parallel_projection)
-        ps.checkbox_shadows.stateChanged.connect(self._toggle_shadows)
-        ps.checkbox_ssao.stateChanged.connect(self._toggle_ssao)
-        ps.checkbox_stereo_rendering.stateChanged.connect(self._toggle_stereo_rendering)
-        ps.button_background_color.color_changed.connect(self._update_background_color)
+        ps.aa_changed.connect(self._toggle_anti_aliasing)
+        ps.lighting_mode_changed.connect(self._toggle_lighting_mode)
+        ps.interaction_style_changed.connect(self._toggle_interaction_style)
+        ps.show_boundary_changed.connect(self._toggle_boundary_box)
+        ps.show_grid_changed.connect(self._toggle_grid)
+        ps.show_camera_widget_changed.connect(self._toggle_camera_orientation_widget)
+        ps.ssao_changed.connect(self._toggle_ssao)
+        ps.pp_changed.connect(self._toggle_parallel_projection)
+        ps.stereo_render_changed.connect(self._toggle_stereo_render)
+        ps.hlr_changed.connect(self._toggle_hidden_line_removal)
+        ps.background_color_changed.connect(self._update_background_color)
 
-    def _update_plotter(self):
-        self._toggle_anti_aliasing()
-        # self._toggle_lighting_mode()
-        self._toggle_interaction_style()
-        self._toggle_boundary_box()
-        self._toggle_grid()
-        self._toggle_camera_orientation_widget()
-        # self._toggle_depth_of_field()
-        # self._toggle_eye_dome_lighting()
-        self._toggle_hidden_line_removal()
-        self._toggle_parallel_projection()
-        self._toggle_shadows()
-        self._toggle_ssao()
-        self._toggle_stereo_rendering()
-        self._update_background_color()
+    def _reset_plotter(self):
+        plotter = self.plotter
+        plotter.disable_anti_aliasing()
+        plotter.remove_all_lights()
+        plotter.remove_bounding_box()
+        if self._grid_actor is not None:
+            plotter.remove_actor(self._grid_actor)
+        plotter.clear_camera_widgets()
+        plotter.disable_ssao()
+        if plotter.parallel_projection:
+            plotter.disable_parallel_projection()
+        plotter.disable_stereo_render()
+        plotter.disable_hidden_line_removal()
 
-    def _toggle_stereo_rendering(self):
-        use_stereo_rendering = self.plotter_settings.checkbox_stereo_rendering.isChecked()
-        if use_stereo_rendering:
+    def _toggle_stereo_render(self, apply_stereo_rendering: bool):
+        if apply_stereo_rendering:
+            logging.info('Enabling stereo render')
             self.plotter.enable_stereo_render()
         else:
+            logging.info('Disabling stereo render')
             self.plotter.disable_stereo_render()
 
-    def _toggle_ssao(self):
-        use_ssao = self.plotter_settings.checkbox_ssao.isChecked()
+    def _toggle_ssao(self, use_ssao: bool):
         if use_ssao:
+            logging.info('Enabling SSAO')
             self.plotter.enable_ssao()
         else:
+            logging.info('Disabling SSAO')
             self.plotter.disable_ssao()
 
-    def _toggle_shadows(self):
-        show_shadows = self.plotter_settings.checkbox_shadows.isChecked()
-        if show_shadows:
-            self.plotter.enable_shadows()
-        else:
-            self.plotter.disable_shadows()
-
-    def _toggle_parallel_projection(self):
-        use_pp = self.plotter_settings.checkbox_parallel_projection.isChecked()
-        if use_pp:
+    def _toggle_parallel_projection(self, apply_pp: bool):
+        if apply_pp:
+            logging.info('Enabling parallel projection')
             self.plotter.enable_parallel_projection()
         else:
+            logging.info('Disabling parallel projection')
             self.plotter.disable_parallel_projection()
 
-    def _toggle_hidden_line_removal(self):
-        use_hlr = self.plotter_settings.checkbox_hidden_line_removal.isChecked()
-        if use_hlr:
+    def _toggle_hidden_line_removal(self, apply_hlr: bool):
+        if apply_hlr:
+            logging.info('Enabling hidden line removal')
             self.plotter.enable_hidden_line_removal()
         else:
+            logging.info('Disabling hidden line removal')
             self.plotter.disable_hidden_line_removal()
 
-    def _toggle_eye_dome_lighting(self):
-        use_edl = self.plotter_settings.checkbox_eye_dome_lighting.isChecked()
-        if use_edl:
-            self.plotter.enable_eye_dome_lighting()
-        else:
-            self.plotter.disable_eye_dome_lighting()
-
-    def _toggle_depth_of_field(self):
-        show_dof = self.plotter_settings.checkbox_depth_of_field.isChecked()
-        if show_dof:
-            self.plotter.enable_depth_of_field()
-        else:
-            self.plotter.disable_depth_of_field()
-
-    def _toggle_camera_orientation_widget(self):
-        show_widget = self.plotter_settings.checkbox_camera_widget.isChecked()
+    def _toggle_camera_orientation_widget(self, show_widget: bool):
         if show_widget:
+            logging.info('Enabling camera widget')
             self.plotter.add_camera_orientation_widget()
         else:
+            logging.info('Disabling camera widget')
             self.plotter.clear_camera_widgets()
 
-    def _toggle_grid(self):
-        show_grid = self.plotter_settings.checkbox_grid.isChecked()
+    def _toggle_grid(self, show_grid: bool):
         if show_grid and self._grid_actor is None:
+            logging.info('Creating grid actor')
             self._grid_actor = self.plotter.show_bounds(
                 xtitle='Longitude', ytitle='Latitude', ztitle='Elevation',
                 show_zlabels=False,
@@ -112,27 +101,33 @@ class PlotterController(QObject):
                 all_edges=True
             )
         if not show_grid and self._grid_actor is not None:
+            logging.info('Removing grid actor')
             self.plotter.remove_actor(self._grid_actor)
             self._grid_actor = None
-            if not self.plotter_settings.checkbox_boundary_box.isChecked():
-                self.plotter.remove_bounding_box()
+            show_box = self.plotter_settings.checkbox_boundary_box.isChecked()
+            self.plotter.remove_bounding_box()
+            if show_box:
+                self.plotter.add_bounding_box()
 
-    def _toggle_boundary_box(self):
+    def _toggle_boundary_box(self, show_box: bool):
         has_grid = self.plotter_settings.checkbox_grid.isChecked()
-        if self.plotter_settings.checkbox_boundary_box.isChecked() and not has_grid:
+        if show_box and not has_grid:
+            logging.info('Adding bunding box')
+            color = pv.global_theme.color
             self.plotter.add_bounding_box()
         elif not has_grid:
+            logging.info('Removing bounding box')
             self.plotter.remove_bounding_box()
 
-    def _update_background_color(self):
-        color = self.plotter_settings.button_background_color.current_color
+    def _update_background_color(self, color: QColor):
+        logging.info('Updating background color: {}'.format(color.name()))
         self.plotter.set_background(color.name())
 
-    def _toggle_anti_aliasing(self):
-        mode = self.plotter_settings.combo_anti_aliasing.currentText()
-        if mode == 'None':
-            self.plotter.disable_anti_aliasing()
-        else:
+    def _toggle_anti_aliasing(self, mode: str):
+        logging.info('Disabling AA')
+        self.plotter.disable_anti_aliasing()
+        if mode != 'None':
+            logging.info('Enabling AA: {}'.format(mode))
             if mode.startswith('MSAA'):
                 mode, multi_samples = mode.split('-')
                 multi_samples = int(multi_samples[:-1])
@@ -140,14 +135,18 @@ class PlotterController(QObject):
                 multi_samples = None
             self.plotter.enable_anti_aliasing(aa_type=mode.lower(), multi_samples=multi_samples)
 
-    def _toggle_lighting_mode(self):
-        mode = self.plotter_settings.combo_lighting_mode.currentText()
-        if mode == 'LightKit':
-            self.plotter.enable_lightkit()
-        elif mode == '3 lights':
-            self.plotter.enable_3_lights()
+    def _toggle_lighting_mode(self, mode: str):
+        logging.info('Removing scene lights')
+        self.plotter.remove_all_lights()
+        action = {
+            'LightKit': self.plotter.enable_lightkit,
+            '3 lights': self.plotter.enable_3_lights
+        }.get(mode, None)
+        if action is not None:
+            logging.info('Setting lighting mode: {}'.format(mode))
+            action()
 
-    def _toggle_interaction_style(self):
-        mode = self.plotter_settings.combo_interaction_style.currentText()
+    def _toggle_interaction_style(self, mode: str):
+        logging.info('Setting interaction style: {}'.format(mode))
         action = getattr(self.plotter, 'enable_{}_style'.format(mode.lower().replace(' ', '_')))
         action()

@@ -1,125 +1,105 @@
 import logging
+import uuid
+from typing import Dict
 
 from PyQt5.QtCore import QObject, pyqtSignal
-
-from src.interaction.domain_selection.controller import DownscalingController
-from src.interaction.pyvista_display.view import PyvistaView
-from src.interaction.visualizations.view import SurfaceVisSettingsView, SceneSettingsView
+import pyvista as pv
+from src.interaction.visualizations.view import VisualizationSettingsView, DataConfiguration
 from src.model.backend_model import DownscalingPipeline
 from src.model.geometry import SurfaceDataset
-from src.model.visualization.scene_model import SceneModel
-from src.model.visualization.visualizations import WireframeSurface, SurfaceVisualization, TranslucentSurface
+from src.model.visualization.scene_model_new import SceneModel, WireframeSurface, TranslucentSurface, PointsSurface, \
+    SurfaceGeometry, VisualizationModel
 
 
 class VisualizationController(QObject):
 
-    visualization_changed = pyqtSignal(str)
-
-    def __init__(self, key: str, settings_view: SurfaceVisSettingsView, scene_model: SceneModel, parent=None):
+    def __init__(self, settings_view: VisualizationSettingsView, parent=None):
         super().__init__(parent)
-        self.key = str(key)
         self.settings_view = settings_view
-        self.scene_model = scene_model
-        self.settings_view.vis_properties_changed.connect(self._handle_vis_properties_change)
-        self.settings_view.vis_method_changed.connect(self._handle_vis_method_change)
-        self.settings_view.visibility_changed.connect(self._handle_visibility_change)
+        self.visualization: VisualizationModel = None
+        self.settings_view.vis_properties_changed.connect(self._on_vis_properties_changed)
+        self.settings_view.visibility_changed.connect(self._on_visibility_changed)
 
-    def _handle_vis_properties_change(self):
+    @property
+    def key(self):
+        return self.settings_view.key
+
+    def _on_vis_properties_changed(self):
         logging.info('Handling vis properties change')
         vis_properties = self.settings_view.get_vis_properties()
-        visualization = self.scene_model.visuals[self.key]
-        visualization.set_properties(vis_properties)
-        self.visualization_changed.emit(self.key)
+        self.visualization.set_properties(vis_properties)
 
-    def _handle_visibility_change(self):
-        visible = self.settings_view.checkbox_visibility.isChecked()
-        visualization = self.scene_model.visuals[self.key]
-        visualization.set_visibility(visible)
+    def _on_visibility_changed(self, visible: bool):
+        self.visualization.set_visibility(visible)
 
-    def _handle_vis_method_change(self):
-        surface_data = self.scene_model.visuals[self.key].dataset
-        self.build_visualization(surface_data)
-        self.visualization_changed.emit(self.key)
-
-    def build_visualization(self, surface_data: SurfaceDataset) -> SurfaceVisualization:
+    def visualize(self, domain_data: Dict[str, SurfaceDataset]) -> VisualizationModel:
         logging.info('Building visualization for {}'.format(self.key))
         vis_properties = self.settings_view.get_vis_properties()
+        source_properties = self.settings_view.get_source_properties()
+        surface_data = self._select_source_data(domain_data, source_properties)
         if isinstance(vis_properties, WireframeSurface.Properties):
-            visualization = WireframeSurface(
-                surface_data,
-                plotter_key=self.key,
-                parent=self.scene_model
-            )
+            visualization = WireframeSurface(*surface_data, visual_key=self.key)
         elif isinstance(vis_properties, TranslucentSurface.Properties):
-            visualization = TranslucentSurface(
-                surface_data,
-                plotter_key=self.key,
-                parent=self.scene_model
-            )
+            visualization = TranslucentSurface(*surface_data, visual_key=self.key)
+        elif isinstance(vis_properties, PointsSurface.Properties):
+            visualization = PointsSurface(*surface_data, visual_key=self.key)
         else:
             raise NotImplementedError()
         visualization.set_properties(vis_properties)
         visualization.set_vertical_scale(4000.)
         visualization.set_visibility(self.settings_view.get_visibility())
-        self.scene_model.visuals.update({self.key: visualization})
+        self.visualization = visualization
         return visualization
 
-    def update_visualization_data(self, surface_data: SurfaceDataset):
-        self.build_visualization(surface_data)
-        self.visualization_changed.emit(self.key)
+    def _select_source_data(self, domain_data: Dict[str, SurfaceDataset], source_properties: DataConfiguration):
+        selection = {
+            DataConfiguration.SURFACE_O1280: ['surface_o1280'],
+            DataConfiguration.SURFACE_O8000: ['surface_o8000'],
+        }[source_properties]
+        return [domain_data[key] for key in selection]
 
 
 class SceneController(QObject):
 
     def __init__(
             self,
-            settings_view: SceneSettingsView, render_view: PyvistaView,
-            pipeline_model: DownscalingPipeline, scene_model: SceneModel,
+            pipeline_model: DownscalingPipeline,
+            scene_model: SceneModel,
             parent=None,
     ):
         super().__init__(parent)
-        self.settings_view = settings_view
         self.pipeline_model = pipeline_model
-        self.render_view = render_view
-        self.vis_controllers = {
-            key: VisualizationController(
-                key,
-                self.settings_view.vis_settings[key],
-                scene_model
-            )
-            for key in self.settings_view.keys()
-        }
-        for key in self.vis_controllers:
-            self.vis_controllers[key].visualization_changed.connect(self._on_visualization_changed)
-        self._scene_model = scene_model
-        self.reset_scene()
+        self.scene_model = scene_model
+        self._visualization_controls = {}
+        self.vis_controllers: Dict[str, VisualizationController] = {}
 
-    @property
-    def plotter(self):
-        return self.render_view.plotter
+    def register_settings_view(self, settings_view: VisualizationSettingsView) -> VisualizationController:
+        controller = VisualizationController(settings_view, parent=self)
+        self._visualization_controls[controller.key] = controller
+        settings_view.visualization_changed.connect(self._on_visualization_changed)
+        return controller
 
     def reset_scene(self):
-        self.plotter.clear()
+        self.scene_model.reset()
         domain_data = self.pipeline_model.get_output()
-        for controller in self.vis_controllers.values():
-            visualization = controller.build_visualization(domain_data[controller.key])
-            visualization.draw(self.plotter)
-        self.plotter.render()
+        for controller in self._visualization_controls.values():
+            visualization = controller.visualize(domain_data)
+            self.scene_model.add_visualization(visualization)
+        # self.scene_model.host.render()
         return self
 
     def _on_visualization_changed(self, key: str):
-        self._scene_model.visuals[key].draw(self.plotter)
-        self.plotter.render()
+        controller = self._visualization_controls[key]
+        dataset = self.pipeline_model.get_output()
+        visualization = controller.visualize(dataset)
+        self.scene_model.replace_visualization(visualization)
 
-    def _handle_domain_change(self):
+    def _on_domain_changed(self):
         return self.reset_scene()
 
-    def update_visualization_data(self):
-        domain_data = self.pipeline_model.get_output()
-        for controller in self.vis_controllers.values():
-            controller.update_visualization_data(domain_data)
-        return self
+    def _update_visualization_data(self):
+        for key in self._visualization_controls:
+            self._on_visualization_changed(key)
 
-    def _handle_data_change(self):
-        self.update_visualization_data()
-
+    def _on_data_changed(self):
+        self._update_visualization_data()
