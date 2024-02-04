@@ -3,7 +3,7 @@ import dataclasses
 import uuid
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 
 from PyQt5.QtCore import QObject
 import pyvista as pv
@@ -128,7 +128,6 @@ class MeshVisualizationModel(VisualizationModel):
         diffuse: float = None
         specular: float = None
         specular_power: float = None
-        lighting: bool = None
 
     def __init__(self, dataset: SurfaceDataset, style: GeometryStyle, visual_key: str = None, parent=None):
         super().__init__(visual_key, parent)
@@ -150,7 +149,7 @@ class MeshVisualizationModel(VisualizationModel):
         self._host_actors[self.ActorKey.MESH] = actor
 
     def _get_plotter_kws(self) -> Dict[str, Any]:
-        return {'name': self.key, 'reset_camera': True, 'style': self._geometry_style.value}
+        return {'name': self.key, 'style': self._geometry_style.value}
 
     def _update_actor_properties(self):
         actor = self._host_actors[self.ActorKey.MESH]
@@ -203,6 +202,55 @@ class GeometryVisualizationModel(MeshVisualizationModel):
 
 
 @dataclass
+class ScalarColormapMixin():
+    scalar_name: str = None
+    colormap_name: str = None
+    scalar_range: Tuple[float, float] = None
+    below_range_color: str = None
+    above_range_color: str = None
+    opacity: float = None
+
+
+class ScalarFieldModel(MeshVisualizationModel):
+
+    @dataclass
+    class ColormapProperties(ScalarColormapMixin):
+        pass
+
+    def __init__(self, dataset: SurfaceDataset, style: GeometryStyle, visual_key: str = None, parent=None):
+        super().__init__(dataset, style, visual_key, parent)
+        self._colormap_properties = None
+        self._lookup_reference = None
+
+    def set_color(self, properties: 'ScalarFieldModel.ColormapProperties') -> 'ScalarFieldModel':
+        self._colormap_properties = properties
+        if self._host is not None:
+            self._update_actor_colormap()
+
+    def _update_actor_colormap(self):
+        actor = self._host_actors[self.ActorKey.MESH]
+        actor.set_active_scalars(self._colormap_properties.scalar_name)
+        mapper = actor.mapper
+        mapper.scalar_range = self._colormap_properties.scalar_range
+        lookup_table = mapper.lookup_table
+        lookup_table.abbly_cmap(self._colormap_properties.colormap_name)
+
+    def _get_color_kws(self) -> Dict[str, Any]:
+        if self._color_properties is None:
+            return {}
+        lookup_table = pv.LookupTable(cmap=self._colormap_properties.colormap_name)
+        lookup_table.scalar_range = self._colormap_properties.scalar_range
+        color_below = self._colormap_properties.below_range_color
+        if color_below is not None:
+            lookup_table.below_range_color = color_below
+        color_above = self._colormap_properties.above_range_color
+        if color_above is not None:
+            lookup_table.above_range_color = color_above
+        kws = {'scalars': self._colormap_properties.scalar_name, 'cmap': lookup_table, 'show_scalar_bar': False}
+        return kws
+
+
+@dataclass
 class WireframeMixin(object):
     line_width: float = None
     render_lines_as_tubes: bool = None
@@ -224,7 +272,7 @@ class PointsSurfaceMixin(object):
 class WireframeGeometry(GeometryVisualizationModel):
 
     @dataclass
-    class Properties(MeshVisualizationModel.Properties, UniformColorMixin, WireframeMixin):
+    class Properties(MeshVisualizationModel.Properties, WireframeMixin):
         pass
 
     def __init__(self, dataset: SurfaceDataset, visual_key: str = None, parent=None):
@@ -237,7 +285,7 @@ class WireframeGeometry(GeometryVisualizationModel):
 class SurfaceGeometry(GeometryVisualizationModel):
 
     @dataclass
-    class Properties(MeshVisualizationModel.Properties, UniformColorMixin, TranslucentSurfaceMixin):
+    class Properties(MeshVisualizationModel.Properties, TranslucentSurfaceMixin):
         pass
 
     def __init__(self, dataset: SurfaceDataset, visual_key: str = None, parent=None):
@@ -250,7 +298,7 @@ class SurfaceGeometry(GeometryVisualizationModel):
 class PointsGeometry(GeometryVisualizationModel):
 
     @dataclass
-    class Properties(MeshVisualizationModel.Properties, UniformColorMixin, PointsSurfaceMixin):
+    class Properties(MeshVisualizationModel.Properties, PointsSurfaceMixin):
         pass
 
     def __init__(self, dataset: SurfaceDataset, visual_key: str = None, parent=None):
@@ -258,15 +306,6 @@ class PointsGeometry(GeometryVisualizationModel):
 
     def set_properties(self, properties: 'PointsGeometry.Properties') -> 'VisualizationModel':
         return super().set_properties(properties)
-
-
-class ScalarFieldModel(MeshVisualizationModel):
-
-    def __init__(self, dataset: SurfaceDataset, style: GeometryStyle, visual_key: str = None, parent=None):
-        super().__init__(dataset, style, visual_key, parent)
-        self._colormap = None
-        self._lookup_reference = None
-
 
 
 class SceneModel(QObject):

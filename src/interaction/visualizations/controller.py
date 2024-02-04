@@ -18,6 +18,7 @@ class VisualizationController(QObject):
         self.settings_view = settings_view
         self.visualization: VisualizationModel = None
         self.settings_view.vis_properties_changed.connect(self._on_vis_properties_changed)
+        self.settings_view.color_changed.connect(self._on_color_changed)
         self.settings_view.visibility_changed.connect(self._on_visibility_changed)
 
     @property
@@ -29,12 +30,18 @@ class VisualizationController(QObject):
         vis_properties = self.settings_view.get_vis_properties()
         self.visualization.set_properties(vis_properties)
 
+    def _on_color_changed(self):
+        logging.info('Handling color change')
+        color_properties = self.settings_view.get_color_properties()
+        self.visualization.set_color(color_properties)
+
     def _on_visibility_changed(self, visible: bool):
         self.visualization.set_visibility(visible)
 
     def visualize(self, domain_data: Dict[str, SurfaceDataset]) -> VisualizationModel:
         logging.info('Building visualization for {}'.format(self.key))
         vis_properties = self.settings_view.get_vis_properties()
+        color_properties = self.settings_view.get_color_properties()
         source_properties = self.settings_view.get_source_properties()
         surface_data = self._select_source_data(domain_data, source_properties)
         if isinstance(vis_properties, WireframeGeometry.Properties):
@@ -46,6 +53,7 @@ class VisualizationController(QObject):
         else:
             raise NotImplementedError()
         visualization.set_properties(vis_properties)
+        visualization.set_color(color_properties)
         visualization.set_vertical_scale(4000.)
         visualization.set_visibility(self.settings_view.get_visibility())
         self.visualization = visualization

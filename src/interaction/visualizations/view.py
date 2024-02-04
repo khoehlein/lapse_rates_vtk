@@ -4,12 +4,13 @@ from enum import Enum
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QWidget, QComboBox, QDoubleSpinBox, QFormLayout, QLabel, QTabWidget, QStackedWidget, \
-    QCheckBox, QVBoxLayout, QStackedLayout, QPushButton
+    QCheckBox, QVBoxLayout, QStackedLayout, QPushButton, QHBoxLayout
 import pyvista as pv
 from pyvista.plotting.opts import InterpolationType
 
 from src.interaction.background_color.view import SelectColorButton
-from src.model.visualization.scene_model import ShadingMethod, WireframeGeometry, SurfaceGeometry, PointsGeometry
+from src.model.visualization.scene_model import ShadingMethod, WireframeGeometry, SurfaceGeometry, PointsGeometry, \
+    GeometryVisualizationModel, ScalarFieldModel
 
 
 class LightingSettingsView(QWidget):
@@ -32,7 +33,6 @@ class LightingSettingsView(QWidget):
         self.spinner_specular_power.setMaximum(128.)
         self.spinner_specular_power.setSingleStep(0.5)
         self.spinner_specular_power.valueChanged.connect(self.lighting_changed.emit)
-        self.checkbox_lighting = QCheckBox()
         self.button_reset = QPushButton(self)
         self.button_reset.setText("Reset")
         self.button_reset.clicked.connect(self._on_reset_clicked)
@@ -53,7 +53,6 @@ class LightingSettingsView(QWidget):
         layout.addRow(QLabel('Diffuse:'), self.spinner_diffuse)
         layout.addRow(QLabel('Specular:'), self.spinner_specular)
         layout.addRow(QLabel('Specular power:'), self.spinner_specular_power)
-        layout.addRow(QLabel('Use lighting:'), self.checkbox_lighting)
         outer.addLayout(layout)
         outer.addWidget(self.button_reset)
         self.setLayout(outer)
@@ -81,7 +80,6 @@ class LightingSettingsView(QWidget):
         self.spinner_diffuse.setValue(lighting_config.diffuse)
         self.spinner_specular.setValue(lighting_config.specular)
         self.spinner_specular_power.setValue(lighting_config.specular_power)
-        self.checkbox_lighting.setChecked(pv.global_theme.lighting)
 
     def get_settings(self):
         return {
@@ -92,7 +90,6 @@ class LightingSettingsView(QWidget):
             'diffuse': self.spinner_diffuse.value(),
             'specular': self.spinner_specular.value(),
             'specular_power': self.spinner_specular_power.value(),
-            'lighting': self.checkbox_lighting.isChecked()
         }
 
 
@@ -103,13 +100,6 @@ class WireframeSettingsView(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.button_frame_color = SelectColorButton(parent=self)
-        self.button_frame_color.color_changed.connect(self.representation_changed.emit)
-        self.spinner_opacity = QDoubleSpinBox(self)
-        self.spinner_opacity.setMinimum(0.)
-        self.spinner_opacity.setMaximum(1.)
-        self.spinner_opacity.valueChanged.connect(self.representation_changed.emit)
-        self.spinner_opacity.setSingleStep(0.05)
         self.spinner_line_width = QDoubleSpinBox(self)
         self.spinner_line_width.setMinimum(0.)
         self.spinner_line_width.setMaximum(32.)
@@ -122,24 +112,17 @@ class WireframeSettingsView(QWidget):
 
     def _set_defaults(self):
         color_theme = pv.global_theme
-        default_color = QColor(*color_theme.color.int_rgb)
-        self.button_frame_color.set_current_color(default_color)
-        self.spinner_opacity.setValue(color_theme.opacity)
         self.spinner_line_width.setValue(color_theme.line_width)
         self.checkbox_lines_as_tubes.setChecked(color_theme.render_lines_as_tubes)
 
     def _set_layout(self):
         layout = QFormLayout()
-        layout.addRow(QLabel('Color:'), self.button_frame_color)
-        layout.addRow(QLabel('Opacity:'), self.spinner_opacity)
         layout.addRow(QLabel('Line width:'), self.spinner_line_width)
         layout.addRow(QLabel('Lines as tubes:'), self.checkbox_lines_as_tubes)
         self.setLayout(layout)
 
     def get_settings(self):
         return {
-            'color': self.button_frame_color.current_color,
-            'opacity': self.spinner_opacity.value(),
             'line_width': self.spinner_line_width.value(),
             'render_lines_as_tubes': self.checkbox_lines_as_tubes.isChecked(),
         }
@@ -152,14 +135,6 @@ class SurfaceSettingsView(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.button_color = SelectColorButton(parent=self)
-        self.button_color.color_changed.connect(self.representation_changed)
-        self.spinner_opacity = QDoubleSpinBox(self)
-        self.spinner_opacity.setMinimum(0.)
-        self.spinner_opacity.setMaximum(1.)
-        self.spinner_opacity.setSingleStep(0.05)
-        self.spinner_opacity.valueChanged.connect(self.representation_changed.emit)
-
         self.button_edge_color = SelectColorButton(parent=self)
         self.button_edge_color.color_changed.connect(self.representation_changed)
         self.spinner_edge_opacity = QDoubleSpinBox(self)
@@ -180,18 +155,13 @@ class SurfaceSettingsView(QWidget):
 
     def _set_defaults(self):
         color_theme = pv.global_theme
-        default_color = QColor(*color_theme.color.int_rgb)
-        self.button_color.set_current_color(default_color)
         default_color = QColor(*color_theme.edge_color.int_rgb)
         self.button_edge_color.set_current_color(default_color)
-        self.spinner_opacity.setValue(color_theme.opacity)
         self.spinner_edge_opacity.setValue(color_theme.edge_opacity)
         self.checkbox_show_edges.setChecked(color_theme.show_edges)
 
     def _set_layout(self):
         layout = QFormLayout()
-        layout.addRow(QLabel('Color:'), self.button_color)
-        layout.addRow(QLabel('Opacity:'), self.spinner_opacity)
         layout.addRow(QLabel('Show edges:'), self.checkbox_show_edges)
         layout.addRow(QLabel('Edge color:'), self.button_edge_color)
         layout.addRow(QLabel('Edge opacity:'), self.spinner_edge_opacity)
@@ -199,8 +169,6 @@ class SurfaceSettingsView(QWidget):
 
     def get_settings(self):
         return {
-            'color': self.button_color.current_color,
-            'opacity': self.spinner_opacity.value(),
             'show_edges': self.checkbox_show_edges.isChecked(),
             'edge_color': self.button_edge_color.current_color,
             'edge_opacity': self.spinner_edge_opacity.value(),
@@ -214,14 +182,6 @@ class PointsSettingsView(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.button_color = SelectColorButton(parent=self)
-        self.button_color.color_changed.connect(self.representation_changed)
-        self.spinner_opacity = QDoubleSpinBox(self)
-        self.spinner_opacity.setMinimum(0.)
-        self.spinner_opacity.setMaximum(1.)
-        self.spinner_opacity.setSingleStep(0.05)
-        self.spinner_opacity.valueChanged.connect(self.representation_changed.emit)
-
         self.spinner_point_size = QDoubleSpinBox(self)
         self.spinner_point_size.setMinimum(0.)
         self.spinner_point_size.setMaximum(32.)
@@ -235,34 +195,26 @@ class PointsSettingsView(QWidget):
 
     def _set_defaults(self):
         color_theme = pv.global_theme
-        default_color = QColor(*color_theme.color.int_rgb)
-        self.button_color.set_current_color(default_color)
-        self.spinner_opacity.setValue(color_theme.opacity)
         self.spinner_point_size.setValue(color_theme.point_size)
         self.checkbox_points_as_spheres.setChecked(color_theme.render_points_as_spheres)
 
     def _set_layout(self):
         layout = QFormLayout()
-        layout.addRow(QLabel('Color:'), self.button_color)
-        layout.addRow(QLabel('Opacity:'), self.spinner_opacity)
         layout.addRow(QLabel('Point size:'), self.spinner_point_size)
         layout.addRow(QLabel('Points as spheres:'), self.checkbox_points_as_spheres)
         self.setLayout(layout)
 
     def get_settings(self):
         return {
-            'color': self.button_color.current_color,
-            'opacity': self.spinner_opacity.value(),
             'point_size': self.spinner_point_size.value(),
             'render_points_as_spheres': self.checkbox_points_as_spheres.isChecked(),
         }
 
 
-class GeometrySettingsView(QWidget):
+class RepresentationSettingsView(QWidget):
 
     properties_changed = pyqtSignal()
     representation_changed = pyqtSignal()
-
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -295,36 +247,6 @@ class GeometrySettingsView(QWidget):
     def get_settings(self):
         current_widget = self.interface_stack.currentWidget()
         return current_widget.REPRESENTATION_CLASS, current_widget.get_settings()
-
-
-class RepresentationSettingsView(QTabWidget):
-
-    vis_properties_changed = pyqtSignal()
-    visualization_changed = pyqtSignal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.lighting_settings = LightingSettingsView(self)
-        self.geometry_settings = GeometrySettingsView(self)
-        self.addTab(self._to_tab_widget(self.geometry_settings), 'Representation')
-        self.addTab(self._to_tab_widget(self.lighting_settings), 'Lighting')
-        self.lighting_settings.lighting_changed.connect(self.vis_properties_changed.emit)
-        self.geometry_settings.properties_changed.connect(self.vis_properties_changed.emit)
-        self.geometry_settings.representation_changed.connect(self.visualization_changed.emit)
-
-    def _to_tab_widget(self, widget: QWidget):
-        wrapper = QWidget(self)
-        layout = QVBoxLayout(wrapper)
-        layout.addWidget(widget)
-        layout.setAlignment(Qt.AlignTop)
-        layout.addStretch()
-        wrapper.setLayout(layout)
-        return wrapper
-
-    def get_vis_properties(self):
-        properties_class, geometry_settings = self.geometry_settings.get_settings()
-        lighting_settings = self.lighting_settings.get_settings()
-        return properties_class(**geometry_settings, **lighting_settings)
 
 
 class DataConfiguration(Enum):
@@ -363,12 +285,125 @@ _available_visualizations = {
     ]
 }
 
+_vis_default_lapse_rate = ScalarFieldModel.ColormapProperties(
+    None, 'RdBu', (-14, 14), None, None
+)
+
+_vis_default_temperature = ScalarFieldModel.ColormapProperties(
+    None, 'RdBu', (260, 320), None, None
+)
+
+_vis_default_elevation = ScalarFieldModel.ColormapProperties(
+    None, 'greys', (-500, 9000), None, None
+)
+
+_vis_default_elevation_difference = ScalarFieldModel.ColormapProperties(
+    None, 'RdBu', (-1500, 1500), None, None
+)
+
+_vis_defaults = {
+    VisualizationType.GEOMETRY: GeometryVisualizationModel.ColorProperties('k', 1.),
+    VisualizationType.LAPSE_RATE_O1280: _vis_default_lapse_rate,
+    VisualizationType.LAPSE_RATE_O8000: _vis_default_lapse_rate,
+    VisualizationType.T2M_O1280: _vis_default_temperature,
+    VisualizationType.T2M_O8000: _vis_default_temperature,
+    VisualizationType.Z_O1280: _vis_default_elevation,
+    VisualizationType.Z_O8000: _vis_default_elevation,
+    VisualizationType.Z_DIFFERENCE: _vis_default_elevation_difference,
+}
+
+
+class UniformColorSettingsView(QWidget):
+
+    color_changed = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super(UniformColorSettingsView, self).__init__(parent)
+        self.button_color = SelectColorButton(parent=self)
+        self.button_color.color_changed.connect(self.color_changed.emit)
+        self.spinner_opacity = QDoubleSpinBox(self)
+        self.spinner_opacity.setMinimum(0.)
+        self.spinner_opacity.setMaximum(1.)
+        self.spinner_opacity.setValue(1.)
+        self.spinner_opacity.setSingleStep(0.05)
+        self.spinner_opacity.valueChanged.connect(self.color_changed.emit)
+        self._set_layout()
+
+    def _set_layout(self):
+        layout = QFormLayout()
+        layout.addRow('Color:', self.button_color)
+        layout.addRow('Opacity', self.spinner_opacity)
+        self.setLayout(layout)
+
+    def set_defaults(self, defaults = None):
+        color_theme = pv.global_theme
+        default_color = QColor(*color_theme.color.int_rgb)
+        self.button_color.set_current_color(default_color)
+        self.spinner_opacity.setValue(color_theme.opacity)
+
+    def get_settings(self, scalar_name: str = None):
+        return GeometryVisualizationModel.ColorProperties(
+            color=self.button_color.current_color,
+            opacity=self.spinner_opacity.value()
+        )
+
+
+class ColormapSettingsView(QWidget):
+
+    color_changed = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super(ColormapSettingsView, self).__init__(parent)
+        self.combo_cmap_name = QComboBox(self)
+        self.combo_cmap_name.addItems([
+            'Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
+            'YlOrBr', 'YlOrRd', 'OrRd', 'PuRd', 'RdPu', 'BuPu',
+            'GnBu', 'PuBu', 'YlGnBu', 'PuBuGn', 'BuGn', 'YlGn'
+        ])
+        self.spinner_scalar_min = QDoubleSpinBox(self)
+        self.spinner_scalar_max = QDoubleSpinBox(self)
+        self.spinner_scalar_min.valueChanged.connect(self.spinner_scalar_max.setMinimum)
+        self.spinner_scalar_max.valueChanged.connect(self.spinner_scalar_min.setMaximum)
+        self.spinner_scalar_min.valueChanged.connect(self.color_changed.emit)
+        self.spinner_scalar_min.setPrefix('min: ')
+        self.spinner_scalar_max.valueChanged.connect(self.color_changed.emit)
+        self.spinner_opacity = QDoubleSpinBox(self)
+        self.spinner_scalar_max.setPrefix('max: ')
+        self.spinner_opacity.setMinimum(0.)
+        self.spinner_opacity.setMaximum(1.)
+        self.spinner_opacity.setSingleStep(0.05)
+        self.spinner_opacity.valueChanged.connect(self.color_changed.emit)
+        self._set_layout()
+
+    def _set_layout(self):
+        layout = QFormLayout()
+        layout.addRow(QLabel('Colormap:'), self.combo_cmap_name)
+        hlayout = QHBoxLayout()
+        hlayout.addWidget(self.spinner_scalar_min)
+        hlayout.addWidget(self.spinner_scalar_max)
+        layout.addRow(QLabel('Scalar range:'), hlayout)
+        layout.addRow(QLabel('Opacity:'), self.spinner_opacity)
+        self.setLayout(layout)
+
+    def set_defaults(self, settings: ScalarFieldModel.ColormapProperties):
+        self.combo_cmap_name.setCurrentText(settings.colormap_name)
+        self.spinner_scalar_min.setValue(settings.scalar_range[0])
+        self.spinner_scalar_max.setValue(settings.scalar_range[1])
+        self.spinner_opacity.setValue(settings.opacity)
+
+    def get_settings(self, scalar_name: str):
+        return ScalarFieldModel.ColormapProperties(
+            scalar_name, self.combo_cmap_name.currentText(),
+            (self.spinner_scalar_min.value(), self.spinner_scalar_max.value())
+        )
+
 
 class VisualizationSettingsView(QWidget):
 
     vis_properties_changed = pyqtSignal()
     visualization_changed = pyqtSignal(str)
     visibility_changed = pyqtSignal(bool)
+    color_changed = pyqtSignal()
 
     def __init__(self, key: str = None, parent=None):
         super().__init__(parent)
@@ -378,15 +413,55 @@ class VisualizationSettingsView(QWidget):
         self.combo_source_data = QComboBox(self)
         self.combo_source_data.addItems([config.value for config in DataConfiguration])
         self.combo_visualization_type = QComboBox(self)
-        self._populate_visualization_combo(DataConfiguration(self.combo_source_data.currentText()))
+        self.combo_visualization_type.addItems([config.value for config in VisualizationType])
+        self._toggle_visualization_types()
         self.combo_source_data.currentTextChanged.connect(self._on_source_data_changed)
-        self.representation_settings = RepresentationSettingsView(self)
-        self.representation_settings.visualization_changed.connect(self._on_visualization_changed)
-        self.representation_settings.vis_properties_changed.connect(self.vis_properties_changed.emit)
+        self.tabs = QTabWidget(self)
+        self._build_color_tab()
+        self._build_representation_tab()
+        self._build_lighting_tab()
         self.checkbox_visibility = QCheckBox('Visible')
         self.checkbox_visibility.setChecked(True)
         self.checkbox_visibility.stateChanged.connect(self.visibility_changed.emit)
         self._set_layout()
+
+    def _toggle_visualization_types(self):
+        model = self.combo_visualization_type.model()
+        selected_source = DataConfiguration(self.combo_source_data.currentText())
+        for i in range(model.rowCount()):
+            item = model.item(i)
+            item_text = self.combo_visualization_type.itemText(i)
+            item.setEnabled(VisualizationType(item_text) in _available_visualizations[selected_source])
+
+    def _build_color_tab(self):
+        self.interface_stack = QStackedLayout()
+        for color_type in VisualizationType:
+            widget = UniformColorSettingsView(self) if color_type == VisualizationType.GEOMETRY else ColormapSettingsView(self)
+            self.interface_stack.addWidget(widget)
+            widget.color_changed.connect(self.color_changed.emit)
+        self.combo_visualization_type.currentIndexChanged.connect(self.interface_stack.setCurrentIndex)
+        color_stack_widget = QWidget(self)
+        color_stack_widget.setLayout(self.interface_stack)
+        self.tabs.addTab(self._to_tab_widget(color_stack_widget), 'Color')
+
+    def _build_representation_tab(self):
+        self.representation_settings = RepresentationSettingsView(self)
+        self.representation_settings.properties_changed.connect(self.vis_properties_changed.emit)
+        self.representation_settings.representation_changed.connect(self._on_visualization_changed)
+        self.tabs.addTab(self._to_tab_widget(self.representation_settings), 'Representation')
+
+    def _build_lighting_tab(self):
+        self.lighting_settings = LightingSettingsView(self)
+        self.lighting_settings.lighting_changed.connect(self.vis_properties_changed.emit)
+        self.tabs.addTab(self._to_tab_widget(self.lighting_settings), 'Lighting')
+
+    def _to_tab_widget(self, x):
+        widget = QWidget(self)
+        layout = QVBoxLayout()
+        layout.addWidget(x)
+        layout.addStretch()
+        widget.setLayout(layout)
+        return widget
 
     def _on_visualization_changed(self):
         self.visualization_changed.emit(self.key)
@@ -395,13 +470,20 @@ class VisualizationSettingsView(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(self.combo_source_data)
         layout.addWidget(self.combo_visualization_type)
-        layout.addWidget(self.representation_settings)
+        layout.addWidget(self.tabs)
         layout.addWidget(self.checkbox_visibility)
         layout.addStretch()
         self.setLayout(layout)
 
     def get_vis_properties(self):
-        return self.representation_settings.get_vis_properties()
+        rep_class, rep_settings = self.representation_settings.get_settings()
+        lighting_settings = self.lighting_settings.get_settings()
+        prop = rep_class(**rep_settings, **lighting_settings)
+        return prop
+
+    def get_color_properties(self):
+        scalar_name = VisualizationType(self.combo_visualization_type.currentText()).name.lower()
+        return self.interface_stack.currentWidget().get_settings(scalar_name)
 
     def get_visibility(self):
         return self.checkbox_visibility.isChecked()
@@ -410,8 +492,7 @@ class VisualizationSettingsView(QWidget):
         return DataConfiguration(self.combo_source_data.currentText())
 
     def _on_source_data_changed(self, source_type: str) -> None:
-        source_type = DataConfiguration(source_type)
-        self._populate_visualization_combo(source_type)
+        self._toggle_visualization_types()
         self.visualization_changed.emit(self.key)
 
     def _populate_visualization_combo(self, source_type: DataConfiguration) -> None:
