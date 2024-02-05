@@ -66,8 +66,13 @@ class MainView(MainWindow):
         self.scene_model = SceneModel(self.render_view.plotter, parent=self)
         self.scene_model.set_vertical_scale(4000.)
 
-        self.scene_controller = SceneController(self.downscaling_pipeline, self.scene_model, parent=self)
-        self.scene_controller.register_settings_view(self.settings_menu.visualization_settings)
+        self.scene_controller = SceneController(
+            self.settings_menu.visualization_settings,
+            self.downscaling_pipeline,
+            self.scene_model,
+            parent=self
+        )
+        # self.scene_controller.register_settings_view(self.settings_menu.visualization_settings)
         # self.scene_controller.reset_scene()
 
     def _build_main_menu(self):

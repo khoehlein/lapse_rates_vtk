@@ -2,7 +2,7 @@ import logging
 from typing import Dict
 
 from PyQt5.QtCore import QObject
-from src.interaction.visualizations.view import VisualizationSettingsView, DataConfiguration
+from src.interaction.visualizations.view import VisualizationSettingsView, DataConfiguration, VisualizationOverview
 from src.model.backend_model import DownscalingPipeline
 from src.model.geometry import SurfaceDataset
 from src.model.visualization.scene_model import SceneModel, VisualizationModel, ColorModel, MeshGeometryModel
@@ -62,6 +62,7 @@ class SceneController(QObject):
 
     def __init__(
             self,
+            vis_overview: VisualizationOverview,
             pipeline_model: DownscalingPipeline,
             scene_model: SceneModel,
             parent=None,
@@ -69,8 +70,15 @@ class SceneController(QObject):
         super().__init__(parent)
         self.pipeline_model = pipeline_model
         self.scene_model = scene_model
+        self.vis_overview = vis_overview
+        self.vis_overview.new_interface_requested.connect(self._on_new_interface_requested)
         self._visualization_controls = {}
         self.vis_controllers: Dict[str, VisualizationController] = {}
+
+    def _on_new_interface_requested(self):
+        widget = VisualizationSettingsView(parent=self.vis_overview)
+        self.vis_overview.register_new_interface(widget)
+        self.register_settings_view(widget)
 
     def register_settings_view(self, settings_view: VisualizationSettingsView) -> VisualizationController:
         controller = VisualizationController(settings_view, parent=self)
