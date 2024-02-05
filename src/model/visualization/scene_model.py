@@ -3,67 +3,12 @@ import dataclasses
 import uuid
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Union
 
 from PyQt5.QtCore import QObject
 import pyvista as pv
 
 from src.model.geometry import SurfaceDataset
-from src.model.visualization.transforms import AffineLinear
-
-
-class VisualizationUpdateModel(object):
-    pass
-
-
-class VisualizationModel(QObject):
-
-    def __init__(self, visual_key: str = None, parent=None):
-        super().__init__(parent)
-        if visual_key is None:
-            visual_key = str(uuid.uuid4())
-        self.key = str(visual_key)
-        self._host = None
-        self._host_actors = {}
-        self._properties = None
-        self._is_visible = True
-
-    def set_host(self, host: pv.Plotter) -> 'VisualizationModel':
-        self.clear_host()
-        if host is not None:
-            self._host = host
-            self._write_to_host()
-        return self
-
-    def clear_host(self):
-        host_reference = self._host
-        if self._host is not None:
-            for actor in self._host_actors.values():
-                self._host.remove_actor(actor)
-        self._host = None
-        self._host_actors = {}
-        return host_reference
-
-    def _write_to_host(self):
-        raise NotImplementedError()
-
-    def set_properties(self, properties) -> 'VisualizationModel':
-        self._properties = properties
-        if self._host is not None:
-            self._update_actor_properties()
-        return self
-
-    def set_visibility(self, visible: bool) -> 'VisualizationModel':
-        self._is_visible = visible
-        for actor in self._host_actors.values():
-            actor.visibility = self._is_visible
-        return self
-
-    def _update_actor_properties(self):
-        raise NotImplementedError()
-
-    def update(self, update: VisualizationUpdateModel):
-        raise NotImplementedError()
 
 
 class ShadingMethod(Enum):
@@ -71,6 +16,54 @@ class ShadingMethod(Enum):
     PHONG = 'Phong'
     GOURAUD = 'Gouraud'
     FLAT = 'Flat'
+
+
+@dataclass
+class LightingProperties:
+    shading: ShadingMethod = None  # Pyvista property: interpolation
+    metallic: float = None
+    roughness: float = None
+    ambient: float = None
+    diffuse: float = None
+    specular: float = None
+    specular_power: float = None
+
+
+class MeshStyle(Enum):
+    WIREFRAME = 'wireframe'
+    SURFACE = 'surface'
+    POINTS = 'points'
+
+
+@dataclass
+class MeshProperties(object):
+    pass
+
+
+@dataclass
+class WireframeProperties(MeshProperties):
+    line_width: float = None
+    render_lines_as_tubes: bool = None
+
+
+@dataclass
+class TranslucentSurfaceProperties(MeshProperties):
+    show_edges: bool = None
+    edge_color: str = None
+    edge_opacity: float = None
+
+
+@dataclass
+class PointsSurfaceProperties(MeshProperties):
+    point_size: float = None
+    render_points_as_spheres: bool = None
+
+
+_mesh_style_mapping = {
+    WireframeProperties: MeshStyle.WIREFRAME,
+    PointsSurfaceProperties: MeshStyle.POINTS,
+    TranslucentSurfaceProperties: MeshStyle.SURFACE
+}
 
 
 class KeywordAdapter(object):
@@ -101,6 +94,7 @@ _keyword_adapter = KeywordAdapter(
         'shading': 'interpolation'
     },
     {
+        'style': lambda x: x.name.lower(),
         'shading': lambda x: x.value,
         'color': lambda x: x.name(),
         'edge_color': lambda x: x.name(),
@@ -108,204 +102,270 @@ _keyword_adapter = KeywordAdapter(
 )
 
 
-class GeometryStyle(Enum):
-    WIREFRAME = 'wireframe'
-    SURFACE = 'surface'
-    POINTS = 'points'
+class VisualizationType(Enum):
+    GEOMETRY = 'Geometry'
+    LAPSE_RATE = 'Lapse rate'
+    T2M_O1280 = 'T2M (O1280)'
+    T2M_O8000 = 'T2M (O8000)'
+    T2M_DIFFERENCE = 'T2M (difference)'
+    Z_O1280 = 'Z (O1280)'
+    Z_O8000 = 'Z (O8000)'
+    Z_DIFFERENCE = 'Z (difference)'
 
 
-class MeshVisualizationModel(VisualizationModel):
+class PropertyModel(QObject):
 
-    class ActorKey(Enum):
-        MESH = 'mesh'
+    class Properties(object):
+        pass
 
-    @dataclass(init=True)
-    class Properties:
-        shading: ShadingMethod = None # Pyvista property: interpolation
-        metallic: float = None
-        roughness: float = None
-        ambient: float = None
-        diffuse: float = None
-        specular: float = None
-        specular_power: float = None
+    def __init__(self, parent: QObject = None):
+        super().__init__(parent)
+        self._properties = None
 
-    def __init__(self, dataset: SurfaceDataset, style: GeometryStyle, visual_key: str = None, parent=None):
-        super().__init__(visual_key, parent)
-        self._dataset = dataset
-        self._mesh = dataset.get_polydata()
-        self._vertical_transform = AffineLinear.identity()
-        self._geometry_style = style
-
-    def set_vertical_scale(self, scale: float):
-        self._vertical_transform.scale = float(scale)
-        self._mesh.points[:, -1] = self._vertical_transform.apply(self._dataset.z)
+    def set_properties(self, properties) -> 'PropertyModel':
+        self._properties = properties
         return self
 
-    def _write_to_host(self):
-        property_kws = _keyword_adapter.read(self._properties)
-        color_kws = self._get_color_kws()
-        plotter_kws = self._get_plotter_kws()
-        actor = self._host.add_mesh(self._mesh, **property_kws, **plotter_kws, **color_kws)
-        self._host_actors[self.ActorKey.MESH] = actor
+    def supports_update(self, properties):
+        raise NotImplementedError()
 
-    def _get_plotter_kws(self) -> Dict[str, Any]:
-        return {'name': self.key, 'style': self._geometry_style.value}
+    def get_kws(self):
+        raise NotImplementedError()
 
-    def _update_actor_properties(self):
-        actor = self._host_actors[self.ActorKey.MESH]
+
+class ColorModel(PropertyModel):
+
+    class Properties(object):
+        pass
+
+    @property
+    def scalar_bar_title(self) -> Union[str, None]:
+        raise NotImplementedError()
+
+    def update_actors(self, actors):
+        raise NotImplementedError()
+
+    @staticmethod
+    def from_properties(properties):
+        if isinstance(properties, UniformColorModel.Properties):
+            model = UniformColorModel()
+        elif isinstance(properties, ScalarColormapModel.Properties):
+            model = ScalarColormapModel()
+        else:
+            raise NotImplementedError()
+        model.set_properties(properties)
+        return model
+
+    def get_kws(self):
+        raise NotImplementedError()
+
+
+class UniformColorModel(ColorModel):
+
+    @dataclass
+    class Properties(ColorModel.Properties):
+        color: str
+        opacity: float
+
+    @property
+    def scalar_bar_title(self) -> Union[str, None]:
+        return None
+
+    def update_actors(self, actors: Dict[str, pv.Actor]) -> pv.Actor:
+        actor = actors['mesh']
         actor_props = actor.prop
         new_actor_props = _keyword_adapter.read(self._properties)
         for key, value in new_actor_props.items():
             setattr(actor_props, key, value)
+        return actor
 
-    def set_color(self, properties) -> 'MeshVisualizationModel':
-        raise NotImplementedError()
+    def supports_update(self, properties: ColorModel.Properties):
+        return isinstance(properties, UniformColorModel.Properties)
 
-    def _get_color_kws(self) -> Dict[str, Any]:
-        raise NotImplementedError()
-
-
-@dataclass
-class UniformColorMixin():
-    color: str = None
-    opacity: float = None
+    def get_kws(self):
+        kws = _keyword_adapter.read(self._properties)
+        kws['scalars'] = None
+        return kws
 
 
-class GeometryVisualizationModel(MeshVisualizationModel):
+class ScalarColormapModel(ColorModel):
 
     @dataclass
-    class ColorProperties(UniformColorMixin):
-        pass
+    class Properties(ColorModel.Properties):
+        scalar_name: str
+        colormap_name: str
+        opacity: float
+        scalar_range: Tuple[float, float] = None
+        below_range_color: str = None
+        above_range_color: str = None
 
-    def __init__(self, dataset: SurfaceDataset, style: GeometryStyle, visual_key: str = None, parent=None):
-        super().__init__(dataset, style, visual_key, parent)
-        self._color_properties = None
+    @property
+    def scalar_bar_title(self) -> Union[str, None]:
+        if self._properties is None:
+            return None
+        scalar_type = getattr(VisualizationType, self._properties.scalar_name.upper())
+        return scalar_type.value
 
-    def set_color(self, properties: 'GeometryVisualizationModel.ColorProperties') -> 'GeometryVisualizationModel':
-        self._color_properties = properties
-        if self._host is not None:
-            self._update_actor_color()
+    def supports_update(self, properties: ColorModel.Properties):
+        return isinstance(properties, ScalarColormapModel.Properties)
+
+    def update_actors(self, actors: Dict[str, pv.Actor]) -> pv.Actor:
+        actor = actors['mesh']
+        actor_props = actor.prop
+        actor_props.opacity = self._properties.opacity
+        actor.mapper.array_name = self._properties.scalar_name
+
+        scalar_range = self._properties.scalar_range
+        if scalar_range is None:
+            mesh = actor.mapper.mesh
+            scalar_range = mesh.get_data_range(self._properties.scalar_name)
+        actor.mapper.scalar_range = scalar_range
+
+        actor.mapper.lookup_table.cmap = self._properties.colormap_name
+        below_range_color = self._properties.below_range_color
+        if below_range_color is not None:
+            actor.mapper.lookup_table.below_range_color = below_range_color
+        above_range_color = self._properties.above_range_color
+        if above_range_color is not None:
+            actor.mapper.lookup_table.above_range_color = above_range_color
+        return actor
+
+    def get_kws(self):
+        props = self._properties
+        lut = pv.LookupTable(cmap=props.colormap_name)
+        lut.scalar_range = props.scalar_range
+        return {'scalars': props.scalar_name, 'cmap': lut, 'opacity': props.opacity, 'show_scalar_bar': False}
+
+
+class MeshGeometryModel(PropertyModel):
+
+    @dataclass
+    class Properties(PropertyModel.Properties):
+        lighting: LightingProperties
+        mesh: MeshProperties
+
+    def __init__(self, dataset: SurfaceDataset, properties: 'MeshGeometryModel.Properties' = None, parent: QObject = None):
+        super().__init__(parent)
+        if properties is not None:
+            self.set_properties(properties)
+        self._dataset = dataset
+        self._mesh = dataset.get_polydata()
+        self._mesh.points[:, -1] /= 4000.
+        self._scale = None
+
+    @property
+    def mesh_style(self):
+        return _mesh_style_mapping[type(self._properties.mesh)]
+
+    def set_properties(self, properties: 'MeshGeometryModel.Properties') -> 'MeshGeometryModel':
+        return super().set_properties(properties)
+
+    def set_vertical_scale(self, scale: float):
+        self._scale = float(scale)
         return self
 
-    def _update_actor_color(self):
-        actor = self._host_actors[self.ActorKey.MESH]
-        actor_props = actor.prop
-        new_actor_props = _keyword_adapter.read(self._color_properties)
-        for key, value in new_actor_props.items():
+    def write_to_host(self, host: pv.Plotter, **kwargs) -> Dict[str, pv.Actor]:
+        lighting_kws = _keyword_adapter.read(self._properties.lighting)
+        mesh_properties = self._properties.mesh
+        mesh_kws = _keyword_adapter.read(mesh_properties)
+        actor = host.add_mesh(self._mesh, style=self.mesh_style.name.lower(), **mesh_kws, **lighting_kws, **kwargs)
+        # actor.scale = (1., 1., 1 / self._scale)
+        return {'mesh': actor}
+
+    def update_actors(self, actors: Dict[str, pv.Actor]) -> Dict[str, pv.Actor]:
+        actor_props = actors['mesh'].prop
+        style = self.mesh_style.name.lower()
+        actor_props.style = style
+        lighting_kws = _keyword_adapter.read(self._properties.lighting)
+        for key, value in lighting_kws.items():
             setattr(actor_props, key, value)
+        mesh_kws = _keyword_adapter.read(self._properties.mesh)
+        for key, value in mesh_kws.items():
+            setattr(actor_props, key, value)
+        # actors['mesh'].scale = (1, 1, 1 / self._scale)
+        return actors
 
-    def _get_color_kws(self) -> Dict[str, Any]:
-        if self._color_properties is None:
-            return {}
-        kws = _keyword_adapter.read(self._color_properties)
-        return kws
-
-
-@dataclass
-class ScalarColormapMixin():
-    scalar_name: str = None
-    colormap_name: str = None
-    scalar_range: Tuple[float, float] = None
-    below_range_color: str = None
-    above_range_color: str = None
-    opacity: float = None
+    def supports_update(self, properties: 'MeshGeometryModel.Properties'):
+        return True
 
 
-class ScalarFieldModel(MeshVisualizationModel):
+class VisualizationModel(QObject):
 
-    @dataclass
-    class ColormapProperties(ScalarColormapMixin):
-        pass
+    def __init__(self, geometry: MeshGeometryModel, color: ColorModel, visual_key: str = None, parent=None):
+        super().__init__(parent)
+        if visual_key is None:
+            visual_key = str(uuid.uuid4())
+        self.key = str(visual_key)
+        self.geometry = geometry
+        self.color = color
+        self._host = None
+        self._host_actors = {}
+        self._is_visible = True
 
-    def __init__(self, dataset: SurfaceDataset, style: GeometryStyle, visual_key: str = None, parent=None):
-        super().__init__(dataset, style, visual_key, parent)
-        self._colormap_properties = None
-        self._lookup_reference = None
+    def set_host(self, host: pv.Plotter) -> 'VisualizationModel':
+        self.clear_host()
+        if host is not None:
+            self._host = host
+            self._write_to_host()
+        return self
 
-    def set_color(self, properties: 'ScalarFieldModel.ColormapProperties') -> 'ScalarFieldModel':
-        self._colormap_properties = properties
+    def clear_host(self):
+        host_reference = self._host
         if self._host is not None:
-            self._update_actor_colormap()
+            for actor in self._host_actors.values():
+                self._host.remove_actor(actor)
+        self._host = None
+        self._host_actors = {}
+        return host_reference
 
-    def _update_actor_colormap(self):
-        actor = self._host_actors[self.ActorKey.MESH]
-        actor.set_active_scalars(self._colormap_properties.scalar_name)
-        mapper = actor.mapper
-        mapper.scalar_range = self._colormap_properties.scalar_range
-        lookup_table = mapper.lookup_table
-        lookup_table.abbly_cmap(self._colormap_properties.colormap_name)
+    def update_geometry(self, properties: MeshGeometryModel.Properties) -> None:
+        if self.geometry.supports_update(properties):
+            self.geometry.set_properties(properties)
+            if self._host_actors:
+                self.geometry.update_actors(self._host_actors)
+            return self
+        raise NotImplementedError()
 
-    def _get_color_kws(self) -> Dict[str, Any]:
-        if self._color_properties is None:
-            return {}
-        lookup_table = pv.LookupTable(cmap=self._colormap_properties.colormap_name)
-        lookup_table.scalar_range = self._colormap_properties.scalar_range
-        color_below = self._colormap_properties.below_range_color
-        if color_below is not None:
-            lookup_table.below_range_color = color_below
-        color_above = self._colormap_properties.above_range_color
-        if color_above is not None:
-            lookup_table.above_range_color = color_above
-        kws = {'scalars': self._colormap_properties.scalar_name, 'cmap': lookup_table, 'show_scalar_bar': False}
-        return kws
+    def update_color(self, properties: ColorModel.Properties) -> 'VisualizationModel':
+        scalar_bar_old = self.color.scalar_bar_title
+        if self.color.supports_update(properties):
+            self.color.set_properties(properties)
+            scalar_bar_new = self.color.scalar_bar_title
+            if self._host_actors:
+                self.color.update_actors(self._host_actors)
+            if scalar_bar_old is not None:
+                if scalar_bar_new is None or scalar_bar_old != scalar_bar_new:
+                    self._host.remove_actor(self._host_actors['scalar_bar'])
+                    self._host.remove_scalar_bar(scalar_bar_old)
+            if scalar_bar_new is not None:
+                if not (scalar_bar_old is not None and scalar_bar_new == scalar_bar_old):
+                    actor = self._host.add_scalar_bar(mapper=self._host_actors['mesh'].mapper, title=scalar_bar_new)
+                    self._host_actors['scalar_bar'] = actor
+        else:
+            self.color = ColorModel.from_properties(properties)
+            self._write_to_host()
+        return self
 
+    def _write_to_host(self):
+        color_kws = self.color.get_kws()
+        actors = self.geometry.write_to_host(self._host, **color_kws, name=self.key)
+        self._host_actors.update(actors)
+        scalar_title = self.color.scalar_bar_title
+        if scalar_title is not None:
+            actor = self._host.add_scalar_bar(mapper=self._host_actors['mesh'].mapper, title=scalar_title)
+            self._host_actors['scalar_bar'] = actor
 
-@dataclass
-class WireframeMixin(object):
-    line_width: float = None
-    render_lines_as_tubes: bool = None
+    def set_visibility(self, visible: bool) -> 'VisualizationModel':
+        self._is_visible = visible
+        for actor in self._host_actors.values():
+            actor.visibility = self._is_visible
+        return self
 
-
-@dataclass
-class TranslucentSurfaceMixin(object):
-    show_edges: bool = None
-    edge_color: str = None
-    edge_opacity: float = None
-
-
-@dataclass
-class PointsSurfaceMixin(object):
-    point_size: float = None
-    render_points_as_spheres: bool = None
-
-
-class WireframeGeometry(GeometryVisualizationModel):
-
-    @dataclass
-    class Properties(MeshVisualizationModel.Properties, WireframeMixin):
-        pass
-
-    def __init__(self, dataset: SurfaceDataset, visual_key: str = None, parent=None):
-        super().__init__(dataset, GeometryStyle.WIREFRAME, visual_key, parent)
-
-    def set_properties(self, properties: 'WireframeGeometry.Properties') -> 'VisualizationModel':
-        return super().set_properties(properties)
-
-
-class SurfaceGeometry(GeometryVisualizationModel):
-
-    @dataclass
-    class Properties(MeshVisualizationModel.Properties, TranslucentSurfaceMixin):
-        pass
-
-    def __init__(self, dataset: SurfaceDataset, visual_key: str = None, parent=None):
-        super().__init__(dataset, GeometryStyle.SURFACE, visual_key, parent)
-
-    def set_properties(self, properties: 'SurfaceGeometry.Properties') -> 'VisualizationModel':
-        return super().set_properties(properties)
-
-
-class PointsGeometry(GeometryVisualizationModel):
-
-    @dataclass
-    class Properties(MeshVisualizationModel.Properties, PointsSurfaceMixin):
-        pass
-
-    def __init__(self, dataset: SurfaceDataset, visual_key: str = None, parent=None):
-        super().__init__(dataset, GeometryStyle.POINTS, visual_key, parent)
-
-    def set_properties(self, properties: 'PointsGeometry.Properties') -> 'VisualizationModel':
-        return super().set_properties(properties)
+    def set_vertical_scale(self, scale: float) -> 'VisualizationModel':
+        self.geometry.set_vertical_scale(scale)
+        if self._host_actors:
+            self.geometry.update_actors(self._host_actors)
+        return self
 
 
 class SceneModel(QObject):
@@ -314,6 +374,7 @@ class SceneModel(QObject):
         super().__init__(parent)
         self.host = host
         self.visuals: Dict[str, VisualizationModel] = {}
+        self._scale = 1.
 
     def add_visualization(self, visualization: VisualizationModel) -> VisualizationModel:
         return self._add_visualization(visualization)
@@ -334,7 +395,12 @@ class SceneModel(QObject):
 
     def _add_visualization(self, visualization: VisualizationModel) -> 'SceneModel':
         self.visuals[visualization.key] = visualization
+        self.host.suppress_render = True
+        visualization.set_vertical_scale(self._scale)
         visualization.set_host(self.host)
+        self.host.update_bounds_axes()
+        self.host.suppress_render = False
+        self.host.render()
         return visualization
 
     def remove_visualization(self, key: str):
@@ -347,4 +413,11 @@ class SceneModel(QObject):
         self.visuals.clear()
         self.host.clear_actors()
         self.host.scalar_bars.clear()
+
+    def set_vertical_scale(self, scale):
+        self._scale = scale
+        for visualization in self.visuals.values():
+            visualization.set_vertical_scale(self._scale)
+        self.host.render()
+        return self
 

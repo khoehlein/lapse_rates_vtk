@@ -1,16 +1,17 @@
 import uuid
 from enum import Enum
 
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal, Qt, QAbstractTableModel
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QWidget, QComboBox, QDoubleSpinBox, QFormLayout, QLabel, QTabWidget, QStackedWidget, \
-    QCheckBox, QVBoxLayout, QStackedLayout, QPushButton, QHBoxLayout
+    QCheckBox, QVBoxLayout, QStackedLayout, QPushButton, QHBoxLayout, QTableView
 import pyvista as pv
 from pyvista.plotting.opts import InterpolationType
 
 from src.interaction.background_color.view import SelectColorButton
-from src.model.visualization.scene_model import ShadingMethod, WireframeGeometry, SurfaceGeometry, PointsGeometry, \
-    GeometryVisualizationModel, ScalarFieldModel
+from src.model.visualization.scene_model import ShadingMethod, ScalarColormapModel, UniformColorModel, \
+    WireframeProperties, TranslucentSurfaceProperties, PointsSurfaceProperties, MeshGeometryModel, LightingProperties, \
+    VisualizationType
 
 
 class LightingSettingsView(QWidget):
@@ -82,7 +83,7 @@ class LightingSettingsView(QWidget):
         self.spinner_specular_power.setValue(lighting_config.specular_power)
 
     def get_settings(self):
-        return {
+        return LightingProperties(**{
             'shading': ShadingMethod(self.combo_shading.currentText()),
             'metallic': self.spinner_metallic.value(),
             'roughness': self.spinner_roughness.value(),
@@ -90,11 +91,10 @@ class LightingSettingsView(QWidget):
             'diffuse': self.spinner_diffuse.value(),
             'specular': self.spinner_specular.value(),
             'specular_power': self.spinner_specular_power.value(),
-        }
+        })
 
 
 class WireframeSettingsView(QWidget):
-    REPRESENTATION_CLASS = WireframeGeometry.Properties
 
     representation_changed = pyqtSignal()
 
@@ -122,14 +122,13 @@ class WireframeSettingsView(QWidget):
         self.setLayout(layout)
 
     def get_settings(self):
-        return {
-            'line_width': self.spinner_line_width.value(),
-            'render_lines_as_tubes': self.checkbox_lines_as_tubes.isChecked(),
-        }
+        return WireframeProperties(
+            line_width=self.spinner_line_width.value(),
+            render_lines_as_tubes=self.checkbox_lines_as_tubes.isChecked(),
+        )
 
 
 class SurfaceSettingsView(QWidget):
-    REPRESENTATION_CLASS = SurfaceGeometry.Properties
 
     representation_changed = pyqtSignal()
 
@@ -168,15 +167,14 @@ class SurfaceSettingsView(QWidget):
         self.setLayout(layout)
 
     def get_settings(self):
-        return {
-            'show_edges': self.checkbox_show_edges.isChecked(),
-            'edge_color': self.button_edge_color.current_color,
-            'edge_opacity': self.spinner_edge_opacity.value(),
-        }
+        return TranslucentSurfaceProperties(
+            show_edges=self.checkbox_show_edges.isChecked(),
+            edge_color=self.button_edge_color.current_color,
+            edge_opacity=self.spinner_edge_opacity.value(),
+        )
 
 
 class PointsSettingsView(QWidget):
-    REPRESENTATION_CLASS = PointsGeometry.Properties
 
     representation_changed = pyqtSignal()
 
@@ -205,15 +203,14 @@ class PointsSettingsView(QWidget):
         self.setLayout(layout)
 
     def get_settings(self):
-        return {
-            'point_size': self.spinner_point_size.value(),
-            'render_points_as_spheres': self.checkbox_points_as_spheres.isChecked(),
-        }
+        return PointsSurfaceProperties(
+            point_size=self.spinner_point_size.value(),
+            render_points_as_spheres=self.checkbox_points_as_spheres.isChecked(),
+        )
 
 
 class RepresentationSettingsView(QWidget):
 
-    properties_changed = pyqtSignal()
     representation_changed = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -224,11 +221,11 @@ class RepresentationSettingsView(QWidget):
         self.combo_geometry_style.currentIndexChanged.connect(self.representation_changed.emit)
 
         self.wireframe_settings = WireframeSettingsView(self)
-        self.wireframe_settings.representation_changed.connect(self.properties_changed.emit)
+        self.wireframe_settings.representation_changed.connect(self.representation_changed.emit)
         self.surface_settings = SurfaceSettingsView(self)
-        self.surface_settings.representation_changed.connect(self.properties_changed.emit)
+        self.surface_settings.representation_changed.connect(self.representation_changed.emit)
         self.points_settings = PointsSettingsView(self)
-        self.points_settings.representation_changed.connect(self.properties_changed.emit)
+        self.points_settings.representation_changed.connect(self.representation_changed.emit)
 
         self.combo_geometry_style.addItems(['Wireframe', 'Surface', 'Points'])
         self.interface_stack.addWidget(self.wireframe_settings)
@@ -239,14 +236,13 @@ class RepresentationSettingsView(QWidget):
 
     def _set_layout(self):
         layout = QVBoxLayout()
-        layout.addWidget(QLabel('Style:'))
         layout.addWidget(self.combo_geometry_style)
         layout.addLayout(self.interface_stack)
+        layout.addStretch()
         self.setLayout(layout)
 
     def get_settings(self):
-        current_widget = self.interface_stack.currentWidget()
-        return current_widget.REPRESENTATION_CLASS, current_widget.get_settings()
+        return self.interface_stack.currentWidget().get_settings()
 
 
 class DataConfiguration(Enum):
@@ -254,59 +250,50 @@ class DataConfiguration(Enum):
     SURFACE_O8000 = 'Surface (O8000)'
 
 
-class VisualizationType(Enum):
-    GEOMETRY = 'Geometry'
-    LAPSE_RATE_O1280 = 'Lapse rate (O1280)'
-    LAPSE_RATE_O8000 = 'Lapse rate (O8000)'
-    T2M_O1280 = 'T2M (O1280)'
-    T2M_O8000 = 'T2M (O8000)'
-    T2M_DIFFERENCE = 'T2M (difference)'
-    Z_O1280 = 'Z (O1280)'
-    Z_O8000 = 'Z (O8000)'
-    Z_DIFFERENCE = 'Z (difference)'
-
-
 _available_visualizations = {
     DataConfiguration.SURFACE_O1280: [
         VisualizationType.GEOMETRY,
-        # VisualizationType.LAPSE_RATE_O1280,
-        # VisualizationType.T2M_O1280,
-        # VisualizationType.Z_O1280
+        VisualizationType.LAPSE_RATE,
+        VisualizationType.T2M_O1280,
+        VisualizationType.Z_O1280
     ],
     DataConfiguration.SURFACE_O8000: [
         VisualizationType.GEOMETRY,
-        # VisualizationType.LAPSE_RATE_O1280,
-        # VisualizationType.LAPSE_RATE_O8000,
-        # VisualizationType.T2M_O1280,
-        # VisualizationType.T2M_O8000,
-        # VisualizationType.Z_O1280,
-        # VisualizationType.Z_O8000,
-        # VisualizationType.Z_DIFFERENCE,
+        VisualizationType.LAPSE_RATE,
+        VisualizationType.T2M_O1280,
+        VisualizationType.T2M_O8000,
+        VisualizationType.Z_O1280,
+        VisualizationType.Z_O8000,
+        VisualizationType.Z_DIFFERENCE,
     ]
 }
 
-_vis_default_lapse_rate = ScalarFieldModel.ColormapProperties(
-    None, 'RdBu', (-14, 14), None, None
+_vis_default_lapse_rate = ScalarColormapModel.Properties(
+    None, 'RdBu', 1., (-14, 14), None, None
 )
 
-_vis_default_temperature = ScalarFieldModel.ColormapProperties(
-    None, 'RdBu', (260, 320), None, None
+_vis_default_temperature = ScalarColormapModel.Properties(
+    None, 'RdBu', 1.,  (260, 320), None, None
 )
 
-_vis_default_elevation = ScalarFieldModel.ColormapProperties(
-    None, 'greys', (-500, 9000), None, None
+_vis_default_temperature_difference = ScalarColormapModel.Properties(
+    None, 'RdBu', 1.,  (-40, 40), None, None
 )
 
-_vis_default_elevation_difference = ScalarFieldModel.ColormapProperties(
-    None, 'RdBu', (-1500, 1500), None, None
+_vis_default_elevation = ScalarColormapModel.Properties(
+    None, 'greys', 1., (-500, 9000), None, None
+)
+
+_vis_default_elevation_difference = ScalarColormapModel.Properties(
+    None, 'RdBu', 1., (-1500, 1500), None, None
 )
 
 _vis_defaults = {
-    VisualizationType.GEOMETRY: GeometryVisualizationModel.ColorProperties('k', 1.),
-    VisualizationType.LAPSE_RATE_O1280: _vis_default_lapse_rate,
-    VisualizationType.LAPSE_RATE_O8000: _vis_default_lapse_rate,
+    VisualizationType.GEOMETRY: UniformColorModel.Properties('k', 1.),
+    VisualizationType.LAPSE_RATE: _vis_default_lapse_rate,
     VisualizationType.T2M_O1280: _vis_default_temperature,
     VisualizationType.T2M_O8000: _vis_default_temperature,
+    VisualizationType.T2M_DIFFERENCE: _vis_default_temperature_difference,
     VisualizationType.Z_O1280: _vis_default_elevation,
     VisualizationType.Z_O8000: _vis_default_elevation,
     VisualizationType.Z_DIFFERENCE: _vis_default_elevation_difference,
@@ -342,7 +329,7 @@ class UniformColorSettingsView(QWidget):
         self.spinner_opacity.setValue(color_theme.opacity)
 
     def get_settings(self, scalar_name: str = None):
-        return GeometryVisualizationModel.ColorProperties(
+        return UniformColorModel.Properties(
             color=self.button_color.current_color,
             opacity=self.spinner_opacity.value()
         )
@@ -356,10 +343,16 @@ class ColormapSettingsView(QWidget):
         super(ColormapSettingsView, self).__init__(parent)
         self.combo_cmap_name = QComboBox(self)
         self.combo_cmap_name.addItems([
+            'viridis', 'plasma', 'inferno', 'magma', 'cividis',
             'Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
             'YlOrBr', 'YlOrRd', 'OrRd', 'PuRd', 'RdPu', 'BuPu',
-            'GnBu', 'PuBu', 'YlGnBu', 'PuBuGn', 'BuGn', 'YlGn'
+            'GnBu', 'PuBu', 'YlGnBu', 'PuBuGn', 'BuGn', 'YlGn', 'binary', 'gist_yarg', 'gist_gray', 'gray', 'bone',
+            'pink', 'spring', 'summer', 'autumn', 'winter', 'cool',
+            'Wistia', 'hot', 'afmhot', 'gist_heat', 'copper',
+            'PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu', 'RdYlBu',
+            'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic'
         ])
+        self.combo_cmap_name.currentTextChanged.connect(self.color_changed.emit)
         self.spinner_scalar_min = QDoubleSpinBox(self)
         self.spinner_scalar_max = QDoubleSpinBox(self)
         self.spinner_scalar_min.valueChanged.connect(self.spinner_scalar_max.setMinimum)
@@ -385,23 +378,27 @@ class ColormapSettingsView(QWidget):
         layout.addRow(QLabel('Opacity:'), self.spinner_opacity)
         self.setLayout(layout)
 
-    def set_defaults(self, settings: ScalarFieldModel.ColormapProperties):
+    def set_defaults(self, settings: ScalarColormapModel.Properties):
         self.combo_cmap_name.setCurrentText(settings.colormap_name)
+        self.spinner_scalar_min.setMinimum(-9999)
+        self.spinner_scalar_max.setMaximum(9999)
+        self.spinner_scalar_min.setMaximum(settings.scalar_range[1])
+        self.spinner_scalar_max.setMinimum(settings.scalar_range[0])
         self.spinner_scalar_min.setValue(settings.scalar_range[0])
         self.spinner_scalar_max.setValue(settings.scalar_range[1])
         self.spinner_opacity.setValue(settings.opacity)
 
     def get_settings(self, scalar_name: str):
-        return ScalarFieldModel.ColormapProperties(
+        return ScalarColormapModel.Properties(
             scalar_name, self.combo_cmap_name.currentText(),
-            (self.spinner_scalar_min.value(), self.spinner_scalar_max.value())
+            self.spinner_opacity.value(), (self.spinner_scalar_min.value(), self.spinner_scalar_max.value())
         )
 
 
 class VisualizationSettingsView(QWidget):
 
-    vis_properties_changed = pyqtSignal()
-    visualization_changed = pyqtSignal(str)
+    source_data_changed = pyqtSignal(str)
+    geometry_changed = pyqtSignal()
     visibility_changed = pyqtSignal(bool)
     color_changed = pyqtSignal()
 
@@ -410,16 +407,21 @@ class VisualizationSettingsView(QWidget):
         if key is None:
             key = str(uuid.uuid4())
         self.key = key
+
         self.combo_source_data = QComboBox(self)
         self.combo_source_data.addItems([config.value for config in DataConfiguration])
+
         self.combo_visualization_type = QComboBox(self)
         self.combo_visualization_type.addItems([config.value for config in VisualizationType])
         self._toggle_visualization_types()
         self.combo_source_data.currentTextChanged.connect(self._on_source_data_changed)
+        self.combo_visualization_type.currentTextChanged.connect(self.color_changed.emit)
+
         self.tabs = QTabWidget(self)
         self._build_color_tab()
         self._build_representation_tab()
         self._build_lighting_tab()
+
         self.checkbox_visibility = QCheckBox('Visible')
         self.checkbox_visibility.setChecked(True)
         self.checkbox_visibility.stateChanged.connect(self.visibility_changed.emit)
@@ -433,26 +435,34 @@ class VisualizationSettingsView(QWidget):
             item_text = self.combo_visualization_type.itemText(i)
             item.setEnabled(VisualizationType(item_text) in _available_visualizations[selected_source])
 
+    def _on_source_data_changed(self, source_type: str) -> None:
+        self._toggle_visualization_types()
+        self.source_data_changed.emit(self.key)
+
     def _build_color_tab(self):
         self.interface_stack = QStackedLayout()
         for color_type in VisualizationType:
             widget = UniformColorSettingsView(self) if color_type == VisualizationType.GEOMETRY else ColormapSettingsView(self)
             self.interface_stack.addWidget(widget)
+            widget.set_defaults(_vis_defaults[color_type])
             widget.color_changed.connect(self.color_changed.emit)
         self.combo_visualization_type.currentIndexChanged.connect(self.interface_stack.setCurrentIndex)
         color_stack_widget = QWidget(self)
-        color_stack_widget.setLayout(self.interface_stack)
-        self.tabs.addTab(self._to_tab_widget(color_stack_widget), 'Color')
+        layout = QVBoxLayout()
+        layout.addWidget(self.combo_visualization_type)
+        layout.addLayout(self.interface_stack)
+        layout.addStretch()
+        color_stack_widget.setLayout(layout)
+        self.tabs.addTab(color_stack_widget, 'Color')
 
     def _build_representation_tab(self):
         self.representation_settings = RepresentationSettingsView(self)
-        self.representation_settings.properties_changed.connect(self.vis_properties_changed.emit)
-        self.representation_settings.representation_changed.connect(self._on_visualization_changed)
-        self.tabs.addTab(self._to_tab_widget(self.representation_settings), 'Representation')
+        self.representation_settings.representation_changed.connect(self.geometry_changed.emit)
+        self.tabs.addTab(self.representation_settings, 'Representation')
 
     def _build_lighting_tab(self):
         self.lighting_settings = LightingSettingsView(self)
-        self.lighting_settings.lighting_changed.connect(self.vis_properties_changed.emit)
+        self.lighting_settings.lighting_changed.connect(self.geometry_changed.emit)
         self.tabs.addTab(self._to_tab_widget(self.lighting_settings), 'Lighting')
 
     def _to_tab_widget(self, x):
@@ -463,22 +473,18 @@ class VisualizationSettingsView(QWidget):
         widget.setLayout(layout)
         return widget
 
-    def _on_visualization_changed(self):
-        self.visualization_changed.emit(self.key)
-
     def _set_layout(self):
         layout = QVBoxLayout()
         layout.addWidget(self.combo_source_data)
-        layout.addWidget(self.combo_visualization_type)
         layout.addWidget(self.tabs)
         layout.addWidget(self.checkbox_visibility)
         layout.addStretch()
         self.setLayout(layout)
 
     def get_vis_properties(self):
-        rep_class, rep_settings = self.representation_settings.get_settings()
+        rep_settings = self.representation_settings.get_settings()
         lighting_settings = self.lighting_settings.get_settings()
-        prop = rep_class(**rep_settings, **lighting_settings)
+        prop = MeshGeometryModel.Properties(mesh=rep_settings, lighting=lighting_settings)
         return prop
 
     def get_color_properties(self):
@@ -490,10 +496,6 @@ class VisualizationSettingsView(QWidget):
 
     def get_source_properties(self) -> DataConfiguration:
         return DataConfiguration(self.combo_source_data.currentText())
-
-    def _on_source_data_changed(self, source_type: str) -> None:
-        self._toggle_visualization_types()
-        self.visualization_changed.emit(self.key)
 
     def _populate_visualization_combo(self, source_type: DataConfiguration) -> None:
         self.combo_visualization_type.clear()

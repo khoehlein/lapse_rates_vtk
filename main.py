@@ -2,17 +2,12 @@ import sys
 import logging
 
 from PyQt5 import QtCore
-from PyQt5.QtWidgets import QDockWidget
-import pyvista as pv
 
-from src.interaction.domain_selection.controller import DownscalingController
 from src.interaction.plotter_controls.controller import PlotterController
 from src.interaction.pyvista_display.view import PyvistaView
 from src.interaction.settings_menu import SettingsViewTabbed
-from src.interaction.visualizations.controller import VisualizationController, SceneController
-from src.model.backend_model import DownscalingPipeline
+from src.interaction.visualizations.controller import SceneController
 from src.model.data_store.dummy import DummyPipeline, DummyController
-from src.model.data_store.world_data import WorldData
 from src.model.visualization.scene_model import SceneModel
 
 logging.basicConfig(level=logging.INFO)
@@ -69,9 +64,11 @@ class MainView(MainWindow):
             self.render_view.plotter, parent=self
         )
         self.scene_model = SceneModel(self.render_view.plotter, parent=self)
+        self.scene_model.set_vertical_scale(4000.)
+
         self.scene_controller = SceneController(self.downscaling_pipeline, self.scene_model, parent=self)
         self.scene_controller.register_settings_view(self.settings_menu.visualization_settings)
-        self.scene_controller.reset_scene()
+        # self.scene_controller.reset_scene()
 
     def _build_main_menu(self):
         # simple menu to demo functions
