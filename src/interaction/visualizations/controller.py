@@ -87,8 +87,13 @@ class SceneController(QObject):
         else:
             print('Nothing happened')
 
-    def register_visualization_interface(self, settings_view: VisualizationSettingsView, controller: VisualizationController):
-        self.scene_settings_view.register_settings_view(settings_view)
+    def register_visualization_interface(
+            self,
+            settings_view: VisualizationSettingsView,
+            controller: VisualizationController,
+            label=None
+    ):
+        self.scene_settings_view.register_settings_view(settings_view, label)
         settings_view.source_data_changed.connect(self._on_source_data_changed)
         self._visualization_controls[controller.key] = controller
         domain_data = self.pipeline_model.get_output()
@@ -189,5 +194,5 @@ class VisualizationFactory(QObject):
             controller = VisualizationController(settings_view, parent=self.scene_controller)
         else:
             raise NotImplementedError()
-        self.scene_controller.register_visualization_interface(settings_view, controller)
+        self.scene_controller.register_visualization_interface(settings_view, controller, label)
         return settings_view, controller

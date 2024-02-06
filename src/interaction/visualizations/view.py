@@ -524,8 +524,10 @@ class SceneSettingsView(QWidget):
         layout.addWidget(self.button_new)
         self.setLayout(layout)
 
-    def register_settings_view(self, widget: VisualizationSettingsView):
+    def register_settings_view(self, widget: VisualizationSettingsView, label=None):
         key = widget.key
-        self.combo_visual_selection.addItem(key)
+        if label is None:
+            label = key
+        self.combo_visual_selection.addItem(label)
         self.interface_stack.addWidget(widget)
         self.interfaces[key] = widget
