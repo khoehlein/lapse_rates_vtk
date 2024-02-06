@@ -244,7 +244,12 @@ class MeshGeometryModel(PropertyModel):
         lighting: LightingProperties
         mesh: MeshProperties
 
-    def __init__(self, dataset: SurfaceDataset, properties: 'MeshGeometryModel.Properties' = None, parent: QObject = None):
+    def __init__(
+            self,
+            dataset: SurfaceDataset,
+            properties: 'MeshGeometryModel.Properties' = None,
+            parent: QObject = None
+    ):
         super().__init__(parent)
         if properties is not None:
             self.set_properties(properties)

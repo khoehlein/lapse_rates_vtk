@@ -239,7 +239,8 @@ class RepresentationSettingsView(QWidget):
         layout.addWidget(self.combo_geometry_style)
         layout.addLayout(self.interface_stack)
         layout.addStretch()
-        self.setLayout(layout)
+        self.vbox_layout = layout
+        # self.setLayout(layout)
 
     def get_settings(self):
         return self.interface_stack.currentWidget().get_settings()
@@ -419,7 +420,6 @@ class VisualizationSettingsView(QWidget):
 
         self.tabs = QTabWidget(self)
         self._build_color_tab()
-        self._build_representation_tab()
         self._build_lighting_tab()
 
         self.checkbox_visibility = QCheckBox('Visible')
@@ -447,18 +447,16 @@ class VisualizationSettingsView(QWidget):
             widget.set_defaults(_vis_defaults[color_type])
             widget.color_changed.connect(self.color_changed.emit)
         self.combo_visualization_type.currentIndexChanged.connect(self.interface_stack.setCurrentIndex)
+        self.representation_settings = RepresentationSettingsView(self)
+        self.representation_settings.representation_changed.connect(self.geometry_changed.emit)
         color_stack_widget = QWidget(self)
         layout = QVBoxLayout()
         layout.addWidget(self.combo_visualization_type)
         layout.addLayout(self.interface_stack)
+        layout.addLayout(self.representation_settings.vbox_layout)
         layout.addStretch()
         color_stack_widget.setLayout(layout)
         self.tabs.addTab(color_stack_widget, 'Color')
-
-    def _build_representation_tab(self):
-        self.representation_settings = RepresentationSettingsView(self)
-        self.representation_settings.representation_changed.connect(self.geometry_changed.emit)
-        self.tabs.addTab(self.representation_settings, 'Representation')
 
     def _build_lighting_tab(self):
         self.lighting_settings = LightingSettingsView(self)
@@ -505,7 +503,7 @@ class VisualizationSettingsView(QWidget):
         ])
 
 
-class VisualizationOverview(QWidget):
+class SceneSettingsView(QWidget):
 
     new_interface_requested = pyqtSignal()
 
@@ -526,7 +524,7 @@ class VisualizationOverview(QWidget):
         layout.addWidget(self.button_new)
         self.setLayout(layout)
 
-    def register_new_interface(self, widget: VisualizationSettingsView):
+    def register_settings_view(self, widget: VisualizationSettingsView):
         key = widget.key
         self.combo_visual_selection.addItem(key)
         self.interface_stack.addWidget(widget)
