@@ -3,11 +3,14 @@ import logging
 
 from PyQt5 import QtCore
 
+from src.interaction.domain_selection.controller import DownscalingController
 from src.interaction.plotter_controls.controller import PlotterController
 from src.interaction.pyvista_display.view import PyvistaView
 from src.interaction.settings_menu import SettingsViewTabbed
 from src.interaction.visualizations.scene_settings import SceneController
+from src.model.backend_model import DownscalingPipeline
 from src.model.data_store.dummy import DummyPipeline, DummyController
+from src.model.data_store.world_data import WorldData
 from src.model.scene_model import SceneModel
 
 import pyvista as pv
@@ -52,14 +55,14 @@ class MainView(MainWindow):
         self.signal_close.connect(self.render_view.plotter.close)
 
     def _build_downscaling_pipeline(self):
-        # self.data_store = WorldData.from_config_file(CONFIG_FILE)
-        # self.downscaling_pipeline = DownscalingPipeline(self.data_store)
-        # self.downscaling_controller = DownscalingController(
-        #     self.settings_menu, self.render_view,
-        #     self.downscaling_pipeline, parent=self
-        # )
-        self.downscaling_pipeline = DummyPipeline()
-        self.downscaling_controller = DummyController(self.downscaling_pipeline)
+        self.data_store = WorldData.from_config_file(CONFIG_FILE)
+        self.downscaling_pipeline = DownscalingPipeline(self.data_store)
+        self.downscaling_controller = DownscalingController(
+            self.settings_menu, self.render_view,
+            self.downscaling_pipeline, parent=self
+        )
+        # self.downscaling_pipeline = DummyPipeline()
+        # self.downscaling_controller = DummyController(self.downscaling_pipeline)
 
     def _build_vis_pipeline(self):
         self.plotter_controller = PlotterController(
