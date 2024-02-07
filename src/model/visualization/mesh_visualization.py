@@ -51,7 +51,7 @@ class MeshVisualization(VisualizationModel):
         return self
 
     @classmethod
-    def from_dataset(cls, dataset: Dict[str, SurfaceDataset], properties: Dict[str, Any], key: str = None) -> 'SurfaceScalarField':
+    def from_dataset(cls, dataset: Dict[str, SurfaceDataset], properties: Dict[str, Any], key: str = None) -> 'MeshVisualization':
         raise NotImplementedError()
 
     @staticmethod

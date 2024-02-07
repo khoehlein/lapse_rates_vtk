@@ -13,6 +13,7 @@ from src.model.geometry import SurfaceDataset
 class VisualizationType(Enum):
     SURFACE_SCALAR_FIELD = 'surface_scalar_field'
     SURFACE_ISOCONTOURS = 'surface_isocontours'
+    PROJECTION_LINES = 'projection_lines'
 
 
 class DataConfiguration(Enum):

@@ -115,6 +115,7 @@ class VisualizationRequestDialog(QDialog):
         self.combo_vis_type = QComboBox(self)
         self.combo_vis_type.addItem('Surface scalar field', VisualizationType.SURFACE_SCALAR_FIELD)
         self.combo_vis_type.addItem('Surface isocontours', VisualizationType.SURFACE_ISOCONTOURS)
+        self.combo_vis_type.addItem('Projection lines', VisualizationType.PROJECTION_LINES)
         self.combo_vis_type.currentIndexChanged.connect(self._on_selection_changed)
         self.line_edit_label = QLineEdit()
         self._update_label_hint()
@@ -137,6 +138,7 @@ class VisualizationRequestDialog(QDialog):
         suffix = {
             VisualizationType.SURFACE_SCALAR_FIELD: 'surface',
             VisualizationType.SURFACE_ISOCONTOURS: 'contours',
+            VisualizationType.PROJECTION_LINES: 'hint-lines'
         }[self.combo_vis_type.currentData()]
         return f'unnamed-{suffix}'
 
