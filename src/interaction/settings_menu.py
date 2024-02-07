@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QDockWidget, QScrollArea, QWidget, QVBoxLayout, QTab
 from src.interaction.domain_selection.view import DomainSelectionView
 from src.interaction.model_selection.view import DownscalingSettingsView, NeighborhoodLookupView
 from src.interaction.plotter_controls.view import PlotterSettingsView
-from src.interaction.visualizations.view import VisualizationSettingsView, SceneSettingsView
+from src.interaction.visualizations.surface_scalar_field.view import SceneSettingsView
 
 
 class GeneralSettingsView(QTabWidget):

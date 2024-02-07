@@ -6,9 +6,9 @@ from PyQt5 import QtCore
 from src.interaction.plotter_controls.controller import PlotterController
 from src.interaction.pyvista_display.view import PyvistaView
 from src.interaction.settings_menu import SettingsViewTabbed
-from src.interaction.visualizations.controller import SceneController
+from src.interaction.visualizations.scene_controller import SceneController
 from src.model.data_store.dummy import DummyPipeline, DummyController
-from src.model.visualization.scene_model import SceneModel
+from src.model.scene_model import SceneModel
 
 logging.basicConfig(level=logging.INFO)
 

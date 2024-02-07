@@ -9,7 +9,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 
 # from model.constants import THRESHOLD_LSM_LAND
-# from model.interface import load_temperatures
+# from model.visualization_model.py import load_temperatures
 # from model.storage import load_orography, Orography, load_lsm, LandSeaMask
 
 R_DRY_AIR = 287.0528 # J / (K * kg)

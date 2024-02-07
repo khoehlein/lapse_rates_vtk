@@ -7,3 +7,9 @@ conda create --name lapse_rates_vtk_new --solver=libmamba -c conda-forge python=
 pip install -r environment.txt
 ```
 
+# Software architecture
+
+
+
+
+
