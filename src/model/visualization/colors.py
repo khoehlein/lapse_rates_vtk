@@ -14,11 +14,10 @@ class ColorModel(PropertyModel):
     class Properties(object):
         pass
 
-    @property
-    def scalar_bar_title(self) -> Union[str, None]:
+    def get_scalar_bar_title(self, gui_label: str = None) -> Union[str, None]:
         raise NotImplementedError()
 
-    def update_actors(self, actors, host, scalar_bar_old):
+    def update_actors(self, actors, host, scalar_bar_old, gui_label: str = None):
         raise NotImplementedError()
 
     @staticmethod
@@ -43,11 +42,10 @@ class UniformColorModel(ColorModel):
         color: str
         opacity: float
 
-    @property
-    def scalar_bar_title(self) -> Union[str, None]:
+    def get_scalar_bar_title(self, gui_label: str = None) -> Union[str, None]:
         return None
 
-    def update_actors(self, actors: Dict[str, pv.Actor], host, scalar_bar_old) -> pv.Actor:
+    def update_actors(self, actors: Dict[str, pv.Actor], host, scalar_bar_old, gui_label=None) -> pv.Actor:
         actor = actors['mesh']
         actor_props = actor.prop
         new_actor_props = standard_adapter.read(self._properties)
@@ -75,19 +73,21 @@ class ScalarColormapModel(ColorModel):
         below_range_color: str = None
         above_range_color: str = None
 
-    @property
-    def scalar_bar_title(self) -> Union[str, None]:
+    def get_scalar_bar_title(self, gui_label: str = None) -> Union[str, None]:
         if self._properties is None:
             return None
         scalar_type = getattr(ScalarType, self._properties.scalar_name.upper())
-        return scalar_type.value
+        title = scalar_type.value
+        if gui_label is None:
+            return title
+        return f'{title} ({gui_label})'
 
     def supports_update(self, properties: ColorModel.Properties):
         return isinstance(properties, ScalarColormapModel.Properties)
 
-    def update_actors(self, actors: Dict[str, pv.Actor], host, scalar_bar_old) -> pv.Actor:
+    def update_actors(self, actors: Dict[str, pv.Actor], host, scalar_bar_old, gui_label: str = None) -> pv.Actor:
         self._update_mesh_actors(actors)
-        self._update_scalar_bar(actors, host, scalar_bar_old)
+        self._update_scalar_bar(actors, host, scalar_bar_old, gui_label)
         return actors
 
     def _update_mesh_actors(self, actors: Dict[str, pv.Actor]):
@@ -111,14 +111,14 @@ class ScalarColormapModel(ColorModel):
             actor.mapper.lookup_table.above_range_color = above_range_color
         return actors
 
-    def _update_scalar_bar(self, actors: Dict[str, pv.Actor], host, scalar_bar_old: str):
-        scalar_bar_new = self.scalar_bar_title
+    def _update_scalar_bar(self, actors: Dict[str, pv.Actor], host, scalar_bar_old: str, gui_label):
+        scalar_bar_new = self.get_scalar_bar_title(gui_label)
         if 'scalar_bar' in actors and (scalar_bar_new is None or scalar_bar_old != scalar_bar_new):
             host.remove_actor(actors['scalar_bar'])
             host.remove_scalar_bar(scalar_bar_old)
             del actors['scalar_bar']
         if scalar_bar_new is not None and scalar_bar_new != scalar_bar_old:
-            actor = host.add_scalar_bar(mapper=actors['mesh'].mapper, title=scalar_bar_new)
+            actor = host.add_scalar_bar(mapper=actors['mesh'].mapper, title=scalar_bar_new, interactive=True, title_font_size=12, label_font_size=12, vertical=False)
             actors['scalar_bar'] = actor
         return actors
 

@@ -14,20 +14,25 @@ class SceneModel(QObject):
         self.visuals: Dict[str, VisualizationModel] = {}
         self._vertical_scale = 1.
 
+    def list_labels(self):
+        return [vis.gui_label for vis in self.visuals.values() if vis.gui_label is not None]
+
     def add_visualization(self, visualization: VisualizationModel) -> VisualizationModel:
         return self._add_visualization(visualization)
 
     def add_or_replace_visualization(self, visualization: VisualizationModel):
         key = visualization.key
         if key in self.visuals:
-            self.remove_visualization(key)
+            label = self.remove_visualization(key)
+            visualization.gui_label = label
         self._add_visualization(visualization)
         return visualization
 
     def replace_visualization(self, visualization: VisualizationModel):
         key = visualization.key
         assert key in self.visuals
-        self.remove_visualization(key)
+        label = self.remove_visualization(key)
+        visualization.gui_label = label
         self._add_visualization(visualization)
         return visualization
 
@@ -42,10 +47,13 @@ class SceneModel(QObject):
         return visualization
 
     def remove_visualization(self, key: str):
+        label = None
         if key in self.visuals:
             visualization = self.visuals[key]
             visualization.clear_host()
+            label = visualization.gui_label
             del self.visuals[key]
+        return label
 
     def reset(self):
         self.visuals.clear()

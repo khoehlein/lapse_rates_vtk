@@ -4,8 +4,9 @@ from PyQt5.QtCore import QObject
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QComboBox, QLineEdit, QVBoxLayout, QFormLayout
 
 from src.interaction.visualizations.factory import VisualizationFactory
+from src.interaction.visualizations.scene_settings.scene_settings_view import SceneSettingsView
 from src.interaction.visualizations.surface_scalar_field.controller import SurfaceScalarFieldController
-from src.interaction.visualizations.surface_scalar_field.view import SceneSettingsView, SurfaceScalarFieldSettingsView
+from src.interaction.visualizations.surface_scalar_field.view import SurfaceScalarFieldSettingsView
 from src.model.backend_model import DownscalingPipeline
 from src.model.scene_model import SceneModel
 from src.model.visualization.interface import VisualizationType
@@ -30,26 +31,40 @@ class SceneController(QObject):
     def _on_new_interface_requested(self):
         dialog = VisualizationRequestDialog(self.scene_settings_view)
         if dialog.exec():
-            label = dialog.get_label()
             visualization_type = dialog.get_visualization_type()
             factory = VisualizationFactory(self.scene_settings_view, self)
-            factory.setup_visualization_interface(visualization_type, label)
+            settings_view, controller = factory.build_visualization_interface(visualization_type)
+            controller, label = self.register_visualization_interface(settings_view, controller, dialog.get_label())
+            visualization = self.build_visualization(controller, label)
+            self.scene_model.add_visualization(visualization)
         else:
             print('Nothing happened')
+
+    def build_visualization(self, controller, label):
+        domain_data = self.pipeline_model.get_output()
+        visualization = controller.visualize(domain_data)
+        visualization.gui_label = label
+        return visualization
+
+    def _get_unique_label(self, label: str):
+        labels = self.scene_model.list_labels()
+        counter = 1
+        while label in labels:
+            label = f'{label}-{counter}'
+            counter += 1
+        return label
 
     def register_visualization_interface(
             self,
             settings_view: SurfaceScalarFieldSettingsView,
             controller: SurfaceScalarFieldController,
-            label=None
+            raw_label: str
     ):
+        label = self._get_unique_label(raw_label)
         self.scene_settings_view.register_settings_view(settings_view, label)
         settings_view.source_data_changed.connect(self._on_source_data_changed)
         self._visualization_controls[controller.key] = controller
-        domain_data = self.pipeline_model.get_output()
-        visualization = controller.visualize(domain_data)
-        self.scene_model.add_visualization(visualization)
-        return controller
+        return controller, label
 
     def reset_scene(self):
         self.scene_model.reset()
@@ -99,7 +114,10 @@ class VisualizationRequestDialog(QDialog):
         self.buttonBox.rejected.connect(self.reject)
         self.combo_vis_type = QComboBox(self)
         self.combo_vis_type.addItem('Surface scalar field', VisualizationType.SURFACE_SCALAR_FIELD)
+        self.combo_vis_type.addItem('Surface isocontours', VisualizationType.SURFACE_ISOCONTOURS)
+        self.combo_vis_type.currentIndexChanged.connect(self._on_selection_changed)
         self.line_edit_label = QLineEdit()
+        self._update_label_hint()
 
         layout = QVBoxLayout()
         form = QFormLayout()
@@ -112,8 +130,22 @@ class VisualizationRequestDialog(QDialog):
     def get_label(self):
         text = self.line_edit_label.text()
         if not text:
-            text = 'unlabeled'
+            text = self._get_default_label()
         return text
+
+    def _get_default_label(self):
+        suffix = {
+            VisualizationType.SURFACE_SCALAR_FIELD: 'surface',
+            VisualizationType.SURFACE_ISOCONTOURS: 'contours',
+        }[self.combo_vis_type.currentData()]
+        return f'unnamed-{suffix}'
+
+    def _on_selection_changed(self):
+        self._update_label_hint()
+
+    def _update_label_hint(self):
+        if not self.line_edit_label.text():
+            self.line_edit_label.setPlaceholderText(self._get_default_label())
 
     def get_visualization_type(self):
         return self.combo_vis_type.currentData()

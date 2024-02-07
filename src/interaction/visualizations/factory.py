@@ -3,8 +3,8 @@ from typing import Tuple
 from PyQt5.QtCore import QObject
 
 from src.interaction.visualizations.interface import VisualizationSettingsView, VisualizationController
-from src.interaction.visualizations.surface_scalar_field.controller import SurfaceScalarFieldController
-from src.interaction.visualizations.surface_scalar_field.view import SurfaceScalarFieldSettingsView
+from src.interaction.visualizations.surface_isocontours import SurfaceIsocontoursController, SurfaceIsocontoursSettingsView
+from src.interaction.visualizations.surface_scalar_field import SurfaceScalarFieldController, SurfaceScalarFieldSettingsView
 from src.model.visualization.interface import VisualizationType
 
 
@@ -20,14 +20,16 @@ class VisualizationFactory(QObject):
         self.scene_settings_view = scene_settings_view
         self.scene_controller = scene_controller
 
-    def setup_visualization_interface(
+    def build_visualization_interface(
             self,
-            visualization_type: VisualizationType, label: str
+            visualization_type: VisualizationType
     ) -> Tuple[VisualizationSettingsView, VisualizationController]:
         if visualization_type == VisualizationType.SURFACE_SCALAR_FIELD:
             settings_view = SurfaceScalarFieldSettingsView(parent=self.scene_settings_view)
             controller = SurfaceScalarFieldController(settings_view, parent=self.scene_controller)
+        elif visualization_type == VisualizationType.SURFACE_ISOCONTOURS:
+            settings_view = SurfaceIsocontoursSettingsView(parent=self.scene_settings_view)
+            controller = SurfaceIsocontoursController(settings_view, parent=self.scene_controller)
         else:
             raise NotImplementedError()
-        self.scene_controller.register_visualization_interface(settings_view, controller, label)
         return settings_view, controller

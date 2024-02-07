@@ -12,6 +12,7 @@ from src.model.geometry import SurfaceDataset
 
 class VisualizationType(Enum):
     SURFACE_SCALAR_FIELD = 'surface_scalar_field'
+    SURFACE_ISOCONTOURS = 'surface_isocontours'
 
 
 class DataConfiguration(Enum):
@@ -28,6 +29,25 @@ class ScalarType(Enum):
     Z_O1280 = 'Z (O1280)'
     Z_O8000 = 'Z (O8000)'
     Z_DIFFERENCE = 'Z (difference)'
+
+
+available_scalars = {
+    DataConfiguration.SURFACE_O1280: [
+        ScalarType.GEOMETRY,
+        ScalarType.LAPSE_RATE,
+        ScalarType.T2M_O1280,
+        ScalarType.Z_O1280
+    ],
+    DataConfiguration.SURFACE_O8000: [
+        ScalarType.GEOMETRY,
+        ScalarType.LAPSE_RATE,
+        ScalarType.T2M_O1280,
+        ScalarType.T2M_O8000,
+        ScalarType.Z_O1280,
+        ScalarType.Z_O8000,
+        ScalarType.Z_DIFFERENCE,
+    ]
+}
 
 
 class PropertyModel(QObject):
@@ -74,13 +94,18 @@ class KeywordAdapter(object):
 
 standard_adapter = KeywordAdapter(
     {
-        'shading': 'interpolation'
+        'shading': 'interpolation',
+        'isolevels': 'isosurfaces',
+        'contour_scalar': 'scalars',
+        'contour_method': 'method'
     },
     {
         'style': lambda x: x.name.lower(),
         'shading': lambda x: x.value,
         'color': lambda x: x.name(),
         'edge_color': lambda x: x.name(),
+        'contour_method': lambda x: x.name.lower(),
+        'contour_scalar': lambda x: x.name.lower()
     }
 )
 
@@ -96,6 +121,7 @@ class VisualizationModel(QObject):
         self.host = None
         self.host_actors = {}
         self._is_visible = True
+        self.gui_label = None
 
     def set_host(self, host: pv.Plotter) -> 'VisualizationModel':
         self.clear_host()
