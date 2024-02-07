@@ -1,7 +1,6 @@
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QWidget, QCheckBox, QComboBox, QPushButton, QGridLayout, QFormLayout, QVBoxLayout, QLabel
-
+from PyQt5.QtWidgets import QWidget, QCheckBox, QComboBox, QPushButton, QFormLayout, QVBoxLayout, QLabel
 from src.interaction.background_color.view import SelectColorButton
 
 

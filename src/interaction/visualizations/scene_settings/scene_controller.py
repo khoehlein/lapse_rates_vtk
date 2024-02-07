@@ -3,6 +3,7 @@ from typing import Dict
 from PyQt5.QtCore import QObject
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QComboBox, QLineEdit, QVBoxLayout, QFormLayout
 
+from src.interaction.domain_selection.controller import DownscalingController
 from src.interaction.visualizations.factory import VisualizationFactory
 from src.interaction.visualizations.scene_settings.scene_settings_view import SceneSettingsView
 from src.interaction.visualizations.surface_scalar_field.controller import SurfaceScalarFieldController
@@ -17,11 +18,14 @@ class SceneController(QObject):
     def __init__(
             self,
             scene_settings_view: SceneSettingsView,
+            pipeline_controller: DownscalingController,
             pipeline_model: DownscalingPipeline,
             scene_model: SceneModel,
             parent=None,
     ):
         super().__init__(parent)
+        self.pipeline_controller = pipeline_controller
+        self.pipeline_controller.data_changed.connect(self._on_data_changed)
         self.pipeline_model = pipeline_model
         self.scene_model = scene_model
         self.scene_settings_view = scene_settings_view

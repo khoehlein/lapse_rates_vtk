@@ -1,6 +1,4 @@
 from PyQt5.QtWidgets import QWidget, QFrame, QVBoxLayout
-
-import pyvista as pv
 from pyvistaqt import QtInteractor
 
 

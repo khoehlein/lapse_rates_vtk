@@ -58,7 +58,7 @@ class MainView(MainWindow):
         self.data_store = WorldData.from_config_file(CONFIG_FILE)
         self.downscaling_pipeline = DownscalingPipeline(self.data_store)
         self.downscaling_controller = DownscalingController(
-            self.settings_menu, self.render_view,
+            self.settings_menu.general_settings,
             self.downscaling_pipeline, parent=self
         )
         # self.downscaling_pipeline = DummyPipeline()
@@ -74,6 +74,7 @@ class MainView(MainWindow):
 
         self.scene_controller = SceneController(
             self.settings_menu.visualization_settings,
+            self.downscaling_controller,
             self.downscaling_pipeline,
             self.scene_model,
             parent=self

@@ -47,7 +47,7 @@ class SettingsViewTabbed(QDockWidget):
 
     def _populate_scroll_area(self):
         self.general_settings = GeneralSettingsView(self.scroll_area_contents)
-        self.visualization_settings = SceneSettingsView(parent=self.scroll_area_contents) #VisualizationSettingsView(parent=self.scroll_area_contents)
+        self.visualization_settings = SceneSettingsView(parent=self.scroll_area_contents)
         layout = QVBoxLayout(self.scroll_area_contents)
         layout.addWidget(QLabel('General settings'))
         layout.addWidget(self.general_settings)
