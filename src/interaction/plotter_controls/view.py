@@ -1,6 +1,8 @@
+import numpy as np
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QWidget, QCheckBox, QComboBox, QPushButton, QFormLayout, QVBoxLayout, QLabel, QDateTimeEdit
+from PyQt5.QtWidgets import QWidget, QCheckBox, QComboBox, QPushButton, QFormLayout, QVBoxLayout, QLabel, QDateTimeEdit, \
+    QSpinBox, QDoubleSpinBox, QHBoxLayout
 from src.interaction.background_color.view import SelectColorButton
 
 
@@ -24,11 +26,14 @@ class PlotterSettingsView(QWidget):
     stereo_render_changed = pyqtSignal(bool)
     background_color_changed = pyqtSignal(QColor)
 
+    solar_timestamp_changed = pyqtSignal(np.datetime64)
+    solar_location_changed = pyqtSignal(float, float)
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self.combo_lighting_mode = QComboBox(self)
-        self.combo_lighting_mode.addItems(['None', 'LightKit', '3 lights'])
+        self.combo_lighting_mode.addItems(['None', 'LightKit', '3 lights', 'Solar lighting'])
         self.combo_lighting_mode.currentTextChanged.connect(self.lighting_mode_changed.emit)
 
         self.combo_anti_aliasing = QComboBox(self)
@@ -68,8 +73,32 @@ class PlotterSettingsView(QWidget):
         self.button_reset.setText('Reset')
         self.button_reset.clicked.connect(self.set_defaults)
 
-        self.utc_date_time = QDateTimeEdit(self)
+        self.utc_day = QSpinBox(self)
+        self.utc_day.setMaximum(365)
+        self.utc_day.valueChanged.connect(self._on_solar_timestamp_changed)
+        self.utc_hour = QSpinBox(self)
+        self.utc_hour.setMaximum(24)
+        self.utc_hour.valueChanged.connect(self._on_solar_timestamp_changed)
+        self.solar_longitude = QDoubleSpinBox(self)
+        self.solar_longitude.setMinimum(-180.)
+        self.solar_longitude.setMaximum(180.)
+        self.solar_longitude.valueChanged.connect(self._on_solar_location_changed)
+        self.solar_latitude = QDoubleSpinBox(self)
+        self.solar_latitude.setMinimum(-90.)
+        self.solar_latitude.setMaximum(90.)
+        self.solar_latitude.valueChanged.connect(self._on_solar_location_changed)
         self._set_layout()
+
+    def _on_solar_timestamp_changed(self):
+        date = np.datetime64('2020-01-01T00', 'h')
+        date = date + (24 * self.utc_day.value() + self.utc_hour.value()) * np.timedelta64(1, 'h')
+        print(date)
+        self.solar_timestamp_changed.emit(date)
+
+    def _on_solar_location_changed(self):
+        latitude = self.solar_latitude.value()
+        longitude = self.solar_longitude.value()
+        self.solar_location_changed.emit(longitude, latitude)
 
     def _set_layout(self):
         form = QWidget(self)
@@ -88,8 +117,17 @@ class PlotterSettingsView(QWidget):
         outer = QVBoxLayout()
         outer.addWidget(form)
         outer.addWidget(self.button_background_color)
+        form = QFormLayout()
+        timespinners = QHBoxLayout()
+        timespinners.addWidget(self.utc_day)
+        timespinners.addWidget(self.utc_hour)
+        form.addRow(QLabel('Timestamp:'), timespinners)
+        location = QHBoxLayout()
+        location.addWidget(self.solar_longitude)
+        location.addWidget(self.solar_latitude)
+        form.addRow(QLabel('Location:'), location)
         outer.addWidget(self.button_reset)
-        outer.addWidget(self.utc_date_time)
+        outer.addLayout(form)
         outer.addStretch()
         self.setLayout(outer)
 

@@ -1,6 +1,7 @@
 import logging
 from typing import Tuple
 
+import numpy as np
 from PyQt5.QtCore import QObject
 import pyvista as pv
 from PyQt5.QtGui import QColor
@@ -19,20 +20,22 @@ class SolarLightingController(QObject):
         self.plotter_settings.solar_location_changed.connect(self.set_solar_location)
 
     def set_solar_timestamp(self, timestamp):
-        pass
+        print('Changing timestamp')
+        self.lighting_model.set_timestamp(timestamp)
 
-    def set_solar_location(self, location: Tuple[float, float]):
-        pass
+    def set_solar_location(self, longitude, latitude):
+        print('Changing location')
+        self.lighting_model.set_location((longitude, latitude))
 
 
 class PlotterController(QObject):
 
-    def __init__(self, plotter_settings: PlotterSettingsView, plotter: pv.Plotter, lighting_model: SolarLightingModel, parent=None):
+    def __init__(self, plotter_settings: PlotterSettingsView, plotter: pv.Plotter, parent=None):
         super().__init__(parent)
         self.plotter_settings = plotter_settings
         self._plotter = plotter
-        self._lighting_model = lighting_model
-        self._lighting_controller = SolarLightingController(plotter_settings, lighting_model)
+        self._lighting_model = SolarLightingModel(np.datetime64('2020-01-01T06:00'), (0., 0.))
+        self._lighting_controller = SolarLightingController(plotter_settings, self._lighting_model)
         self._grid_actor = None
         self._link_actions()
         self._reset_plotter()
