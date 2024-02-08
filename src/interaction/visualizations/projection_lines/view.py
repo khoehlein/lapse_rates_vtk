@@ -1,6 +1,7 @@
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget, QComboBox, QTabWidget, QCheckBox, QVBoxLayout, QStackedLayout, QPushButton
-from src.interaction.visualizations.color_settings_view import UniformColorSettingsView, cmap_defaults, ColormapSettingsView
+from src.interaction.visualizations.color_settings_view import UniformColorSettingsView, cmap_defaults, \
+    ColormapSettingsView, MultiScalarColorSettingsView
 from src.interaction.visualizations.geometry_settings_view import RepresentationSettingsView, LightingSettingsView, \
     WireframeSettingsView
 from src.interaction.visualizations.interface import VisualizationSettingsView
@@ -38,15 +39,14 @@ class ProjectionLinesSettingsView(VisualizationSettingsView):
         self.source_data_changed.emit(self.key)
 
     def _build_color_tab(self):
-        self.color_settings = UniformColorSettingsView(self)
-        self.color_settings.set_defaults(cmap_defaults[ScalarType.GEOMETRY])
+        self.color_settings = MultiScalarColorSettingsView(self)
+        self.color_settings.toggle_scalars(DataConfiguration.SURFACE_O8000)
         self.color_settings.color_changed.connect(self.color_changed.emit)
-
         self.representation_settings = WireframeSettingsView(parent=self)
         self.representation_settings.representation_changed.connect(self.geometry_changed.emit)
         color_stack_widget = QWidget(self)
         layout = QVBoxLayout()
-        layout.addWidget(self.color_settings)
+        layout.addLayout(self.color_settings.vbox_layout)
         layout.addWidget(self.representation_settings)
         layout.addStretch()
         color_stack_widget.setLayout(layout)

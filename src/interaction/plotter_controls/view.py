@@ -1,7 +1,13 @@
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QWidget, QCheckBox, QComboBox, QPushButton, QFormLayout, QVBoxLayout, QLabel
+from PyQt5.QtWidgets import QWidget, QCheckBox, QComboBox, QPushButton, QFormLayout, QVBoxLayout, QLabel, QDateTimeEdit
 from src.interaction.background_color.view import SelectColorButton
+
+
+class SunlightSettingsView(QWidget):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
 
 class PlotterSettingsView(QWidget):
@@ -61,6 +67,8 @@ class PlotterSettingsView(QWidget):
         self.button_reset = QPushButton(self)
         self.button_reset.setText('Reset')
         self.button_reset.clicked.connect(self.set_defaults)
+
+        self.utc_date_time = QDateTimeEdit(self)
         self._set_layout()
 
     def _set_layout(self):
@@ -81,6 +89,7 @@ class PlotterSettingsView(QWidget):
         outer.addWidget(form)
         outer.addWidget(self.button_background_color)
         outer.addWidget(self.button_reset)
+        outer.addWidget(self.utc_date_time)
         outer.addStretch()
         self.setLayout(outer)
 

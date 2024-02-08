@@ -30,7 +30,14 @@ class SceneController(QObject):
         self.scene_model = scene_model
         self.scene_settings_view = scene_settings_view
         self.scene_settings_view.new_interface_requested.connect(self._on_new_interface_requested)
+        self.scene_settings_view.reset_requested.connect(self._on_reset_requested)
         self._visualization_controls: Dict[str, SurfaceScalarFieldController] = {}
+
+    def _on_reset_requested(self):
+        for key in self._visualization_controls:
+            self.scene_model.remove_visualization(key)
+            self.scene_settings_view.remove_settings_view(key)
+        self._visualization_controls.clear()
 
     def _on_new_interface_requested(self):
         dialog = VisualizationRequestDialog(self.scene_settings_view)

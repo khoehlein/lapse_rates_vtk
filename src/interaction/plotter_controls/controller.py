@@ -1,18 +1,38 @@
 import logging
+from typing import Tuple
 
 from PyQt5.QtCore import QObject
 import pyvista as pv
 from PyQt5.QtGui import QColor
 
 from src.interaction.plotter_controls.view import PlotterSettingsView
+from src.model.solar_lighting_model import SolarLightingModel
+
+
+class SolarLightingController(QObject):
+
+    def __init__(self, plotter_settings, lighting_model, parent=None):
+        super().__init__(parent)
+        self.plotter_settings = plotter_settings
+        self.lighting_model = lighting_model
+        self.plotter_settings.solar_timestamp_changed.connect(self.set_solar_timestamp)
+        self.plotter_settings.solar_location_changed.connect(self.set_solar_location)
+
+    def set_solar_timestamp(self, timestamp):
+        pass
+
+    def set_solar_location(self, location: Tuple[float, float]):
+        pass
 
 
 class PlotterController(QObject):
 
-    def __init__(self, plotter_settings: PlotterSettingsView, plotter: pv.Plotter, parent=None):
+    def __init__(self, plotter_settings: PlotterSettingsView, plotter: pv.Plotter, lighting_model: SolarLightingModel, parent=None):
         super().__init__(parent)
         self.plotter_settings = plotter_settings
         self._plotter = plotter
+        self._lighting_model = lighting_model
+        self._lighting_controller = SolarLightingController(plotter_settings, lighting_model)
         self._grid_actor = None
         self._link_actions()
         self._reset_plotter()
@@ -140,11 +160,15 @@ class PlotterController(QObject):
         self.plotter.remove_all_lights()
         action = {
             'LightKit': self.plotter.enable_lightkit,
-            '3 lights': self.plotter.enable_3_lights
+            '3 lights': self.plotter.enable_3_lights,
+            'Solar lighting': self._enable_solar_lighting
         }.get(mode, None)
         if action is not None:
             logging.info('Setting lighting mode: {}'.format(mode))
             action()
+
+    def _enable_solar_lighting(self):
+        self.plotter.add_light(self._lighting_model.light)
 
     def _toggle_interaction_style(self, mode: str):
         logging.info('Setting interaction style: {}'.format(mode))

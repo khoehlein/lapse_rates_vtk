@@ -3,7 +3,8 @@ import uuid
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget, QComboBox, QTabWidget, QCheckBox, QVBoxLayout, QStackedLayout, QPushButton, \
     QSpinBox, QFormLayout
-from src.interaction.visualizations.color_settings_view import UniformColorSettingsView, cmap_defaults, ColormapSettingsView
+from src.interaction.visualizations.color_settings_view import UniformColorSettingsView, cmap_defaults, \
+    ColormapSettingsView, MultiScalarColorSettingsView
 from src.interaction.visualizations.geometry_settings_view import RepresentationSettingsView, LightingSettingsView
 from src.interaction.visualizations.interface import VisualizationSettingsView
 from src.model.visualization.interface import DataConfiguration, ScalarType, available_scalars
@@ -59,18 +60,12 @@ class SurfaceIsocontoursSettingsView(VisualizationSettingsView):
         self.contour_settings = ContourSettingsView(self)
         self.contour_settings.contours_changed.connect(self._on_contours_changed)
 
-        self.combo_color_scalar = QComboBox(self)
-        for scalar_type in ScalarType:
-            self.combo_color_scalar.addItem(scalar_type.value, scalar_type)
-
-
-        self._toggle_scalar_types()
         self.combo_source_data.currentTextChanged.connect(self._on_source_data_changed)
-        self.combo_color_scalar.currentTextChanged.connect(self.color_changed.emit)
 
         self.tabs = QTabWidget(self)
         self._build_contours_tab()
         self._build_color_tab()
+        self._toggle_scalar_types()
         self._build_lighting_tab()
 
         self.checkbox_visibility = QCheckBox('Visible')
@@ -90,7 +85,10 @@ class SurfaceIsocontoursSettingsView(VisualizationSettingsView):
         self.contour_settings.blockSignals(True)
         self._toggle_combo_entries(self.contour_settings.combo_contour_scalar)
         self.contour_settings.blockSignals(False)
-        self._toggle_combo_entries(self.combo_color_scalar)
+        self.color_settings.blockSignals(True)
+        selected_source = self.combo_source_data.currentData()
+        self.color_settings.toggle_scalars(selected_source)
+        self.color_settings.blockSignals(False)
 
     def _on_source_data_changed(self) -> None:
         self._toggle_scalar_types()
@@ -103,19 +101,13 @@ class SurfaceIsocontoursSettingsView(VisualizationSettingsView):
         self.tabs.addTab(self._to_tab_widget(self.contour_settings), 'Isocontours')
 
     def _build_color_tab(self):
-        self.color_settings_stack = QStackedLayout()
-        for scalar_type in ScalarType:
-            widget = UniformColorSettingsView(self) if scalar_type == ScalarType.GEOMETRY else ColormapSettingsView(self)
-            self.color_settings_stack.addWidget(widget)
-            widget.set_defaults(cmap_defaults[scalar_type])
-            widget.color_changed.connect(self.color_changed.emit)
-        self.combo_color_scalar.currentIndexChanged.connect(self.color_settings_stack.setCurrentIndex)
+        self.color_settings = MultiScalarColorSettingsView(self)
+        self.color_settings.color_changed.connect(self.color_changed)
         self.representation_settings = RepresentationSettingsView(enable_surface=False, parent=self)
         self.representation_settings.representation_changed.connect(self.geometry_changed.emit)
         color_stack_widget = QWidget(self)
         layout = QVBoxLayout()
-        layout.addWidget(self.combo_color_scalar)
-        layout.addLayout(self.color_settings_stack)
+        layout.addLayout(self.color_settings.vbox_layout)
         layout.addLayout(self.representation_settings.vbox_layout)
         layout.addStretch()
         color_stack_widget.setLayout(layout)
@@ -163,9 +155,7 @@ class SurfaceIsocontoursSettingsView(VisualizationSettingsView):
         return self.contour_settings.get_settings()
 
     def get_color_properties(self):
-        scalar_type = self.combo_color_scalar.currentData()
-        scalar_name = scalar_type.name.lower()
-        return self.color_settings_stack.currentWidget().get_settings(scalar_name)
+        return self.color_settings.get_settings()
 
     def get_source_properties(self) -> DataConfiguration:
         return self.combo_source_data.currentData()

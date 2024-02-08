@@ -2,11 +2,12 @@ import pyvista as pv
 
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QWidget, QDoubleSpinBox, QFormLayout, QComboBox, QLabel, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QDoubleSpinBox, QFormLayout, QComboBox, QLabel, QHBoxLayout, QStackedLayout, \
+    QVBoxLayout
 
 from src.interaction.background_color.view import SelectColorButton
 from src.model.visualization.colors import ScalarColormapModel, UniformColorModel
-from src.model.visualization.interface import ScalarType
+from src.model.visualization.interface import ScalarType, available_scalars, DataConfiguration
 
 _vis_default_lapse_rate = ScalarColormapModel.Properties(
     None, 'RdBu', 1., (-14, 14), None, None
@@ -133,3 +134,44 @@ class ColormapSettingsView(QWidget):
             scalar_name, self.combo_cmap_name.currentText(),
             self.spinner_opacity.value(), (self.spinner_scalar_min.value(), self.spinner_scalar_max.value())
         )
+
+
+class MultiScalarColorSettingsView(QWidget):
+
+    color_changed = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.combo_scalar_type = QComboBox(self)
+        for scalar_type in ScalarType:
+            self.combo_scalar_type.addItem(scalar_type.value, scalar_type)
+
+        self.interface_stack = QStackedLayout()
+        for color_type in ScalarType:
+            widget = UniformColorSettingsView(self) if color_type == ScalarType.GEOMETRY else ColormapSettingsView(self)
+            self.interface_stack.addWidget(widget)
+            widget.set_defaults(cmap_defaults[color_type])
+            widget.color_changed.connect(self.color_changed.emit)
+        self.combo_scalar_type.currentIndexChanged.connect(self._on_scalar_changed)
+        self._set_layout()
+
+    def _on_scalar_changed(self):
+        self.interface_stack.setCurrentIndex(self.combo_scalar_type.currentIndex())
+        self.color_changed.emit()
+
+    def _set_layout(self):
+        vlayout = QVBoxLayout()
+        vlayout.addWidget(self.combo_scalar_type)
+        vlayout.addLayout(self.interface_stack)
+        self.vbox_layout = vlayout
+
+    def toggle_scalars(self, selected_source: DataConfiguration):
+        model = self.combo_scalar_type.model()
+        for i in range(model.rowCount()):
+            item = model.item(i)
+            item_data = self.combo_scalar_type.itemData(i)
+            item.setEnabled(item_data in available_scalars[selected_source])
+
+    def get_settings(self):
+        scalar_name = self.combo_scalar_type.currentData().name.lower()
+        return self.interface_stack.currentWidget().get_settings(scalar_name)

@@ -85,7 +85,7 @@ class LapseRateDownscaler(DownscalerModel):
             ),
             count=count, dtype=float
         )
-        source.add_scalar_field(lapse_rates, 'lapse_rate')
+        source.add_scalar_field(lapse_rates * 1000., 'lapse_rate')
         source.add_scalar_field(t2m_at_site, 't2m_o1280')
         source.add_scalar_field(z_at_site, 'z_o1280')
         return samples.locations, t2m_at_site, z_at_site, lapse_rates
@@ -112,7 +112,7 @@ class LapseRateDownscaler(DownscalerModel):
         t2m_lowres_at_target = t2m_at_site[nearest]
         z_lowres_at_target = z_at_site[nearest]
         t2m_highres_at_target = t2m_lowres_at_target + lapse_rate_at_target * (target.z - z_lowres_at_target)
-        target.add_scalar_field(lapse_rate_at_target, 'lapse_rate')
+        target.add_scalar_field(lapse_rate_at_target * 1000., 'lapse_rate')
         target.add_scalar_field(t2m_lowres_at_target, 't2m_o1280')
         target.add_scalar_field(t2m_highres_at_target, 't2m_o8000')
         target.add_scalar_field(t2m_highres_at_target - t2m_lowres_at_target, 't2m_difference')

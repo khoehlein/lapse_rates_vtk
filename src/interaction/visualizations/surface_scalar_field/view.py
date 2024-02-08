@@ -1,11 +1,11 @@
 import uuid
 
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QWidget, QComboBox, QTabWidget, QCheckBox, QVBoxLayout, QStackedLayout, QPushButton
-from src.interaction.visualizations.color_settings_view import UniformColorSettingsView, cmap_defaults, ColormapSettingsView
+from PyQt5.QtWidgets import QWidget, QComboBox, QTabWidget, QCheckBox, QVBoxLayout
+from src.interaction.visualizations.color_settings_view import MultiScalarColorSettingsView
 from src.interaction.visualizations.geometry_settings_view import RepresentationSettingsView, LightingSettingsView
 from src.interaction.visualizations.interface import VisualizationSettingsView
-from src.model.visualization.interface import DataConfiguration, ScalarType, available_scalars
+from src.model.visualization.interface import DataConfiguration
 from src.model.visualization.mesh_geometry import MeshGeometryModel
 
 
@@ -21,13 +21,7 @@ class SurfaceScalarFieldSettingsView(VisualizationSettingsView):
         for config_type in DataConfiguration:
             self.combo_source_data.addItem(config_type.value, config_type)
 
-        self.combo_scalar_type = QComboBox(self)
-        for scalar_type in ScalarType:
-            self.combo_scalar_type.addItem(scalar_type.value, scalar_type)
-        self._toggle_scalar_types()
-
         self.combo_source_data.currentTextChanged.connect(self._on_source_data_changed)
-        self.combo_scalar_type.currentTextChanged.connect(self.color_changed.emit)
 
         self.tabs = QTabWidget(self)
         self._build_color_tab()
@@ -39,31 +33,24 @@ class SurfaceScalarFieldSettingsView(VisualizationSettingsView):
         self._set_layout()
 
     def _toggle_scalar_types(self):
-        model = self.combo_scalar_type.model()
+        self.color_settings.blockSignals(True)
         selected_source = self.combo_source_data.currentData()
-        for i in range(model.rowCount()):
-            item = model.item(i)
-            item_data = self.combo_scalar_type.itemData(i)
-            item.setEnabled(item_data in available_scalars[selected_source])
+        self.color_settings.toggle_scalars(selected_source)
+        self.color_settings.blockSignals(False)
 
     def _on_source_data_changed(self, source_type: str) -> None:
         self._toggle_scalar_types()
         self.source_data_changed.emit(self.key)
 
     def _build_color_tab(self):
-        self.interface_stack = QStackedLayout()
-        for color_type in ScalarType:
-            widget = UniformColorSettingsView(self) if color_type == ScalarType.GEOMETRY else ColormapSettingsView(self)
-            self.interface_stack.addWidget(widget)
-            widget.set_defaults(cmap_defaults[color_type])
-            widget.color_changed.connect(self.color_changed.emit)
-        self.combo_scalar_type.currentIndexChanged.connect(self.interface_stack.setCurrentIndex)
+        self.color_settings = MultiScalarColorSettingsView(self)
+        self.color_settings.color_changed.connect(self.color_changed)
+        self._toggle_scalar_types()
         self.representation_settings = RepresentationSettingsView(parent=self)
         self.representation_settings.representation_changed.connect(self.geometry_changed.emit)
         color_stack_widget = QWidget(self)
         layout = QVBoxLayout()
-        layout.addWidget(self.combo_scalar_type)
-        layout.addLayout(self.interface_stack)
+        layout.addLayout(self.color_settings.vbox_layout)
         layout.addLayout(self.representation_settings.vbox_layout)
         layout.addStretch()
         color_stack_widget.setLayout(layout)
@@ -107,9 +94,7 @@ class SurfaceScalarFieldSettingsView(VisualizationSettingsView):
         return prop
 
     def get_color_properties(self):
-        scalar_type = self.combo_scalar_type.currentData()
-        scalar_name = scalar_type.name.lower()
-        return self.interface_stack.currentWidget().get_settings(scalar_name)
+        return self.color_settings.get_settings()
 
     def get_source_properties(self) -> DataConfiguration:
         return self.combo_source_data.currentData()

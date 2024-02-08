@@ -47,10 +47,16 @@ class UniformColorModel(ColorModel):
 
     def update_actors(self, actors: Dict[str, pv.Actor], host, scalar_bar_old, gui_label=None) -> pv.Actor:
         actor = actors['mesh']
+        actor.mapper.array_name = None
+        actor.mapper.dataset.active_scalars_name = None
         actor_props = actor.prop
         new_actor_props = standard_adapter.read(self._properties)
         for key, value in new_actor_props.items():
             setattr(actor_props, key, value)
+        if 'scalar_bar' in actors:
+            host.remove_actor(actors['scalar_bar'])
+            # host.remove_scalar_bar(scalar_bar_old) # apparently not required here
+            del actors['scalar_bar']
         return actor
 
     def supports_update(self, properties: ColorModel.Properties):
@@ -95,6 +101,7 @@ class ScalarColormapModel(ColorModel):
         actor_props = actor.prop
         actor_props.opacity = self._properties.opacity
         actor.mapper.array_name = self._properties.scalar_name
+        actor.mapper.dataset.active_scalars_name = self._properties.scalar_name
 
         scalar_range = self._properties.scalar_range
         if scalar_range is None:
@@ -113,12 +120,15 @@ class ScalarColormapModel(ColorModel):
 
     def _update_scalar_bar(self, actors: Dict[str, pv.Actor], host, scalar_bar_old: str, gui_label):
         scalar_bar_new = self.get_scalar_bar_title(gui_label)
-        if 'scalar_bar' in actors and (scalar_bar_new is None or scalar_bar_old != scalar_bar_new):
+        if ('scalar_bar' in actors) and (scalar_bar_new != scalar_bar_old):
             host.remove_actor(actors['scalar_bar'])
             host.remove_scalar_bar(scalar_bar_old)
             del actors['scalar_bar']
-        if scalar_bar_new is not None and scalar_bar_new != scalar_bar_old:
-            actor = host.add_scalar_bar(mapper=actors['mesh'].mapper, title=scalar_bar_new, interactive=True, title_font_size=12, label_font_size=12, vertical=False)
+        if 'scalar_bar' not in actors:
+            actor = host.add_scalar_bar(
+                mapper=actors['mesh'].mapper, title=scalar_bar_new,
+                interactive=True, title_font_size=12, label_font_size=12, vertical=False
+            )
             actors['scalar_bar'] = actor
         return actors
 
@@ -126,7 +136,10 @@ class ScalarColormapModel(ColorModel):
         props = self._properties
         lut = pv.LookupTable(cmap=props.colormap_name)
         lut.scalar_range = props.scalar_range
-        return {'scalars': props.scalar_name, 'cmap': lut, 'opacity': props.opacity, 'show_scalar_bar': False}
+        kws = {'scalars': props.scalar_name, 'cmap': lut, 'opacity': props.opacity}
+        if props.scalar_name is not None:
+            kws['show_scalar_bar'] = False
+        return kws
 
 
 def numpy_to_qcolor(numpy_color: np.ndarray) -> QColor:

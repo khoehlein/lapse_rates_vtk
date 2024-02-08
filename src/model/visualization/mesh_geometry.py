@@ -4,7 +4,6 @@ from typing import Dict
 import pyvista as pv
 from PyQt5.QtCore import QObject
 
-from src.model.geometry import SurfaceDataset
 from src.model.visualization.interface import PropertyModel, standard_adapter
 
 
@@ -74,7 +73,8 @@ class MeshGeometryModel(PropertyModel):
             self,
             dataset: pv.PolyData,
             properties: 'MeshGeometryModel.Properties' = None,
-            parent: QObject = None
+            parent: QObject = None,
+            scalar_preference='point'
     ):
         super().__init__(parent)
         if properties is not None:
@@ -82,6 +82,7 @@ class MeshGeometryModel(PropertyModel):
         self._mesh = dataset
         self._vertical_coordinates = self._mesh.points[:, -1].copy()
         self._vertical_scale = 1.
+        self._scalar_preference = scalar_preference
 
     @property
     def mesh_style(self):
@@ -99,7 +100,12 @@ class MeshGeometryModel(PropertyModel):
         lighting_kws = standard_adapter.read(self._properties.lighting)
         mesh_properties = self._properties.mesh
         mesh_kws = standard_adapter.read(mesh_properties)
-        actor = host.add_mesh(self._mesh, style=self.mesh_style.name.lower(), **mesh_kws, **lighting_kws, **kwargs)
+        actor = host.add_mesh(
+            self._mesh,
+            style=self.mesh_style.name.lower(),
+            preference=self._scalar_preference,
+            **mesh_kws, **lighting_kws, **kwargs
+        )
         return {'mesh': actor}
 
     def update_actors(self, actors: Dict[str, pv.Actor]) -> Dict[str, pv.Actor]:

@@ -12,20 +12,26 @@ class MeshVisualization(VisualizationModel):
             self,
             visual_type: VisualizationType,
             geometry: MeshGeometryModel, coloring: ColorModel,
-            visual_key: str = None, parent=None
+            visual_key: str = None, parent=None,
     ):
         super().__init__(visual_type, visual_key, parent)
         self.geometry = geometry
         self.coloring = coloring
+
+    def clear_host(self):
+        if 'scalar_bar' in self.host_actors:
+            scalar_bar_title = self.coloring.get_scalar_bar_title(self.gui_label)
+            self.host.remove_scalar_bar(scalar_bar_title)
+            self.host.remove_actor(self.host_actors['scalar_bar'])
+            del self.host_actors['scalar_bar']
+        return super().clear_host()
 
     def _write_to_host(self):
         color_kws = self.coloring.get_kws()
         actors = self.geometry.write_to_host(self.host, **color_kws, name=self.key)
         self.host_actors.update(actors)
         scalar_title = self.coloring.get_scalar_bar_title(self.gui_label)
-        if scalar_title is not None:
-            actor = self.host.add_scalar_bar(mapper=self.host_actors['mesh'].mapper, title=scalar_title,  interactive=True, title_font_size=12, label_font_size=12, vertical=False)
-            self.host_actors['scalar_bar'] = actor
+        self.coloring.update_actors(self.host_actors, self.host, scalar_title, self.gui_label)
 
     def update_geometry(self, properties: MeshGeometryModel.Properties) -> 'MeshVisualization':
         self.geometry.set_properties(properties)
@@ -40,8 +46,9 @@ class MeshVisualization(VisualizationModel):
             if self.host_actors:
                 self.coloring.update_actors(self.host_actors, self.host, scalar_bar_old, self.gui_label)
         else:
+            host = self.clear_host()
             self.coloring = ColorModel.from_properties(properties)
-            self._write_to_host()
+            self.set_host(host)
         return self
 
     def set_vertical_scale(self, scale: float) -> 'MeshVisualization':

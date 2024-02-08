@@ -14,8 +14,8 @@ class DomainSelectionView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.select_latitude = RangeSpinner(self, 45., 50., 0., 90.)
-        self.select_longitude = RangeSpinner(self, 15., 20., -180., 180.)
+        self.select_latitude = RangeSpinner(self, 43., 47., 0., 90.)
+        self.select_longitude = RangeSpinner(self, 6., 12., -180., 180.)
         self.button_apply = QPushButton('Apply', self)
         self.button_apply.clicked.connect(self.domain_changed.emit)
         self._set_layout()

@@ -131,6 +131,9 @@ class VisualizationModel(QObject):
             self._write_to_host()
         return self
 
+    def reset(self):
+        return self.set_host(self.host)
+
     def clear_host(self):
         host_reference = self.host
         if self.host is not None:
