@@ -32,12 +32,11 @@ class SolarLightingModel(object):
         return self
 
     def _update_solar_positions(self):
-        print('time', self.timestamp, 'location', self.location)
-        datetime_index = pd.DatetimeIndex([self.timestamp])
+        datetime_index = pd.date_range(self.timestamp, periods=1, freq='H')
         output = pvlib.solarposition.get_solarposition(datetime_index, self.location[1], self.location[0], method=self.method)
         self.elevation = output['elevation'][0]
-        self.azimuth = output['azimuth'][0]
-        print('elevation: ', self.elevation, 'azimuth: ', self.azimuth)
+        self.azimuth = (90 - output['azimuth'][0]) % 360
+        print(self.elevation, self.azimuth)
 
     def set_method(self, method: str):
         self.method = method
