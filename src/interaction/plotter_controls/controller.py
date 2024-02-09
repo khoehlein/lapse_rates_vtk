@@ -1,5 +1,4 @@
 import logging
-from typing import Tuple
 
 import numpy as np
 from PyQt5.QtCore import QObject
@@ -20,11 +19,9 @@ class SolarLightingController(QObject):
         self.plotter_settings.solar_location_changed.connect(self.set_solar_location)
 
     def set_solar_timestamp(self, timestamp):
-        print('Changing timestamp')
         self.lighting_model.set_timestamp(timestamp)
 
     def set_solar_location(self, longitude, latitude):
-        print('Changing location')
         self.lighting_model.set_location((longitude, latitude))
 
 

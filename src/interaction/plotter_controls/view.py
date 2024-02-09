@@ -6,12 +6,6 @@ from PyQt5.QtWidgets import QWidget, QCheckBox, QComboBox, QPushButton, QFormLay
 from src.interaction.background_color.view import SelectColorButton
 
 
-class SunlightSettingsView(QWidget):
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-
 class PlotterSettingsView(QWidget):
 
     aa_changed = pyqtSignal(str)
@@ -75,27 +69,31 @@ class PlotterSettingsView(QWidget):
 
         self.utc_day = QSpinBox(self)
         self.utc_day.setMaximum(365)
-        self.utc_day.valueChanged.connect(self._on_solar_timestamp_changed)
+        self.utc_day.setPrefix('day of year: ')
+        self.utc_day.valueChanged.connect(self.on_solar_timestamp_changed)
         self.utc_hour = QSpinBox(self)
         self.utc_hour.setMaximum(24)
-        self.utc_hour.valueChanged.connect(self._on_solar_timestamp_changed)
+        self.utc_hour.setPrefix('hour: ')
+        self.utc_hour.valueChanged.connect(self.on_solar_timestamp_changed)
         self.solar_longitude = QDoubleSpinBox(self)
         self.solar_longitude.setMinimum(-180.)
         self.solar_longitude.setMaximum(180.)
-        self.solar_longitude.valueChanged.connect(self._on_solar_location_changed)
+        self.solar_longitude.setPrefix('lon: ')
+        self.solar_longitude.valueChanged.connect(self.on_solar_location_changed)
         self.solar_latitude = QDoubleSpinBox(self)
         self.solar_latitude.setMinimum(-90.)
         self.solar_latitude.setMaximum(90.)
-        self.solar_latitude.valueChanged.connect(self._on_solar_location_changed)
+        self.solar_latitude.setPrefix('lat: ')
+        self.solar_latitude.valueChanged.connect(self.on_solar_location_changed)
         self._set_layout()
 
-    def _on_solar_timestamp_changed(self):
+    def on_solar_timestamp_changed(self):
         date = np.datetime64('2020-01-01T00', 'h')
         date = date + (24 * self.utc_day.value() + self.utc_hour.value()) * np.timedelta64(1, 'h')
         print(date)
         self.solar_timestamp_changed.emit(date)
 
-    def _on_solar_location_changed(self):
+    def on_solar_location_changed(self):
         latitude = self.solar_latitude.value()
         longitude = self.solar_longitude.value()
         self.solar_location_changed.emit(longitude, latitude)
@@ -123,8 +121,8 @@ class PlotterSettingsView(QWidget):
         timespinners.addWidget(self.utc_hour)
         form.addRow(QLabel('Timestamp:'), timespinners)
         location = QHBoxLayout()
-        location.addWidget(self.solar_longitude)
         location.addWidget(self.solar_latitude)
+        location.addWidget(self.solar_longitude)
         form.addRow(QLabel('Location:'), location)
         outer.addWidget(self.button_reset)
         outer.addLayout(form)
@@ -143,6 +141,8 @@ class PlotterSettingsView(QWidget):
         self.checkbox_stereo_rendering.setChecked(False)
         self.checkbox_hidden_line_removal.setChecked(False)
         self.button_background_color.set_current_color(QColor(255, 255, 255))
+        self.on_solar_location_changed()
+        self.on_solar_timestamp_changed()
 
     def get_settings(self):
         return {

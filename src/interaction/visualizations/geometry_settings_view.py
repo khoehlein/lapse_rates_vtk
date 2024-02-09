@@ -223,17 +223,18 @@ class RepresentationSettingsView(QWidget):
         self.combo_geometry_style.currentIndexChanged.connect(self.interface_stack.setCurrentIndex)
         self.combo_geometry_style.currentIndexChanged.connect(self.representation_changed.emit)
 
+        if enable_surface:
+            self.surface_settings = SurfaceSettingsView(self)
+            self.surface_settings.representation_changed.connect(self.representation_changed.emit)
+            self.combo_geometry_style.addItem('Surface')
+            self.interface_stack.addWidget(self.surface_settings)
+
         if enable_wireframe:
             self.wireframe_settings = WireframeSettingsView(self)
             self.wireframe_settings.representation_changed.connect(self.representation_changed.emit)
             self.combo_geometry_style.addItem('Wireframe')
             self.interface_stack.addWidget(self.wireframe_settings)
 
-        if enable_surface:
-            self.surface_settings = SurfaceSettingsView(self)
-            self.surface_settings.representation_changed.connect(self.representation_changed.emit)
-            self.combo_geometry_style.addItem('Surface')
-            self.interface_stack.addWidget(self.surface_settings)
 
         if enable_points:
             self.points_settings = PointsSettingsView(self)
