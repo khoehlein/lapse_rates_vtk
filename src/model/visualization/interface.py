@@ -51,17 +51,27 @@ available_scalars = {
 }
 
 
+class PropertyModelUpdateError(Exception):
+    pass
+
+
 class PropertyModel(QObject):
+
     class Properties(object):
         pass
 
-    def __init__(self, parent: QObject = None):
+    def __init__(self, properties: 'PropertyModel.Properties' = None, parent: QObject = None):
         super().__init__(parent)
-        self._properties = None
+        self.set_properties(properties)
 
     def set_properties(self, properties) -> 'PropertyModel':
+        if not self.new_properties_valid(properties):
+            raise PropertyModelUpdateError()
         self._properties = properties
         return self
+
+    def new_properties_valid(self, properties: 'PropertyModel.Properties') -> bool:
+        return True
 
     def supports_update(self, properties):
         raise NotImplementedError()

@@ -8,6 +8,7 @@ from scipy.special import roots_legendre
 import cartopy.crs as ccrs
 import pyvista as pv
 
+from src.interaction.downscaling.interface import DomainModel
 
 geocentric_system = ccrs.Geocentric()
 xyz_system = geocentric_system
@@ -337,9 +338,9 @@ class OctahedralGrid(object):
         counter += num_nodes
         return vertices
 
-    def get_subgrid(self, bounds: DomainBounds) -> 'TriangleMesh':
+    def get_subgrid(self, bounds: DomainModel) -> 'TriangleMesh':
         circle_latitudes = _get_legendre_latitudes(self.degree)
-        latitudes_in_bounds = np.argwhere(np.logical_and(circle_latitudes >= bounds.latitude.min, circle_latitudes <= bounds.latitude.max)).ravel()
+        latitudes_in_bounds = bounds._latitude_interval.argwhere(circle_latitudes)
         first_latitude = max(0, latitudes_in_bounds[0] - 1)
         last_latitude = min(2 * self.degree - 1, latitudes_in_bounds[-1] + 1)
         all_triangles = []

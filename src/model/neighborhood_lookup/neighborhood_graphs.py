@@ -2,7 +2,7 @@ from itertools import chain
 from typing import List
 import numpy as np
 import pandas as pd
-from sklearn.neighbors import KDTree
+from sklearn.neighbors import KDTree, NearestNeighbors
 from src.model.geometry import LocationBatch
 
 
@@ -76,9 +76,9 @@ class UniformNeighborhoodGraph(NeighborhoodGraph):
         return [self]
 
     @classmethod
-    def from_tree_query(cls, locations: LocationBatch, tree: KDTree, k: int):
+    def from_tree_query(cls, locations: LocationBatch, tree: NearestNeighbors, k: int):
         xyz = locations.coords.as_geocentric().values
-        distances, neighbors = tree.query(xyz, k=k, return_distance=True)
+        distances, neighbors = tree.kneighbors(xyz, n_neighbors=k, return_distance=True)
         data = cls(locations, neighbors, distances)
         return data
 
@@ -108,10 +108,10 @@ class RadialNeighborhoodGraph(NeighborhoodGraph):
         self.max_distance = np.fromiter(((d[-1] if len(d) else -1.) for d in self.distances), count=len(self.distances), dtype=float)
 
     @classmethod
-    def from_tree_query(cls, locations: LocationBatch, tree: KDTree, radius_km: float):
+    def from_tree_query(cls, locations: LocationBatch, tree: NearestNeighbors, radius_km: float):
         xyz = locations.coords.as_geocentric().values
-        neighbors, distances = tree.query_radius(
-            xyz, r=1000. * radius_km,
+        distances, neighbors = tree.radius_neighbors(
+            xyz, radius=1000. * radius_km,
             return_distance=True, sort_results=True
         )
         data = cls(locations, neighbors, distances)
