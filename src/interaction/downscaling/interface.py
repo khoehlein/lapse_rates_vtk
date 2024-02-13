@@ -570,9 +570,10 @@ class NeighborhoodLookup(PropertyModel):
         num_jobs: int # 1 for single-process, -1 for all processors
         lsm_threshold: float
 
-    def __init__(self, search_structure: NearestNeighbors, properties: 'NeighborhoodLookup.Properties'):
-        super().__init__(properties)
-        self.search_structure = search_structure
+    def __init__(self, data_store: DataStore):
+        super().__init__(None)
+        self.data_store = data_store
+        self.search_structure: NearestNeighbors = None
         self._actions = {
             NeighborhoodType.NEAREST_NEIGHBORS: self._query_k_nearest_neighbors,
             NeighborhoodType.RADIAL: self._query_k_radial_neighbors,
@@ -600,34 +601,34 @@ class NeighborhoodLookup(PropertyModel):
 
     def _refresh_search_structure(self):
         properties = self._properties
-        search_structure = NearestNeighbors(algorithm=properties.tree_type.value, leaf_size=100,
+        self.search_structure = NearestNeighbors(algorithm=properties.tree_type.value, leaf_size=100,
                                             n_jobs=properties.num_jobs)
-        data = data_store.get_lsm()
+        data = self.data_store.get_lsm()
         if data is None:
             raise RuntimeError('[ERROR] Error while building neighborhood lookup from properties: LSM unavailable.')
         mask = np.argwhere(data.values >= properties.lsm_threshold)
         data = data.isel(values=mask)
         coords = Coordinates.from_xarray(data).as_geocentric().values
-        search_structure.fit(coords)
+        self.search_structure.fit(coords)
 
-    def update_properties(self, properties: 'NeighborhoodLookup.Properties', data_store: DataStore):
-
-        self.search_structure = search_structure
+    def set_properties(self, properties: 'NeighborhoodLookup.Properties'):
+        if self.tree_update_required(properties):
+            super().set_properties(properties)
+            self._refresh_search_structure()
+        else:
+            super().set_properties(properties)
         return self
 
-    def set_properties(self, properties) -> 'NeighborhoodLookup':
-        if not self.new_properties_valid(properties):
-            raise PropertyModelUpdateError()
-        return super().set_properties(properties)
-
-    def new_properties_valid(self, properties: 'NeighborhoodLookup.Properties') -> bool:
+    def tree_update_required(self, properties: 'NeighborhoodLookup.Properties') -> bool:
+        if self._properties is None:
+            return True
         if properties.lsm_threshold != self.lsm_threshold:
-            return False
+            return True
         if properties.tree_type != self.tree_type:
-            return False
+            return True
         if properties.num_jobs != self.num_jobs:
-            return False
-        return True
+            return True
+        return False
 
     def query_neighbor_graph(self, locations: LocationBatch) -> NeighborhoodGraph:
         action = self._actions.get(self.neighborhood_type, None)
@@ -644,36 +645,25 @@ class NeighborhoodLookup(PropertyModel):
 
 class NeighborhoodData(object):
 
-    def __init__(self, data_store: DataStore):
-        self.data_store = data_store
-        self.lookup: NeighborhoodLookup = None
+    def __init__(self, domain_model: DomainData):
+        self.domain_model = domain_model
+        self.lookup = NeighborhoodLookup(self.data_store)
         self._neighborhood_graph = None
         self.data = None
 
+    @property
+    def data_store(self):
+        return self.domain_model.data_store
+
     def set_neighborhood_properties(self, properties: NeighborhoodLookup.Properties):
-        if self.new_properties_differ(properties):
-            self._update_lookup(properties)
-            self._update_data()
+        self.lookup.set_properties(properties)
+        self.update()
         return self
 
-    def new_properties_differ(self, properties):
-        if self.lookup is None:
-            return True
-        if self.lookup.properties
-
-    def _update_lookup(self, properties):
-        update_successful = False
-        if self.lookup is not None:
-            try:
-                self.lookup.set_properties(properties)
-            except PropertyModelUpdateError:
-                pass
-            else:
-                update_successful = True
-        if not update_successful:
-            self.lookup = NeighborhoodLookup.from_properties(properties, self.data_store)
-
-
+    def update(self):
+        domain_sites = self.domain_model.sites
+        self._neighborhood_graph = self.lookup.query_neighbor_graph(domain_sites)
+        self.data = self.data_store.query_site_data(self._neighborhood_graph.links['neighbors'])
 
     def query_neighbor_graph(self, locations: LocationBatch) -> NeighborhoodGraph:
         if self.lookup is None:
@@ -694,15 +684,12 @@ class NeighborhoodController(object):
     def __init__(
             self,
             settings_view: NeighborhoodSettingsView,
-            model: NeighborhoodModel,
-            domain_controller: DomainController
+            model: NeighborhoodData,
     ):
         self.settings_view = settings_view
         self.settings_view.neighborhood_settings_changed.connect(self._on_neighborhood_settings_changed)
         self.model = model
         self._synchronize_neighborhood_settings()
-        self.domain_controller = domain_controller
-        self.domain_controller.domain_data_changed.connect(self._on_domain_data_changed)
 
     def _on_neighborhood_settings_changed(self):
         self._synchronize_neighborhood_settings()
@@ -711,10 +698,6 @@ class NeighborhoodController(object):
     def _synchronize_neighborhood_settings(self):
         settings = self.settings_view.get_neighborhood_settings()
         self.model.set_neighborhood_properties(settings)
-
-    def _on_domain_data_changed(self):
-        self.model.update_neighbor_samples()
-        self.neighborhood_data_changed.emit()
 
 
 class DownscalingMethod(Enum):
@@ -754,12 +737,12 @@ class DownscalerController(object):
 
     def __init__(self, settings_view: DownscalerSettingsView, downscaler: Downscaler):
         self.settings_view = settings_view
-        self.downscaler = downscaler
+        self.model = downscaler
         self.settings_view.downscaler_settings_changed.connect(self._on_downscaler_settings_changed)
 
     def _on_downscaler_settings_changed(self):
         settings = self.settings_view.get_settings()
-        self.downscaler.set_properties(settings)
+        self.model.set_properties(settings)
         self.downscaler_changed.emit()
 
 
@@ -767,22 +750,19 @@ class DownscalingPipeline(object):
 
     def __init__(
             self,
-            source_data: DomainData, target_data: DomainData,
-            neighborhood_data: NeighborhoodModel,
+            site_data: DomainData, neighborhood_data: NeighborhoodData,
+            target_data: DomainData,
             downscaler_model: DownscalingMethod,
     ):
-        self.source_data = source_data
+        self.site_data = site_data
+        self.neighborhood_data = neighborhood_data
         self.target_data = target_data
-        self.neighborhood_model = neighborhood_model
-        self._neighboorhood_graph = None
-        self._neighbor_data = None
         self.downscaler_model = downscaler_model
         self.output = None
 
     def query_neighborhoods(self):
         domain_sites = self.source_data.sites
         self._neighboorhood_graph = self.neighborhood_model.query_neighbor_graph(domain_sites)
-
 
     def _update(self):
         if self.downscaler is None:
@@ -797,10 +777,17 @@ class DownscalingPipelineController(object):
             self,
             downscaling_pipeline: DownscalingPipeline,
             neighborhood_controller: NeighborhoodController,
-            downscaler_controller: DownscalerController
+            downscaler_controller: DownscalerController,
+            domain_controller: DomainController
     ):
         self.neighborhood_controller = neighborhood_controller
         self.downscaler_controller = downscaler_controller
+        self.domain_controller = domain_controller
+        self.domain_controller.domain_data_changed.connect(self._on_domain_data_changed)
+
+    def _on_domain_data_changed(self):
+        self.neighborhood_controller.model.update()
+        self.downscaler_controller.model.update()
 
 
 
