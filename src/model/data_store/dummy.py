@@ -22,8 +22,8 @@ class DummyPipeline(QObject):
 
     def _build_outputs(self):
         domain_bounds = DomainBounds(10, 10.5, 5, 5.5)
-        grid_highres = OctahedralGrid(8000).get_subgrid(domain_bounds)
-        grid_lowres = OctahedralGrid(1280).get_subgrid(domain_bounds)
+        grid_highres = OctahedralGrid(8000).get_mesh_for_subdomain(domain_bounds)
+        grid_lowres = OctahedralGrid(1280).get_mesh_for_subdomain(domain_bounds)
         np.random.seed(1234)
         z_highres = np.exp(np.random.randn(grid_highres.num_nodes) * 0.5) * 400.
         z_lowres = np.random.randn(grid_lowres.num_nodes) * (np.std(z_highres) / math.sqrt(10)) + np.mean(z_highres)

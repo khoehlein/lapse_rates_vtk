@@ -1,38 +1,54 @@
 import json
 import logging
-from typing import Dict, Any, Union
+from typing import Dict, Any, Union, List
 import xarray as xr
 
 
-class ConfigurationKey(object):
+class SourceConfigKey(object):
     PATH = 'path'
+    ATTRIBUTE_NAME = 'attribute'
+    DIMENSIONS = 'dims'
     SELECTION = 'select'
     ENGINE = 'engine'
 
 
-class DataConfiguration(object):
+class SourceConfiguration(object):
 
     DEFAULTS = {
-        ConfigurationKey.SELECTION: None,
-        ConfigurationKey.ENGINE: 'cfgrib'
+        SourceConfigKey.SELECTION: None,
+        SourceConfigKey.ENGINE: 'cfgrib'
     }
 
-    def __init__(self, path: str, selection: Dict[str, Any], engine: str):
+    def __init__(
+            self,
+            path: str,
+            attribute: str,
+            dims: List[str],
+            selection: Dict[str, Any],
+            engine: str
+    ):
         self.path = path
+        self.attribute = attribute
+        self.dims = dims
         self.selection = selection
         self.engine = engine
 
     @classmethod
-    def from_config_entry(cls, config_entry: Union[str, Dict[str, Any]]) -> 'DataConfiguration':
+    def from_config_entry(cls, config_entry: Union[str, Dict[str, Any]], entry_key: str) -> 'SourceConfiguration':
         if isinstance(config_entry, str):
-            return cls(config_entry, cls.DEFAULTS[ConfigurationKey.SELECTION], cls.DEFAULTS[ConfigurationKey.ENGINE])
-        path = config_entry.get(ConfigurationKey.PATH)
-        selection = config_entry.get(ConfigurationKey.SELECTION, cls.DEFAULTS[ConfigurationKey.SELECTION])
-        engine = config_entry.get(ConfigurationKey.ENGINE, cls.DEFAULTS[ConfigurationKey.ENGINE])
-        return cls(path, selection, engine)
+            return cls(config_entry, entry_key, cls.DEFAULTS[SourceConfigKey.SELECTION], cls.DEFAULTS[SourceConfigKey.ENGINE])
+        path = config_entry.get(SourceConfigKey.PATH)
+        assert path is not None
+        attribute_name = config_entry.get(SourceConfigKey.ATTRIBUTE_NAME, entry_key)
+        dims = config_entry.get(SourceConfigKey.DIMENSIONS, None)
+        selection = config_entry.get(SourceConfigKey.SELECTION, None)
+        engine = config_entry.get(SourceConfigKey.ENGINE, cls.DEFAULTS[SourceConfigKey.ENGINE])
+        return cls(path, attribute_name, dims, selection, engine)
 
     def load_data(self):
-        data = xr.open_dataset(self.path, engine=self.engine)
+        data = xr.open_dataset(self.path, engine=self.engine)[self.attribute]
+        if self.dims is not None:
+            data = data.transpose(*self.dims)
         if self.selection is not None:
             data = data.isel(**self.selection)
         return data

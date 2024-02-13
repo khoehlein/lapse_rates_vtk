@@ -4,7 +4,7 @@ from typing import Union
 import numpy as np
 import xarray as xr
 
-from src.model.data_store.config_interface import ConfigReader, DataConfiguration
+from src.model.data_store.config_interface import ConfigReader, SourceConfiguration
 from src.model.geometry import OctahedralGrid, DomainBounds, TriangleMesh, WedgeMesh, LocationBatch, SurfaceDataset
 from src.model.level_heights import compute_physical_level_height
 from src.model.neighborhood_lookup.neighborhood_graphs import NeighborhoodGraph
@@ -49,7 +49,7 @@ class WorldData(object):
 
     @classmethod
     def from_config_file(cls, path_to_config_file: str):
-        config_reader = ConfigReader(DataConfiguration)
+        config_reader = ConfigReader(SourceConfiguration)
         configs = config_reader.load_json_config(path_to_config_file)
         logging.info('Loading low-res model...')
         orography_lr = config_reader.load_data(configs['orography']['low-res']).z
@@ -84,8 +84,8 @@ class WorldData(object):
         self.data_hr = data_hr
 
     def query_domain_data(self, domain_bounds: DomainBounds) -> DomainData:
-        mesh_lr = self.grid_lr.get_subgrid(domain_bounds)
-        mesh_hr = self.grid_hr.get_subgrid(domain_bounds)
+        mesh_lr = self.grid_lr.get_mesh_for_subdomain(domain_bounds)
+        mesh_hr = self.grid_hr.get_mesh_for_subdomain(domain_bounds)
         z_model_levels = self.data_lr.z_model_levels.values[:, mesh_lr.source_reference]
         mesh_model_levels = WedgeMesh(mesh_lr, z_model_levels)
         return DomainData(

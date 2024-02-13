@@ -1,61 +1,191 @@
+import logging
 from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
-from typing import Tuple, Union
+from typing import Tuple, Union, Any, Dict
 
 import numpy as np
 import pyvista as pv
+import cartopy.crs as ccrs
 from scipy.special import roots_legendre
 import xarray as xr
 from sklearn.neighbors import NearestNeighbors
 
-from src.model.geometry import AngularInterval, LocationBatch, Coordinates, TriangleBatch, lat_lon_system
-from src.model.neighborhood_lookup.neighborhood_graphs import UniformNeighborhoodGraph, RadialNeighborhoodGraph
+from src.model.data_store.config_interface import ConfigReader, SourceConfiguration
+from src.model.level_heights import compute_physical_level_height
+from src.model.neighborhood_lookup.neighborhood_graphs import UniformNeighborhoodGraph, RadialNeighborhoodGraph, \
+    NeighborhoodGraph
 from src.model.visualization.interface import PropertyModel, PropertyModelUpdateError
 
-N_LOWRES = 1280
-N_HIGHRES = 8000
+
+geocentric_system = ccrs.Geocentric()
+xyz_system = geocentric_system
+lat_lon_system = ccrs.PlateCarree()
+
+
+class Coordinates(object):
+
+    @classmethod
+    def from_xarray(cls, data: Union[xr.Dataset, xr.DataArray]):
+        return cls(lat_lon_system, data['longitude'].values, data['latitude'].values)
+
+    def __init__(self, system: ccrs.CRS, *values: np.ndarray):
+        self.components = values
+        self.system = system
+
+    def transform_to(self, new_system: ccrs.CRS):
+        return Coordinates(new_system, *new_system.transform_points(self.system, *self.components).T)
+
+    def as_geocentric(self):
+        return self.transform_to(geocentric_system)
+
+    def as_lat_lon(self):
+        new_coords = self.transform_to(lat_lon_system)
+        # restrict lat lon coordinates to 2d coordinates
+        if len(new_coords.components) == 3:
+            new_coords.components = new_coords.components[:2]
+        return new_coords
+
+    def as_xyz(self):
+        return self.as_geocentric()
+
+    @property
+    def values(self):
+        return np.stack(self.components, axis=-1)
+
+    @property
+    def x(self):
+        return self.components[0]
+
+    @property
+    def y(self):
+        return self.components[1]
+
+    @property
+    def z(self):
+        return self.components[2]
+
+    def __len__(self):
+        return len(self.values)
+
+
+class AngularInterval(object):
+
+    def __init__(self, min: float, max: float, period: float = None):
+        self.min = float(min)
+        self._max = float(max)
+        if period is not None:
+            period = float(period)
+        self.period = period
+
+    def is_periodic(self) -> bool:
+        return self.period is not None
+
+    @property
+    def max(self) -> float:
+        return (self._max - self.min) % self.period if self.is_periodic() else self._max
+
+    def argwhere(self, x: np.ndarray) -> np.ndarray:
+        return np.argwhere(self.contains(x))
+
+    def contains(self, x: np.ndarray) -> np.ndarray:
+        if self.is_periodic():
+            x = (x - self.min) % self.period
+            mask = x < self.max
+        else:
+            mask = np.logical_and(x >= self.min, x <= self.max)
+        return mask
+
+
+class LocationBatch(object):
+
+    def __init__(self, coords: Coordinates, elevation: np.ndarray = None, source_reference: np.ndarray = None):
+        self.coords = coords
+        self.elevation = elevation
+        self.source_reference = source_reference
+
+    @property
+    def x(self):
+        return self.coords.x
+
+    @property
+    def y(self):
+        return self.coords.y
+
+    @property
+    def z(self):
+        return self.elevation
+
+    def get_subset(self, location_ids: np.ndarray) -> 'LocationBatch':
+        coords = Coordinates(self.coords.system, *[c[location_ids] for c in self.coords.components])
+        source_reference = self.source_reference[location_ids]
+        return self.__class__(coords, source_reference)
+
+    def __len__(self):
+        return self.coords.__len__()
 
 
 class TriangleMesh(object):
 
-    def __init__(self, locations: LocationBatch, vertices: np.ndarray):
-        self.locations = locations
+    def __init__(self, nodes: LocationBatch, vertices: np.ndarray):
+        self.nodes = nodes
         self.vertices = vertices
+        self._x = None
+        self._y = None
 
     @property
     def x(self):
-        return self.locations.x
+        if self._x is None:
+            self._x = self.nodes.x[self.vertices]
+        return self._x
 
     @property
     def y(self):
-        return self.locations.y
+        if self._y is None:
+            self._y = self.nodes.y[self.vertices]
+        return self._y
+
+    @property
+    def z(self):
+        return self.nodes.z
+
+    @property
+    def left(self) -> np.ndarray:
+        return np.amin(self.x, axis=-1)
+
+    @property
+    def right(self) -> np.ndarray:
+        return np.amax(self.x, axis=-1)
+
+    @property
+    def bottom(self) -> np.ndarray:
+        return np.amin(self.y, axis=-1)
+
+    @property
+    def top(self) -> np.ndarray:
+        return np.amax(self.y, axis=-1)
+
 
     @property
     def source_reference(self):
-        return self.locations.source_reference
+        return self.nodes.source_reference
 
     @property
-    def coordinates(self):
-        return self.locations.coords
+    def node_coordinates(self):
+        return self.nodes.coords
 
     @property
     def num_nodes(self):
         return len(self.x)
 
-    def get_horizontal_coordinates(self, transform=None) -> Tuple[np.ndarray, np.ndarray]:
-        if transform is not None:
-            return transform(self.x, self.y)
-        return self.x, self.y
-
-    def get_vertex_positions(self, z: np.ndarray = None, transform=None) -> np.ndarray:
-        coords = self.coordinates
+    def get_node_positions(self) -> np.ndarray:
+        z = self.z
         if z is None:
-            z = np.zeros_like(coords.x)
-        coordinates = np.stack([*coords.components, z], axis=-1)
+            z = np.zeros_like(self.x)
+        coordinates = np.stack([self.x, self.y, z], axis=-1)
         return coordinates
 
-    def get_triangle_vertices(self, add_prefix: bool = False) -> np.ndarray:
+    def get_faces(self, add_prefix: bool = False) -> np.ndarray:
         prefix_offset = int(add_prefix)
         faces = np.zeros((len(self.vertices), 3 + prefix_offset), dtype=int)
         if add_prefix:
@@ -63,17 +193,10 @@ class TriangleMesh(object):
         faces[:, prefix_offset:] = self.vertices
         return faces
 
-    def to_polydata(self, z: np.ndarray = None, transform=None) -> pv.PolyData:
-        faces = np.concatenate([np.full((len(self.vertices), 1), 3, dtype=int), self.vertices], axis=-1)
-        points = self.get_vertex_positions(z, transform)
+    def to_polydata(self) -> pv.PolyData:
+        faces = self.get_faces()
+        points = self.get_node_positions()
         return pv.PolyData(points, faces)
-
-
-class DataStore(object):
-
-    def query_site_data(self, domain_bounds):
-        raise NotImplementedError()
-
 
 
 @dataclass
@@ -90,14 +213,15 @@ class DomainBoundingBox(object):
         self.latitude = AngularInterval(bounds.min_latitude, bounds.max_latitude)
         self.longitude = AngularInterval(bounds.min_longitude, bounds.max_longitude, period=360.)
 
-    def contains(self, coords: Coordinates) -> np.ndarray:
-        longitude, latitude = coords.as_lat_lon().components
+    def contains(self, locations: LocationBatch) -> np.ndarray:
+        coords = locations.coords.as_lat_lon()
+        longitude, latitude = coords.components
         return np.logical_and(
             self.latitude.contains(latitude),
             self.longitude.contains(longitude)
         )
 
-    def intersects(self, triangles: TriangleBatch) -> np.ndarray:
+    def intersects(self, triangles: TriangleMesh) -> np.ndarray:
         # approximate triangles as rectangles
         overlaps_longitude = np.logical_or(
             self.longitude.contains(triangles.left),
@@ -193,15 +317,11 @@ class GridCircle(object):
         return self._get_triangles(first_index_other + offset_on_other, True)
 
 
-@lru_cache(maxsize=2)
-def _get_legendre_latitudes(n: int):
-    return - np.rad2deg(np.arcsin(roots_legendre(2 * n)[0]))
-
-
 class OctahedralGrid(object):
 
     def __init__(self, degree: int):
         self.degree = int(degree)
+        self._circle_latitudes = - np.rad2deg(np.arcsin(roots_legendre(2 * self.degree)[0]))
 
     @property
     def num_triangles(self):
@@ -228,22 +348,21 @@ class OctahedralGrid(object):
 
     @property
     def latitudes(self):
-        circle_latitudes = _get_legendre_latitudes(self.degree)
         latitudes = np.empty(self.num_nodes)
         counter = 0
         for n in range(2 * self.degree):
             num_nodes = GridCircle(self.degree, n).num_nodes
-            latitudes[counter:(counter + num_nodes)] = circle_latitudes[n]
+            latitudes[counter:(counter + num_nodes)] = self._circle_latitudes[n]
             counter = counter + num_nodes
         return latitudes
 
     @property
     def coordinates(self):
-        return (self.latitudes, self.longitudes)
+        return Coordinates(lat_lon_system, self.longitudes, self.latitudes)
 
     @property
     def triangles(self):
-        vertices = -np.ones((self.num_triangles, 3), dtype=int)
+        vertices = - np.ones((self.num_triangles, 3), dtype=int)
         circle = GridCircle(self.degree, 0)
         counter = circle.num_nodes
         vertices[:counter] = circle.triangles_to_southern_circle()
@@ -275,9 +394,8 @@ class OctahedralGrid(object):
         counter += num_nodes
         return vertices
 
-    def get_subgrid(self, bounds: DomainBoundingBox) -> TriangleMesh:
-        circle_latitudes = _get_legendre_latitudes(self.degree)
-        latitudes_in_bounds = bounds._latitude_interval.argwhere(circle_latitudes)
+    def get_mesh_for_subdomain(self, bounds: DomainBoundingBox) -> TriangleMesh:
+        latitudes_in_bounds = bounds.latitude.argwhere(self._circle_latitudes)
         first_latitude = max(0, latitudes_in_bounds[0] - 1)
         last_latitude = min(2 * self.degree - 1, latitudes_in_bounds[-1] + 1)
         all_triangles = []
@@ -288,8 +406,8 @@ class OctahedralGrid(object):
             longitudes = np.concatenate([northern_circle.longitudes, southern_circle.longitudes])
             latitudes = np.zeros_like(longitudes)
             num_northern = northern_circle.num_nodes
-            latitudes[:num_northern] = circle_latitudes[northern_circle.index_from_north]
-            latitudes[num_northern:] = circle_latitudes[southern_circle.index_from_north]
+            latitudes[:num_northern] = self._circle_latitudes[northern_circle.index_from_north]
+            latitudes[num_northern:] = self._circle_latitudes[southern_circle.index_from_north]
             return Coordinates(lat_lon_system, longitudes, latitudes)
 
         for n in range(first_latitude, last_latitude):
@@ -299,13 +417,13 @@ class OctahedralGrid(object):
             coords = get_coordinates(northern_circle, southern_circle)
             locations = LocationBatch(coords)
             vertices = northern_circle.triangles_to_southern_circle() - first_index
-            triangles = TriangleBatch(locations, vertices)
+            triangles = TriangleMesh(locations, vertices)
             valid = bounds.intersects(triangles)
             all_triangles.append(vertices[valid] + first_index)
             all_longitudes.append(triangles.x[valid])
             all_latitudes.append(triangles.y[valid])
             vertices = southern_circle.triangles_to_northern_circle() - first_index
-            triangles = TriangleBatch(locations, vertices)
+            triangles = TriangleMesh(locations, vertices)
             valid = bounds.intersects(triangles)
             all_triangles.append(vertices[valid] + first_index)
             all_longitudes.append(triangles.x[valid])
@@ -323,9 +441,49 @@ class OctahedralGrid(object):
         return TriangleMesh(locations, all_triangles)
 
 
-class SubDomainData(object):
-    GRID_LOWRES = OctahedralGrid(N_LOWRES)
-    GRID_HIGHRES = OctahedralGrid(N_HIGHRES)
+class DataStore(object):
+
+    def __init__(self, grid: OctahedralGrid, data: xr.Dataset):
+        assert data.dims['values'] == grid.num_nodes
+        self.grid = grid
+        self.data = data
+
+    @classmethod
+    def from_config(cls, configs: Dict[str, Any], grid: OctahedralGrid, compute_level_heights: bool = False) -> 'DataStore':
+        config_reader = ConfigReader(SourceConfiguration)
+        logging.info('Loading data...')
+        data = [
+            config_reader.load_data(configs[key])
+            for key in configs
+        ]
+        data = xr.merge(data, compat='override')
+
+        if compute_level_heights:
+            logging.info('Computing model level heights...')
+            keys = set(data.data_vars.keys())
+            assert 'z' in keys
+            assert 'lnsp' in keys
+            assert 't' in keys
+            assert 'q' in keys
+            z_model_levels = compute_physical_level_height(
+                np.exp(data.lnsp.values)[None, :], data.z.values[None, :],
+                data.t.values, data.q.values
+            )
+            logging.info('Merging data...')
+            data = data.assign(z_model_levels=(('hybrid', 'values'), z_model_levels))
+
+        return cls(grid, data)
+
+    def get_lsm(self):
+        if 'lsm' in self.data.data_vars.keys():
+            return self.data['lsm']
+        return None
+
+    def query_site_data(self, domain_bounds):
+        raise NotImplementedError()
+
+
+class DomainData(object):
 
     def __init__(self, grid: OctahedralGrid, data_store: DataStore):
         self.grid = grid
@@ -333,6 +491,12 @@ class SubDomainData(object):
         self.bounding_box = None
         self.mesh = None
         self.site_data: xr.Dataset = None
+
+    @property
+    def sites(self):
+        if self.mesh is None:
+            return None
+        return self.mesh.nodes
 
     def set_bounds(self, bounds: DomainLimits):
         if bounds is not None:
@@ -344,15 +508,14 @@ class SubDomainData(object):
 
     def _update(self):
         if self.bounding_box is not None:
-            self.mesh = self.grid.get_subgrid(self.bounding_box)
-            self.site_data = self.data_store.query_site_data(self.mesh.locations)
+            self.mesh = self.grid.get_mesh_for_subdomain(self.bounding_box)
+            self.site_data = self.data_store.query_site_data(self.mesh.nodes)
         else:
             self.reset()
         return self
 
     def reset(self):
-        self.mesh = None
-        self.site_data = None
+        return self.set_bounds(None)
 
 
 class DomainSettingsView(object):
@@ -368,7 +531,7 @@ class DomainController(object):
     def __init__(
             self,
             settings_view: DomainSettingsView,
-            domain_lr: SubDomainData, domain_hr: SubDomainData
+            domain_lr: DomainData, domain_hr: DomainData
     ):
         self.settings_view = settings_view
         self.domain_lr = domain_lr
@@ -435,18 +598,25 @@ class NeighborhoodLookup(PropertyModel):
     def lsm_threshold(self) -> float:
         return self._properties.lsm_threshold
 
-    @classmethod
-    def from_properties(cls, properties: 'NeighborhoodLookup.Properties', data_store: DataStore):
-        search_structure = NearestNeighbors(algorithm=properties.tree_type.value, leaf_size=100, n_jobs=properties.num_jobs)
-        data = data_store.get_lsm_data()
+    def _refresh_search_structure(self):
+        properties = self._properties
+        search_structure = NearestNeighbors(algorithm=properties.tree_type.value, leaf_size=100,
+                                            n_jobs=properties.num_jobs)
+        data = data_store.get_lsm()
+        if data is None:
+            raise RuntimeError('[ERROR] Error while building neighborhood lookup from properties: LSM unavailable.')
         mask = np.argwhere(data.values >= properties.lsm_threshold)
         data = data.isel(values=mask)
         coords = Coordinates.from_xarray(data).as_geocentric().values
         search_structure.fit(coords)
-        return cls(search_structure, properties)
+
+    def update_properties(self, properties: 'NeighborhoodLookup.Properties', data_store: DataStore):
+
+        self.search_structure = search_structure
+        return self
 
     def set_properties(self, properties) -> 'NeighborhoodLookup':
-        if not self._new_properties_valid(properties):
+        if not self.new_properties_valid(properties):
             raise PropertyModelUpdateError()
         return super().set_properties(properties)
 
@@ -459,43 +629,39 @@ class NeighborhoodLookup(PropertyModel):
             return False
         return True
 
-    def query_neighbor_graph(self, locations: LocationBatch):
+    def query_neighbor_graph(self, locations: LocationBatch) -> NeighborhoodGraph:
         action = self._actions.get(self.neighborhood_type, None)
-        if action is not None:
+        if action is None:
             raise RuntimeError()
         return action(locations)
 
     def _query_k_nearest_neighbors(self, locations: LocationBatch) -> UniformNeighborhoodGraph:
         return UniformNeighborhoodGraph.from_tree_query(locations, self.search_structure, self.neighborhood_size)
 
-    def _query_radial_neighbors(self, locations: LocationBatch) -> UniformNeighborhoodGraph:
+    def _query_radial_neighbors(self, locations: LocationBatch) -> RadialNeighborhoodGraph:
         return RadialNeighborhoodGraph.from_tree_query(locations, self.search_structure, self.neighborhood_size)
 
 
-class NeighborhoodModel(object):
+class NeighborhoodData(object):
 
-    def __init__(self, domain_model: SubDomainData, data_store: DataStore):
-        self.domain_model = domain_model
+    def __init__(self, data_store: DataStore):
         self.data_store = data_store
-        self.lookup = None
-        self.neighbor_graph = None
-        self.neighbor_samples = None
-
-    def _update(self):
-        if self.lookup is None:
-            self.neighbor_graph = None
-            self.neighbor_samples = None
-            return self
-        locations = self.domain_model.mesh.locations
-        self.neighbor_graph = self.lookup.query_neighbor_graph(locations)
-        self.update_neighbor_samples()
-        return self
-
-    def update_neighbor_samples(self):
-        self.neighbor_samples = self.data_store.query_site_data(self.neighbor_graph.links['neighbor'])
-        return self
+        self.lookup: NeighborhoodLookup = None
+        self._neighborhood_graph = None
+        self.data = None
 
     def set_neighborhood_properties(self, properties: NeighborhoodLookup.Properties):
+        if self.new_properties_differ(properties):
+            self._update_lookup(properties)
+            self._update_data()
+        return self
+
+    def new_properties_differ(self, properties):
+        if self.lookup is None:
+            return True
+        if self.lookup.properties
+
+    def _update_lookup(self, properties):
         update_successful = False
         if self.lookup is not None:
             try:
@@ -505,9 +671,14 @@ class NeighborhoodModel(object):
             else:
                 update_successful = True
         if not update_successful:
-            self.lookup = NeighborhoodLookup.from_properties(properties, self.domain_model.data_store)
-        self._update()
-        return self
+            self.lookup = NeighborhoodLookup.from_properties(properties, self.data_store)
+
+
+
+    def query_neighbor_graph(self, locations: LocationBatch) -> NeighborhoodGraph:
+        if self.lookup is None:
+            raise RuntimeError('[ERROR]  Error while querying neighborhood graph: lookup not found.')
+        return self.lookup.query_neighbor_graph(locations)
 
 
 class NeighborhoodSettingsView(object):
@@ -567,36 +738,69 @@ class Downscaler(PropertyModel):
     def from_properties(cls, properties):
         raise NotImplementedError()
 
-    def downscale(self, site_data: xr.Dataset, neighbor_data: xr.Dataset, target_domain: SubDomainData):
+    def downscale(self, site_data: xr.Dataset, neighbor_data: xr.Dataset, target_domain: DomainData):
         raise NotImplementedError()
 
 
-class DownscalingModel(object):
+class DownscalerSettingsView(object):
+    downscaler_settings_changed = None
 
-    def __init__(self, target_domain_data: SubDomainData, neighborhood_model: NeighborhoodModel):
-        self.target_domain_data = target_domain_data
+    def get_settings(self):
+        raise NotImplementedError()
+
+
+class DownscalerController(object):
+    downscaler_changed = None
+
+    def __init__(self, settings_view: DownscalerSettingsView, downscaler: Downscaler):
+        self.settings_view = settings_view
+        self.downscaler = downscaler
+        self.settings_view.downscaler_settings_changed.connect(self._on_downscaler_settings_changed)
+
+    def _on_downscaler_settings_changed(self):
+        settings = self.settings_view.get_settings()
+        self.downscaler.set_properties(settings)
+        self.downscaler_changed.emit()
+
+
+class DownscalingPipeline(object):
+
+    def __init__(
+            self,
+            source_data: DomainData, target_data: DomainData,
+            neighborhood_data: NeighborhoodModel,
+            downscaler_model: DownscalingMethod,
+    ):
+        self.source_data = source_data
+        self.target_data = target_data
         self.neighborhood_model = neighborhood_model
-        self.downscaler = None
+        self._neighboorhood_graph = None
+        self._neighbor_data = None
+        self.downscaler_model = downscaler_model
         self.output = None
 
-    def set_downscaler_properties(self, properties):
-        update_successful = False
-        if self.downscaler is not None:
-            try:
-                self.downscaler.update_properties(properties)
-            except PropertyModelUpdateError:
-                pass
-            else:
-                update_successful = True
-        if not update_successful:
-            self.downscaler = Downscaler.from_properties(properties)
-        self._update()
-        return self
+    def query_neighborhoods(self):
+        domain_sites = self.source_data.sites
+        self._neighboorhood_graph = self.neighborhood_model.query_neighbor_graph(domain_sites)
+
 
     def _update(self):
         if self.downscaler is None:
             return
         self.output = self.downscaler.process(self.target_domain_data, self.neighborhood_model.neighbor_samples)
+
+
+class DownscalingPipelineController(object):
+    output_data_changed = None
+
+    def __init__(
+            self,
+            downscaling_pipeline: DownscalingPipeline,
+            neighborhood_controller: NeighborhoodController,
+            downscaler_controller: DownscalerController
+    ):
+        self.neighborhood_controller = neighborhood_controller
+        self.downscaler_controller = downscaler_controller
 
 
 

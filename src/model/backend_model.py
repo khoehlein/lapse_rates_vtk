@@ -95,7 +95,7 @@ class DownscalingPipeline(QObject):
     def _update_neighborhood_graph(self):
         self._update_domain_data()
         if self._neighborhood_graph is None:
-            query_locations = self._domain_data.surface_mesh_lr.locations
+            query_locations = self._domain_data.surface_mesh_lr.nodes
             self._neighborhood_graph = self.neighborhood_lookup.query_neighborhood(query_locations)
             self._neighborhood_samples = None
 

@@ -106,7 +106,7 @@ class LapseRateDownscaler(DownscalerModel):
         locations, t2m_at_site, z_at_site, lapse_rates = output
         source_coords = locations.coords.as_geocentric().values
         tree = KDTree(source_coords)
-        target_coords = target.mesh.locations.coords.as_geocentric().values
+        target_coords = target.mesh.nodes.coords.as_geocentric().values
         nearest = tree.query(target_coords, k=1, return_distance=False).ravel()
         lapse_rate_at_target = lapse_rates[nearest]
         t2m_lowres_at_target = t2m_at_site[nearest]
