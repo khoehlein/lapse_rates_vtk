@@ -43,5 +43,5 @@ class DownscalingController(QObject):
         self.pipeline_model.set_neighborhood_properties(properties)
 
     def _synchronize_downscaler_properties(self):
-        properties = self.settings_view.downscaler_settings.get_downscaler_properties()
+        properties = self.settings_view.downscaler_properties.get_downscaler_properties()
         self.pipeline_model.set_downscaler_properties(properties)

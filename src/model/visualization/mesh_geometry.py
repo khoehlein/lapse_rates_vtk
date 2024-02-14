@@ -86,7 +86,7 @@ class MeshGeometryModel(PropertyModel):
 
     @property
     def mesh_style(self):
-        return _mesh_style_mapping[type(self._properties.mesh)]
+        return _mesh_style_mapping[type(self.properties.mesh)]
 
     def set_properties(self, properties: 'MeshGeometryModel.Properties') -> 'MeshGeometryModel':
         return super().set_properties(properties)
@@ -97,8 +97,8 @@ class MeshGeometryModel(PropertyModel):
         return self
 
     def write_to_host(self, host: pv.Plotter, **kwargs) -> Dict[str, pv.Actor]:
-        lighting_kws = standard_adapter.read(self._properties.lighting)
-        mesh_properties = self._properties.mesh
+        lighting_kws = standard_adapter.read(self.properties.lighting)
+        mesh_properties = self.properties.mesh
         mesh_kws = standard_adapter.read(mesh_properties)
         actor = host.add_mesh(
             self._mesh,
@@ -112,10 +112,10 @@ class MeshGeometryModel(PropertyModel):
         actor_props = actors['mesh'].prop
         style = self.mesh_style.name.lower()
         actor_props.style = style
-        lighting_kws = standard_adapter.read(self._properties.lighting)
+        lighting_kws = standard_adapter.read(self.properties.lighting)
         for key, value in lighting_kws.items():
             setattr(actor_props, key, value)
-        mesh_kws = standard_adapter.read(self._properties.mesh)
+        mesh_kws = standard_adapter.read(self.properties.mesh)
         for key, value in mesh_kws.items():
             setattr(actor_props, key, value)
         return actors

@@ -50,7 +50,7 @@ class UniformColorModel(ColorModel):
         actor.mapper.array_name = None
         actor.mapper.dataset.active_scalars_name = None
         actor_props = actor.prop
-        new_actor_props = standard_adapter.read(self._properties)
+        new_actor_props = standard_adapter.read(self.properties)
         for key, value in new_actor_props.items():
             setattr(actor_props, key, value)
         if 'scalar_bar' in actors:
@@ -63,7 +63,7 @@ class UniformColorModel(ColorModel):
         return isinstance(properties, UniformColorModel.Properties)
 
     def get_kws(self):
-        kws = standard_adapter.read(self._properties)
+        kws = standard_adapter.read(self.properties)
         kws['scalars'] = None
         return kws
 
@@ -80,9 +80,9 @@ class ScalarColormapModel(ColorModel):
         above_range_color: str = None
 
     def get_scalar_bar_title(self, gui_label: str = None) -> Union[str, None]:
-        if self._properties is None:
+        if self.properties is None:
             return None
-        scalar_type = getattr(ScalarType, self._properties.scalar_name.upper())
+        scalar_type = getattr(ScalarType, self.properties.scalar_name.upper())
         title = scalar_type.value
         if gui_label is None:
             return title
@@ -99,21 +99,21 @@ class ScalarColormapModel(ColorModel):
     def _update_mesh_actors(self, actors: Dict[str, pv.Actor]):
         actor = actors['mesh']
         actor_props = actor.prop
-        actor_props.opacity = self._properties.opacity
-        actor.mapper.array_name = self._properties.scalar_name
-        actor.mapper.dataset.active_scalars_name = self._properties.scalar_name
+        actor_props.opacity = self.properties.opacity
+        actor.mapper.array_name = self.properties.scalar_name
+        actor.mapper.dataset.active_scalars_name = self.properties.scalar_name
 
-        scalar_range = self._properties.scalar_range
+        scalar_range = self.properties.scalar_range
         if scalar_range is None:
             mesh = actor.mapper.mesh
-            scalar_range = mesh.get_data_range(self._properties.scalar_name)
+            scalar_range = mesh.get_data_range(self.properties.scalar_name)
         actor.mapper.scalar_range = scalar_range
 
-        actor.mapper.lookup_table.cmap = self._properties.colormap_name
-        below_range_color = self._properties.below_range_color
+        actor.mapper.lookup_table.cmap = self.properties.colormap_name
+        below_range_color = self.properties.below_range_color
         if below_range_color is not None:
             actor.mapper.lookup_table.below_range_color = below_range_color
-        above_range_color = self._properties.above_range_color
+        above_range_color = self.properties.above_range_color
         if above_range_color is not None:
             actor.mapper.lookup_table.above_range_color = above_range_color
         return actors
@@ -133,7 +133,7 @@ class ScalarColormapModel(ColorModel):
         return actors
 
     def get_kws(self):
-        props = self._properties
+        props = self.properties
         lut = pv.LookupTable(cmap=props.colormap_name)
         lut.scalar_range = props.scalar_range
         kws = {'scalars': props.scalar_name, 'cmap': lut, 'opacity': props.opacity}

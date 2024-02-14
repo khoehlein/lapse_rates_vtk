@@ -5,7 +5,8 @@ from typing import Dict, Any
 
 import pyvista as pv
 
-from PyQt5.QtCore import QObject
+from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtWidgets import QWidget
 
 from src.model.geometry import SurfaceDataset
 
@@ -55,29 +56,66 @@ class PropertyModelUpdateError(Exception):
     pass
 
 
-class PropertyModel(QObject):
+class PropertyModel(object):
 
     class Properties(object):
         pass
 
-    def __init__(self, properties: 'PropertyModel.Properties' = None, parent: QObject = None):
-        super().__init__(parent)
+    def __init__(self, properties: 'PropertyModel.Properties' = None):
         self.set_properties(properties)
 
     def set_properties(self, properties) -> 'PropertyModel':
-        if not self.new_properties_valid(properties):
-            raise PropertyModelUpdateError()
-        self._properties = properties
+        self.properties = properties
         return self
-
-    def new_properties_valid(self, properties: 'PropertyModel.Properties') -> bool:
-        return True
-
-    def supports_update(self, properties):
-        raise NotImplementedError()
 
     def get_kws(self):
         raise NotImplementedError()
+
+
+class PropertySettingsView(QWidget):
+
+    settings_changed = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def get_settings(self) -> PropertyModel.Properties:
+        raise NotImplementedError()
+
+    def update_settings(self, settings: PropertyModel.Properties):
+        raise NotImplementedError()
+
+
+class PropertyController(QObject):
+
+    model_changed = pyqtSignal()
+
+    def __init__(
+            self,
+            view: PropertySettingsView,
+            model: PropertyModel,
+            parent=None,
+            apply_defaults: bool = True,
+    ):
+        super().__init__(parent)
+        self.view = view
+        self.model = model
+        self.view.settings_changed.connect(self._on_settings_changed)
+        if apply_defaults:
+            self.view.update_settings(self._default_settings())
+        else:
+            self._synchronize_properties()
+
+    def default_settings(self):
+        raise NotImplementedError()
+
+    def _on_settings_changed(self):
+        self._synchronize_properties()
+        self.model_changed.emit()
+
+    def _synchronize_properties(self):
+        properties = self.view.get_settings()
+        self.model.set_properties(properties)
 
 
 class KeywordAdapter(object):
