@@ -49,3 +49,6 @@ class DataStore(object):
 
     def query_site_data(self, domain_bounds):
         raise NotImplementedError()
+
+    def query_link_data(self, x):
+        raise NotImplementedError()

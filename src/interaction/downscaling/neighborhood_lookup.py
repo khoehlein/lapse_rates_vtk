@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Union
+from typing import Union, Tuple
 
 import numpy as np
 import xarray as xr
@@ -76,7 +76,7 @@ class NeighborhoodModel(PropertyModel):
         coords = Coordinates.from_xarray(data).as_geocentric().values
         self.search_structure.fit(coords)
 
-    def set_properties(self, properties: 'NeighborhoodLookupModel.Properties'):
+    def set_properties(self, properties: 'NeighborhoodModel.Properties'):
         reset = self.tree_update_required(properties)
         super().set_properties(properties)
         if reset:
@@ -84,7 +84,7 @@ class NeighborhoodModel(PropertyModel):
         self.data = self.data_store.query_link_data()
         return self
 
-    def tree_update_required(self, properties: 'NeighborhoodLookupModel.Properties') -> bool:
+    def tree_update_required(self, properties: 'NeighborhoodModel.Properties') -> bool:
         if self.properties is None:
             return True
         if properties.lsm_threshold != self.lsm_threshold:
@@ -101,6 +101,11 @@ class NeighborhoodModel(PropertyModel):
             raise RuntimeError()
         return action(sites)
 
+    def query_neighbor_data(self, sites: LocationBatch) -> Tuple[xr.Dataset, NeighborhoodGraph]:
+        graph = self.query_neighbor_graph(sites)
+        data = self.data_store.query_link_data(graph.links)
+        return data, graph
+
     def _query_k_nearest_neighbors(self, locations: LocationBatch) -> UniformNeighborhoodGraph:
         return UniformNeighborhoodGraph.from_tree_query(locations, self.search_structure, self.neighborhood_size)
 
@@ -110,24 +115,24 @@ class NeighborhoodModel(PropertyModel):
 
 class NeighborhoodLookupSettingsView(PropertySettingsView):
 
-    def get_settings(self) -> NeighborhoodLookupModel.Properties:
+    def get_settings(self) -> NeighborhoodModel.Properties:
         raise NotImplementedError()
 
-    def update_settings(self, settings: NeighborhoodLookupModel.Properties):
+    def update_settings(self, settings: NeighborhoodModel.Properties):
         raise NotImplementedError()
 
 
 class NeighborhoodLookupController(PropertyController):
 
     @classmethod
-    def from_settings(cls, settings: NeighborhoodLookupModel.Properties, data_store: DataStore, parent=None):
+    def from_settings(cls, settings: NeighborhoodModel.Properties, data_store: DataStore, parent=None):
         view = NeighborhoodLookupSettingsView(parent)
         view.update_settings(settings)
-        model = NeighborhoodLookupModel(data_store)
+        model = NeighborhoodModel(data_store)
         return cls(view, model, parent, apply_defaults=False)
 
     def default_settings(self):
-        return NeighborhoodLookupModel.Properties(
+        return NeighborhoodModel.Properties(
             neighborhood_type=NeighborhoodType.RADIAL,
             neighborhood_size=60.,
             tree_type=TreeType.AUTO,

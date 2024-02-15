@@ -189,26 +189,6 @@ class DefaultDownscaler(_LowResolutionDownscaler):
 
         return output
 
-    def outputs_highres(self):
-        return [
-            SurfaceFieldType.T2M,
-            SurfaceFieldType.T2M_INTERPOLATION,
-            SurfaceFieldType.T2M_DIFFERENCE,
-            SurfaceFieldType.LAPSE_RATE,
-            SurfaceFieldType.Z,
-            SurfaceFieldType.Z_INTERPOLATION,
-            SurfaceFieldType.Z_DIFFERENCE,
-            SurfaceFieldType.LSM
-        ]
-
-    def outputs_lowres(self):
-        return [
-            SurfaceFieldType.T2M,
-            SurfaceFieldType.LAPSE_RATE,
-            SurfaceFieldType.Z,
-            SurfaceFieldType.LSM
-        ]
-
 
 class _NeighborhoodDownscaler(_LowResolutionDownscaler):
 
