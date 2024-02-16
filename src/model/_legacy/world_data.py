@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xr
 
 from src.model.data_store.config_interface import ConfigReader, SourceConfiguration
-from src.model.geometry import OctahedralGrid, DomainBounds, TriangleMesh, WedgeMesh, LocationBatch, SurfaceDataset
+from src.model._legacy.geometry import OctahedralGrid, DomainBounds, TriangleMesh, WedgeMesh, LocationBatch, SurfaceDataset
 from src.model.level_heights import compute_physical_level_height
 from src.model.neighborhood_lookup.neighborhood_graphs import NeighborhoodGraph
 
@@ -105,7 +105,7 @@ class WorldData(object):
 
 
 def _test():
-    world_data = WorldData.from_config_file('/home/hoehlein/PycharmProjects/local/lapse_rates_vtk/cfg/data/2021121906_ubuntu.json')
+    world_data = WorldData.from_config_file('/cfg/data/2021121906_ubuntu.json')
     bounds = DomainBounds(45, 50, 20,25)
     world_data.query_domain_data(bounds)
 

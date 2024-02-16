@@ -2,11 +2,11 @@ from typing import Dict, Any
 
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import QWidget, QDoubleSpinBox, QCheckBox, QLabel, QFormLayout, QHBoxLayout, QSpinBox, QComboBox, \
-    QStackedLayout, QPushButton, QVBoxLayout, QStackedWidget
+    QStackedLayout, QPushButton, QVBoxLayout
 
-from src.model.downscaling import LapseRateDownscalerProperties
-from src.model.neighborhood_lookup.knn_lookup import KNNNeighborhoodProperties
-from src.model.neighborhood_lookup.radial_lookup import RadialNeighborhoodProperties
+from src.model._legacy.downscaling import LapseRateDownscalerProperties
+from src.model._legacy.knn_lookup import KNNNeighborhoodProperties
+from src.model._legacy.radial_lookup import RadialNeighborhoodProperties
 from src.widgets import FileSelectionWidget
 
 

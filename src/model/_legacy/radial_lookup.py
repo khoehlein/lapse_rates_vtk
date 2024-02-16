@@ -1,11 +1,7 @@
 from dataclasses import dataclass
-from typing import Dict, Any
-import xarray as xr
 
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
-
-from src.model.geometry import LocationBatch
-from src.model.neighborhood_lookup.interface import NeighborhoodLookupModel
+from src.model._legacy.geometry import LocationBatch
+from src.model._legacy.interface import NeighborhoodLookupModel
 from src.model.neighborhood_lookup.neighborhood_graphs import RadialNeighborhoodGraph
 
 

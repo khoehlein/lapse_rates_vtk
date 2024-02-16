@@ -1,9 +1,7 @@
-import logging
-
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget, QPushButton, QGridLayout, QLabel, QVBoxLayout
 
-from src.model.geometry import DomainBounds
+from src.model._legacy.geometry import DomainBounds
 from src.widgets import RangeSpinner
 
 

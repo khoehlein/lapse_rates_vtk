@@ -8,9 +8,8 @@ from src.interaction.plotter_controls.controller import PlotterController
 from src.interaction.pyvista_display.view import PyvistaView
 from src.interaction.settings_menu import SettingsViewTabbed
 from src.interaction.visualizations.scene_settings import SceneController
-from src.model.backend_model import DownscalingPipeline
-from src.model.data_store.dummy import DummyPipeline, DummyController
-from src.model.data_store.world_data import WorldData
+from src.model._legacy.backend_model import DownscalingPipeline
+from src.model._legacy.world_data import WorldData
 from src.model.scene_model import SceneModel
 
 import pyvista as pv

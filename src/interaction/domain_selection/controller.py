@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QObject, pyqtSignal
-from src.model.backend_model import DownscalingPipeline
+from src.model._legacy.backend_model import DownscalingPipeline
 
 
 class DownscalingController(QObject):

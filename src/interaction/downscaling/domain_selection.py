@@ -1,65 +1,64 @@
-import xarray as xr
+from dataclasses import dataclass
 
-from src.interaction.downscaling.data_store import DataStore
-from src.interaction.downscaling.geometry import OctahedralGrid, DomainLimits, DomainBoundingBox
+from PyQt5.QtCore import QObject
+from PyQt5.QtWidgets import QWidget
+
+from src.interaction.downscaling.data_store import GlobalData
+from src.interaction.downscaling.geometry import DomainLimits
+from src.model.visualization.interface import PropertyModel
 
 
-class DomainData(object):
+class DomainSelectionModel(PropertyModel):
 
-    def __init__(self, grid: OctahedralGrid, data_store: DataStore):
-        self.bounding_box = None
+    @dataclass
+    class Properties(PropertyModel.Properties):
+        min_latitude: float
+        max_latitude: float
+        min_longitude: float
+        max_longitude: float
+
+        def get_domain_limits(self):
+            return DomainLimits(
+                min_latitude=self.min_latitude, max_latitude=self.max_latitude,
+                min_longitude=self.min_longitude, max_longitude=self.max_longitude
+            )
+
+    def __init__(self, data_store: GlobalData):
+        super().__init__(None)
         self.data_store = data_store
-        self.grid = grid
-        self.mesh = None
-        self.data: xr.Dataset = None
+        self.data = None
 
-    @property
-    def sites(self):
-        if self.mesh is None:
-            return None
-        return self.mesh.nodes
-
-    def set_bounds(self, bounds: DomainLimits):
-        if bounds is not None:
-            self.bounding_box = DomainBoundingBox(bounds)
-        else:
-            self.bounding_box = None
-        self._update()
+    def set_properties(self, properties: 'DomainSelectionModel.Properties') -> 'DomainSelectionModel':
+        super().set_properties(properties)
+        domain_bounds = self.properties.get_domain_limits()
+        self.data = self.data_store.get_domain_dataset(domain_bounds)
         return self
 
-    def _update(self):
-        if self.bounding_box is not None:
-            self.mesh = self.grid.get_mesh_for_subdomain(self.bounding_box)
-            self.site_data = self.data_store.query_site_data(self.mesh.nodes)
-        else:
-            self.reset()
-        return self
 
-    def reset(self):
-        return self.set_bounds(None)
+DEFAULT_DOMAIN = DomainSelectionModel.Properties(43., 47., 6., 12.)
 
 
-DEFAULT_DOMAIN = DomainLimits(43., 47., 6., 12.)
-
-
-class DomainSettingsView(object):
+class DomainSelectionView(QWidget):
     domain_limits_changed = None
 
-    def get_settings(self) -> DomainLimits:
+    def get_settings(self) -> DomainSelectionModel.Properties:
         raise NotImplementedError()
 
-    def update_settings(self, settings: DomainLimits):
+    def update_settings(self, settings: DomainSelectionModel.Properties):
         raise NotImplementedError()
 
 
-class DomainController(object):
+class DomainSelectionController(QObject):
     domain_changed = None
 
     def __init__(
             self,
-            settings_view: DomainSettingsView,
-            domain_lr: DomainData, domain_hr: DomainData
+            settings_view: DomainSelectionView,
+            domain_lr: DomainSelectionModel,
+            domain_hr: DomainSelectionModel,
+            parent=None
     ):
+        super().__init__(parent)
         self.view = settings_view
         self.model_lr = domain_lr
         self.model_hr = domain_hr
@@ -72,5 +71,5 @@ class DomainController(object):
 
     def _synchronize_domain_settings(self):
         bounds = self.view.get_settings()
-        self.model_lr.set_bounds(bounds)
-        self.model_hr.set_bounds(bounds)
+        self.model_lr.set_properties(bounds)
+        self.model_hr.set_properties(bounds)

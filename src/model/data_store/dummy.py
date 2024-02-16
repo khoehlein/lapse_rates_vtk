@@ -1,11 +1,10 @@
 import math
 
 import numpy as np
-import pandas as pd
 from PyQt5.QtCore import QObject, pyqtSignal
 from sklearn.neighbors import KDTree
 
-from src.model.geometry import SurfaceDataset, OctahedralGrid, DomainBounds
+from src.model._legacy.geometry import SurfaceDataset, OctahedralGrid, DomainBounds
 
 
 class DummyPipeline(QObject):

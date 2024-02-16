@@ -1,12 +1,11 @@
 import logging
-from typing import Dict, Any
 
 import numpy as np
 import xarray as xr
 from PyQt5.QtWidgets import QWidget
 from sklearn.neighbors import KDTree
 
-from src.model.geometry import LocationBatch, Coordinates
+from src.model._legacy.geometry import LocationBatch, Coordinates
 from src.model.neighborhood_lookup.neighborhood_graphs import RadialNeighborhoodGraph, UniformNeighborhoodGraph
 
 

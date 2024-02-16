@@ -4,7 +4,7 @@ from typing import Dict, Type, Any
 from PyQt5.QtCore import pyqtSignal, QObject
 from PyQt5.QtWidgets import QWidget
 
-from src.model.geometry import SurfaceDataset
+from src.model._legacy.geometry import SurfaceDataset
 from src.model.visualization.interface import VisualizationModel
 
 

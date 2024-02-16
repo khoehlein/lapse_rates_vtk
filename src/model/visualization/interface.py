@@ -8,7 +8,7 @@ import pyvista as pv
 from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtWidgets import QWidget
 
-from src.model.geometry import SurfaceDataset
+from src.model._legacy.geometry import SurfaceDataset
 
 
 class VisualizationType(Enum):
@@ -65,6 +65,8 @@ class PropertyModel(object):
         self.set_properties(properties)
 
     def set_properties(self, properties) -> 'PropertyModel':
+        if properties == self.properties:
+            return self
         self.properties = properties
         return self
 
@@ -72,7 +74,7 @@ class PropertyModel(object):
         raise NotImplementedError()
 
 
-class PropertySettingsView(QWidget):
+class PropertyModelView(QWidget):
 
     settings_changed = pyqtSignal()
 
@@ -86,13 +88,13 @@ class PropertySettingsView(QWidget):
         raise NotImplementedError()
 
 
-class PropertyController(QObject):
+class PropertyModelController(QObject):
 
     model_changed = pyqtSignal()
 
     def __init__(
             self,
-            view: PropertySettingsView,
+            view: PropertyModelView,
             model: PropertyModel,
             parent=None,
             apply_defaults: bool = True,

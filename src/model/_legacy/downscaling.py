@@ -7,8 +7,8 @@ from PyQt5.QtCore import QObject
 from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KDTree
 
-from src.model.data_store.world_data import SampleBatch
-from src.model.geometry import SurfaceDataset, LocationBatch
+from src.model._legacy.world_data import SampleBatch
+from src.model._legacy.geometry import SurfaceDataset, LocationBatch
 
 
 class DownscalerModel(QObject):

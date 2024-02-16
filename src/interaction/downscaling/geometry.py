@@ -385,6 +385,7 @@ class OctahedralGrid(object):
         return vertices
 
     def get_mesh_for_subdomain(self, bounds: DomainBoundingBox) -> TriangleMesh:
+
         latitudes_in_bounds = bounds.latitude.argwhere(self._circle_latitudes)
         first_latitude = max(0, latitudes_in_bounds[0] - 1)
         last_latitude = min(2 * self.degree - 1, latitudes_in_bounds[-1] + 1)

@@ -2,12 +2,12 @@ import logging
 
 from PyQt5.QtCore import QObject
 
-from src.model.data_store.world_data import WorldData
-from src.model.downscaling import DownscalerModel, LapseRateDownscalerProperties, LapseRateDownscaler
-from src.model.geometry import DomainBounds
-from src.model.neighborhood_lookup.interface import NeighborhoodLookupModel
-from src.model.neighborhood_lookup.knn_lookup import KNNNeighborhoodProperties, KNNNeighborhoodLookup
-from src.model.neighborhood_lookup.radial_lookup import RadialNeighborhoodProperties, RadialNeighborhoodLookup
+from src.model._legacy.world_data import WorldData
+from src.model._legacy.downscaling import DownscalerModel, LapseRateDownscalerProperties, LapseRateDownscaler
+from src.model._legacy.geometry import DomainBounds
+from src.model._legacy.interface import NeighborhoodLookupModel
+from src.model._legacy.knn_lookup import KNNNeighborhoodProperties, KNNNeighborhoodLookup
+from src.model._legacy.radial_lookup import RadialNeighborhoodProperties, RadialNeighborhoodLookup
 
 
 class DownscalingPipeline(QObject):

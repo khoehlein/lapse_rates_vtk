@@ -1,6 +1,6 @@
 from typing import Dict, Any
 
-from src.model.geometry import SurfaceDataset
+from src.model._legacy.geometry import SurfaceDataset
 from src.model.visualization.colors import ColorModel
 from src.model.visualization.interface import VisualizationModel, VisualizationType, DataConfiguration
 from src.model.visualization.mesh_geometry import MeshGeometryModel

@@ -8,7 +8,7 @@ from src.interaction.visualizations.factory import VisualizationFactory
 from src.interaction.visualizations.scene_settings.scene_settings_view import SceneSettingsView
 from src.interaction.visualizations.surface_scalar_field.controller import SurfaceScalarFieldController
 from src.interaction.visualizations.surface_scalar_field.view import SurfaceScalarFieldSettingsView
-from src.model.backend_model import DownscalingPipeline
+from src.model._legacy.backend_model import DownscalingPipeline
 from src.model.scene_model import SceneModel
 from src.model.visualization.interface import VisualizationType
 

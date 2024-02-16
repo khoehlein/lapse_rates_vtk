@@ -1,12 +1,9 @@
 import uuid
-from typing import Tuple, Union
 
 import numpy as np
-import xarray as xr
-from functools import lru_cache
-from scipy.special import roots_legendre
-import cartopy.crs as ccrs
 import pyvista as pv
+
+from src.interaction.downscaling.geometry import TriangleMesh
 
 
 class SurfaceDataset(object):
