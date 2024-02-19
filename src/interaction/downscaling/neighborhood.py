@@ -112,7 +112,7 @@ class KNNNeighborhoodHandles(_NeighborhoodMethodHandles):
 
 class NeighborhoodModelView(PropertyModelView):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, set_layout=True):
         super().__init__(parent)
         self.combo_lookup_type = QComboBox(self)
         self.interface_stack = QStackedLayout()
@@ -132,17 +132,22 @@ class NeighborhoodModelView(PropertyModelView):
         self.button_apply = QPushButton('Apply')
         self.button_apply.clicked.connect(self.settings_changed.emit)
 
-        self._set_layout()
+        if set_layout:
+            self._set_layout()
 
     def _set_layout(self):
+        layout = self.build_layout()
+        self.setLayout(layout)
+
+    def build_layout(self):
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel('Neighborhood method:'))
+        layout.addWidget(QLabel('Neighborhood settings:'))
         layout.addWidget(self.combo_lookup_type)
         layout.addLayout(self.interface_stack)
-        layout.addStretch()
         layout.addWidget(self.button_apply)
+        layout.addStretch()
         layout.setAlignment(Qt.AlignTop)
-        self.setLayout(layout)
+        return layout
 
     def get_settings(self):
         return self.interface_stack.currentWidget().get_settings()
