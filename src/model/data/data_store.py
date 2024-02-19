@@ -5,9 +5,9 @@ import numpy as np
 import xarray as xr
 from sklearn.neighbors import NearestNeighbors
 
-from src.interaction.downscaling.geometry import OctahedralGrid, DomainLimits, DomainBoundingBox, LocationBatch, \
+from src.model.geometry import OctahedralGrid, DomainLimits, DomainBoundingBox, LocationBatch, \
     Coordinates, TriangleMesh
-from src.model.data_store.config_interface import ConfigReader, SourceConfiguration
+from src.model.data.config_interface import ConfigReader, SourceConfiguration
 from src.model.level_heights import compute_physical_level_height
 
 

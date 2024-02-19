@@ -3,7 +3,7 @@ import logging
 
 from PyQt5 import QtCore
 
-from src.interaction.domain_selection.controller import DownscalingController
+from src.interaction._legacy.domain_selection import DownscalingController
 from src.interaction.plotter_controls.controller import PlotterController
 from src.interaction.pyvista_display.view import PyvistaView
 from src.interaction.settings_menu import SettingsViewTabbed

@@ -4,10 +4,10 @@ from typing import Union
 import numpy as np
 import xarray as xr
 
-from src.model.data_store.config_interface import ConfigReader, SourceConfiguration
+from src.model.data.config_interface import ConfigReader, SourceConfiguration
 from src.model._legacy.geometry import OctahedralGrid, DomainBounds, TriangleMesh, WedgeMesh, LocationBatch, SurfaceDataset
 from src.model.level_heights import compute_physical_level_height
-from src.model.neighborhood_lookup.neighborhood_graphs import NeighborhoodGraph
+from src.model.downscaling.neighborhood_graphs import NeighborhoodGraph
 
 N_LOW_RES = 1280
 N_HIGH_RES = 8000

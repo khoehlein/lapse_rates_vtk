@@ -5,7 +5,8 @@ import numpy as np
 import pyvista as pv
 from PyQt5.QtGui import QColor
 
-from src.model.visualization.interface import standard_adapter, PropertyModel, ScalarType
+from src.model.visualization.interface import standard_adapter, ScalarType
+from src.model.interface import PropertyModel
 
 
 class ColorModel(PropertyModel):

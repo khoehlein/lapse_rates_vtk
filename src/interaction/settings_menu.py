@@ -1,7 +1,7 @@
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QDockWidget, QScrollArea, QWidget, QVBoxLayout, QTabWidget, QLabel
 
-from src.interaction.domain_selection.view import DomainSelectionView
+from src.interaction._legacy.domain_selection import DomainSelectionView
 from src.interaction.model_selection.view import DownscalingSettingsView, NeighborhoodLookupView
 from src.interaction.plotter_controls.view import PlotterSettingsView
 from src.interaction.visualizations.scene_settings import SceneSettingsView

@@ -3,7 +3,7 @@ from typing import Dict
 from PyQt5.QtCore import QObject
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QComboBox, QLineEdit, QVBoxLayout, QFormLayout
 
-from src.interaction.domain_selection.controller import DownscalingController
+from src.interaction._legacy.domain_selection import DownscalingController
 from src.interaction.visualizations.factory import VisualizationFactory
 from src.interaction.visualizations.scene_settings.scene_settings_view import SceneSettingsView
 from src.interaction.visualizations.surface_scalar_field.controller import SurfaceScalarFieldController

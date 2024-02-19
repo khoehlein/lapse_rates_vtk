@@ -3,7 +3,7 @@ import uuid
 import numpy as np
 import pyvista as pv
 
-from src.interaction.downscaling.geometry import TriangleMesh
+from src.model.geometry import TriangleMesh
 
 
 class SurfaceDataset(object):

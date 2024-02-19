@@ -4,7 +4,8 @@ from typing import Dict
 import pyvista as pv
 from PyQt5.QtCore import QObject
 
-from src.model.visualization.interface import PropertyModel, standard_adapter
+from src.model.visualization.interface import standard_adapter
+from src.model.interface import PropertyModel
 
 
 class ShadingType(Enum):

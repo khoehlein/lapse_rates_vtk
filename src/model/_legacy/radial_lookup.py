@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from src.model._legacy.geometry import LocationBatch
 from src.model._legacy.interface import NeighborhoodLookupModel
-from src.model.neighborhood_lookup.neighborhood_graphs import RadialNeighborhoodGraph
+from src.model.downscaling.neighborhood_graphs import RadialNeighborhoodGraph
 
 
 @dataclass(init=True, repr=True)

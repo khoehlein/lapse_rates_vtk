@@ -1,11 +1,11 @@
 import math
-from typing import Any
+from typing import Any, Tuple
 
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QFile
-from PyQt5.QtGui import QDoubleValidator
+from PyQt5.QtGui import QDoubleValidator, QColor, QPixmap, QIcon
 from PyQt5.QtWidgets import QLineEdit, QSlider, QLabel, QWidget, QVBoxLayout, QDoubleSpinBox, QGridLayout, QHBoxLayout, \
-    QPushButton, QFileDialog
+    QPushButton, QFileDialog, QColorDialog
 
 
 class CollapsibleBox(QtWidgets.QWidget):
@@ -183,41 +183,61 @@ class LogDoubleSliderSpinner(QWidget):
         self.slider_wrapper.set_value(new_value)
 
 
-class RangeSpinner(object):
+class RangeSpinner(QWidget):
+
+    range_changed = pyqtSignal(Tuple[float, float])
 
     def __init__(
             self,
-            parent: QtWidgets.QWidget,
+            parent: QWidget,
             default_min: float, default_max: float,
             global_min: float, global_max: float,
             step=0.5,
     ):
-        self.global_min = global_min
-        self.global_max = global_max
+        super().__init__(parent)
+        self.global_min = float(global_min)
+        self.global_max = float(global_max)
         self.step = step
-        self.min_spinner = QtWidgets.QDoubleSpinBox(parent)
+        self.min_spinner = QDoubleSpinBox(parent)
         self.min_spinner.setValue(default_min)
         self.min_spinner.setRange(self.global_min, self.global_max - self.step)
         self.min_spinner.setPrefix('min: ')
-        self.max_spinner = QtWidgets.QDoubleSpinBox(parent)
+        self.max_spinner = QDoubleSpinBox(parent)
         self.max_spinner.setValue(default_max)
         self.max_spinner.setRange(self.global_min + self.step, self.global_max)
         self.max_spinner.setPrefix('max: ')
         self.min_spinner.valueChanged.connect(self._update_max_spinner)
         self.max_spinner.valueChanged.connect(self._update_min_spinner)
 
+    def limits(self):
+        return tuple([self.min_spinner.value(), self.max_spinner.value()])
+
     def _update_max_spinner(self):
         value = self.max_spinner.value()
-        new_min_value = self.min_spinner.value()
+        new_min_value = min(self.min_spinner.value() + self.step, self.global_max)
         if value <= new_min_value:
-            self.max_spinner.setValue(min(new_min_value + self.step, self.global_max))
+            self.max_spinner.setValue(new_min_value)
+        return self
 
     def _update_min_spinner(self):
         value = self.min_spinner.value()
-        new_max_value = self.max_spinner.value()
+        new_max_value = max(self.max_spinner.value() - self.step, self.global_min)
         if value >= new_max_value:
-            self.min_spinner.setValue(max(new_max_value - self.step, self.global_min))
+            self.min_spinner.setValue(new_max_value)
+        return self
 
+    def set_limits(self, min_value: float, max_value: float):
+        self.min_spinner.blockSignals(True)
+        self.max_spinner.blockSignals(True)
+        min_value = max(self.global_min, float(min_value))
+        max_value = min(self.global_max, float(max_value))
+        self.min_spinner.setValue(min_value)
+        self.max_spinner.setValue(max_value)
+        self._update_min_spinner()
+        self.min_spinner.blockSignals(True)
+        self.max_spinner.blockSignals(True)
+        self.range_changed.emit(self.limits())
+        return self
 
 class FileSelectionWidget(QWidget):
 
@@ -244,3 +264,34 @@ class FileSelectionWidget(QWidget):
         self.current_file = fname[0]
         self.line_edit.setText(self.current_file)
         self.file_selection_changed.emit(self.current_file)
+
+
+class SelectColorButton(QPushButton):
+
+    color_changed = pyqtSignal(QColor)
+
+    def __init__(self, color: QColor = None, parent=None):
+        super().__init__(parent)
+        if color is None:
+            color = QColor(0, 0, 0)
+        self.current_color = color
+        self._update_button_icon()
+        self.clicked.connect(self._select_color)
+
+    def set_current_color(self, color: QColor):
+        self.current_color = color
+        self._update_button_icon()
+        self.color_changed.emit(color)
+        return self
+
+    def _update_button_icon(self):
+        pixmap = QPixmap(12, 12)
+        pixmap.fill(self.current_color)
+        self.setIcon(QIcon(pixmap))
+
+    def _select_color(self):
+        color = QColorDialog.getColor()
+        if color.isValid():
+            self.current_color = color
+            self._update_button_icon()
+            self.color_changed.emit(self.current_color)

@@ -3,7 +3,8 @@ from typing import List
 import numpy as np
 import pandas as pd
 from sklearn.neighbors import NearestNeighbors
-from src.model._legacy.geometry import LocationBatch
+
+from src.model.geometry import LocationBatch
 
 
 class NeighborhoodGraph(object):
