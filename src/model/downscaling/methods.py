@@ -9,7 +9,7 @@ from src.model.data.data_store import DomainData
 from src.model.data.output import OutputDataset
 from src.model.downscaling.interpolation import InterpolationType, NearestNeighborInterpolation, \
     BarycentricInterpolation
-from src.model.downscaling.neighborhood import NeighborhoodModel
+from src.model.downscaling.neighborhood import NeighborhoodModel, NeighborhoodType, DEFAULT_NEIGHBORHOOD_RADIAL
 from src.model.interface import PropertyModel, SurfaceFieldType, GridConfiguration
 
 
@@ -141,6 +141,12 @@ class FixedLapseRateDownscaler(_InterpolatedDownscaler):
         self.output = output
 
 
+DEFAULTS_FIXED_LAPSE_RATE = FixedLapseRateDownscaler.Properties(
+    InterpolationType.NEAREST_NEIGHBOR,
+    -6.5,
+)
+
+
 class LapseRateEstimator(PropertyModel):
 
     @dataclass
@@ -239,6 +245,12 @@ class LapseRateEstimator(PropertyModel):
         return lm.coef_[0]
 
 
+DEFAULTS_ADAPTIVE_ESTIMATOR = LapseRateEstimator.Properties(
+    False, False, 30., 10, False, -6.5,
+    DEFAULT_NEIGHBORHOOD_RADIAL
+)
+
+
 class AdaptiveLapseRateDownscaler(_InterpolatedDownscaler):
 
     FIELDS_O1280 = [
@@ -316,6 +328,12 @@ class AdaptiveLapseRateDownscaler(_InterpolatedDownscaler):
 
     def synchronize_properties(self):
         self.properties.estimator = self.estimator.properties
+
+
+DEFAULTS_ADAPTIVE_LAPSE_RATE = AdaptiveLapseRateDownscaler.Properties(
+    InterpolationType.NEAREST_NEIGHBOR,
+    DEFAULTS_ADAPTIVE_ESTIMATOR
+)
 
 
 class NetworkDownscaler(DownscalingMethodModel):

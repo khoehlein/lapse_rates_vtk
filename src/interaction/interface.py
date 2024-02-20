@@ -17,6 +17,9 @@ class PropertyModelView(QWidget):
     def update_settings(self, settings: PropertyModel.Properties):
         raise NotImplementedError()
 
+    def set_defaults(self):
+        raise NotImplementedError()
+
 
 class PropertyModelController(QObject):
 

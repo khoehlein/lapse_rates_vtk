@@ -1,43 +1,48 @@
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QComboBox, QDoubleSpinBox, QFormLayout, QCheckBox, QSpinBox, QVBoxLayout, QLabel, \
-    QHBoxLayout
+    QHBoxLayout, QFrame, QDialog, QStackedLayout, QDialogButtonBox
 
-from src.interaction.downscaling.neighborhood import NeighborhoodModelView, NeighborhoodModelController
+from src.interaction.downscaling.neighborhood import NeighborhoodModelView
 from src.interaction.interface import PropertyModelView, PropertyModelController
 from src.model.data.data_store import GlobalData
 from src.model.downscaling.interpolation import InterpolationType
 from src.model.downscaling.methods import DownscalingMethodModel, FixedLapseRateDownscaler, LapseRateEstimator, \
-    AdaptiveLapseRateDownscaler
+    AdaptiveLapseRateDownscaler, DownscalerType, DEFAULTS_ADAPTIVE_LAPSE_RATE, DEFAULTS_FIXED_LAPSE_RATE, \
+    DEFAULTS_ADAPTIVE_ESTIMATOR
+from src.model.downscaling.neighborhood import NeighborhoodModel
 from src.model.downscaling.pipeline import DownscalingPipelineModel
-from src.model.interface import PropertyModel
 from src.widgets import RangeSpinner
 
 
-class DownscalingMethodView(PropertyModelView):
+class DownscalerModelView(PropertyModelView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.combo_interpolation_type = QComboBox(self)
         self.combo_interpolation_type.addItem('Nearest neighbor', InterpolationType.NEAREST_NEIGHBOR)
         self.combo_interpolation_type.addItem('Barycentric', InterpolationType.BARYCENTRIC)
-        self.combo_interpolation_type.model().item(1).setDisabled(True)
-        self.combo_interpolation_type.currentIndexChanged(self.settings_changed.emit)
+        self.combo_interpolation_type.model().item(1).setEnabled(False)
+        self.combo_interpolation_type.currentIndexChanged.connect(self.settings_changed.emit)
         self._interpolation_types = {
             InterpolationType.NEAREST_NEIGHBOR: 0,
             InterpolationType.BARYCENTRIC: 1,
         }
+        # self.button_apply = QPushButton(self)
+        # self.button_apply.setText("Apply")
+        # self.button_apply.clicked.connect(self.settings_changed.emit)
 
 
 class DownscalingMethodController(PropertyModelController):
 
     @classmethod
-    def from_view(cls, view: DownscalingMethodView, pipeline: DownscalingPipelineModel) -> 'DownscalingMethodController':
+    def from_view(cls, view: DownscalerModelView, pipeline: DownscalingPipelineModel) -> 'DownscalingMethodController':
         raise NotImplementedError()
 
-    def __init__(self, view: DownscalingMethodView, model: DownscalingMethodModel, parent=None, apply_defaults=True):
+    def __init__(self, view: DownscalerModelView, model: DownscalingMethodModel, parent=None, apply_defaults=True):
         super().__init__(view, model, parent, apply_defaults)
 
 
-class FixedLapseRateDownscalerView(DownscalingMethodView):
+class FixedLapseRateDownscalerView(DownscalerModelView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -45,13 +50,22 @@ class FixedLapseRateDownscalerView(DownscalingMethodView):
         self.spinner_lapse_rate.setMinimum(-14.)
         self.spinner_lapse_rate.setMaximum(100.)
         self.spinner_lapse_rate.setValue(-6.5)
+        self.spinner_lapse_rate.setSuffix(' K/km')
         self.spinner_lapse_rate.valueChanged.connect(self.settings_changed.emit)
         self._set_layout()
 
     def build_layout(self):
-        layout = QFormLayout()
-        layout.addRow('Interpolation:', self.combo_interpolation_type)
-        layout.addRow('Lapse rate:', self.spinner_lapse_rate)
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel('Interpolation:'))
+        layout.addWidget(self.combo_interpolation_type)
+        layout.addWidget(QLabel('Estimator settings:'))
+        form_layout = QFormLayout()
+        form_layout.addRow('Lapse rate:', self.spinner_lapse_rate)
+        form = QFrame(self)
+        form.setFrameStyle(QFrame.Box|QFrame.Sunken)
+        form.setLayout(form_layout)
+        layout.addWidget(form)
+        layout.addStretch()
         return layout
 
     def _set_layout(self):
@@ -66,6 +80,10 @@ class FixedLapseRateDownscalerView(DownscalingMethodView):
     def update_settings(self, settings: FixedLapseRateDownscaler.Properties):
         self.spinner_lapse_rate.setValue(settings.lapse_rate)
         self.combo_interpolation_type.setCurrentIndex(self._interpolation_types.get(settings.interpolation))
+        return self
+
+    def set_defaults(self):
+        self.update_settings(DEFAULTS_FIXED_LAPSE_RATE)
         return self
 
 
@@ -89,11 +107,14 @@ class LapseRateEstimatorView(PropertyModelView):
         self.range_lapse_rates = RangeSpinner(self, -14., 14., -25., 25.)
         self.range_lapse_rates.min_spinner.setEnabled(False)
         self.range_lapse_rates.max_spinner.setEnabled(False)
+        self.range_lapse_rates.min_spinner.setSuffix(' K/km')
+        self.range_lapse_rates.max_spinner.setSuffix(' K/km')
         self.range_lapse_rates.range_changed.connect(self.settings_changed.emit)
         self.spinner_lapse_rate_default = QDoubleSpinBox(self)
         self.spinner_lapse_rate_default.setMinimum(-14.)
         self.spinner_lapse_rate_default.setMaximum(100.)
         self.spinner_lapse_rate_default.setValue(-6.5)
+        self.spinner_lapse_rate_default.setSuffix(' K/km')
         self.spinner_lapse_rate_default.valueChanged.connect(self.settings_changed.emit)
         self.spinner_num_neighbors = QSpinBox(self)
         self.spinner_num_neighbors.setMinimum(4)
@@ -110,9 +131,11 @@ class LapseRateEstimatorView(PropertyModelView):
         self.toggle_weighting.setText('use weighting')
         self.toggle_weighting.stateChanged.connect(self._toggle_weight_scale_spinner)
         self.toggle_weighting.stateChanged.connect(self.settings_changed.emit)
+        self._toggle_weight_scale_spinner()
         self.toggle_volume_data = QCheckBox(self)
         self.toggle_volume_data.setText('use volume data')
         self.toggle_volume_data.stateChanged.connect(self.settings_changed.emit)
+
         self.toggle_intercept = QCheckBox(self)
         self.toggle_intercept.setText('fit intercept')
         self.toggle_intercept.stateChanged.connect(self.settings_changed.emit)
@@ -129,6 +152,8 @@ class LapseRateEstimatorView(PropertyModelView):
     def _build_estimator_layout(self):
         layout = QVBoxLayout()
         layout.addWidget(QLabel('Estimator settings:'))
+        form = QFrame(self)
+        form.setFrameStyle(QFrame.Box |QFrame.Sunken)
         form_layout = QFormLayout()
         form_layout.addRow(QLabel('Default lapse rate:'), self.spinner_lapse_rate_default)
         range_layout = QHBoxLayout()
@@ -142,18 +167,18 @@ class LapseRateEstimatorView(PropertyModelView):
         form_layout.addRow(QLabel('Weight scale:'), weight_layout)
         form_layout.addRow('Volume interpolation:', self.toggle_volume_data)
         form_layout.addRow('Intercept:', self.toggle_intercept)
-        layout.addLayout(form_layout)
+        form.setLayout(form_layout)
+        layout.addWidget(form)
         layout.addStretch()
         return layout
 
-    def build_layout(self):
+    def build_layout(self, stretch=True):
         layout = QVBoxLayout()
-        layout.addLayout(self.neighborhood_view.build_layout())
+        layout.addLayout(self.neighborhood_view.build_layout(stretch=False))
         layout.addLayout(self._build_estimator_layout())
+        if stretch:
+            layout.addStretch()
         return layout
-
-    def get_neighborhood_view(self) -> NeighborhoodModelView:
-        return self.neighborhood_view
 
     def get_settings(self) -> LapseRateEstimator.Properties:
         return LapseRateEstimator.Properties(
@@ -176,64 +201,128 @@ class LapseRateEstimatorView(PropertyModelView):
         self.neighborhood_view.update_settings(settings.neighborhood)
         return self
 
+    def set_defaults(self):
+        self.neighborhood_view.set_defaults()
+        self.update_settings(DEFAULTS_ADAPTIVE_ESTIMATOR)
+        return self
+
 
 class LapseRateEstimatorController(PropertyModelController):
 
     @classmethod
     def from_view(cls, view: LapseRateEstimatorView, data_store: GlobalData):
-        neighborhood_view = view.get_neighborhood_view()
-        neighborhood_controller = NeighborhoodModelController.from_view(neighborhood_view, data_store)
-        model = LapseRateEstimator(neighborhood_controller.model)
-        return cls(view, model, neighborhood_controller)
+        neighborhood = NeighborhoodModel(data_store)
+        model = LapseRateEstimator(neighborhood)
+        return cls(view, model)
 
     def __init__(
             self,
             view: LapseRateEstimatorView, model: LapseRateEstimator,
-            neighborhood_controller: NeighborhoodModelController,
             parent=None, apply_defaults: bool = True
     ):
         super().__init__(view, model, parent, apply_defaults)
-        self.neighborhood_controller = neighborhood_controller
-        self.neighborhood_controller.model_changed.connect(self._on_neighborhood_changed)
-
-    def _on_neighborhood_changed(self):
-        self.model.synchronize_properties()
-        self.model.output = None
-        self.model_changed.emit()
 
 
-class AdaptiveLapseRateDownscalerView(DownscalingMethodView):
+class AdaptiveLapseRateDownscalerView(DownscalerModelView):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, set_layout=True):
         super().__init__(parent)
         self.estimator_view = LapseRateEstimatorView(self, set_layout=False)
+        if set_layout:
+            self._set_layout()
 
-    def get_estimator_view(self) -> LapseRateEstimatorView():
-        return self.estimator_view
+    def _set_layout(self):
+        self.setLayout(self.build_layout())
+
+    def build_layout(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel('Interpolation:'))
+        layout.addWidget(self.combo_interpolation_type)
+        layout.addLayout(self.estimator_view.build_layout())
+        # layout.addWidget(self.button_apply)
+        layout.addStretch()
+        return layout
+
+    def get_settings(self) -> AdaptiveLapseRateDownscaler.Properties:
+        return AdaptiveLapseRateDownscaler.Properties(
+            self.combo_interpolation_type.currentData(),
+            self.estimator_view.get_settings()
+        )
+
+    def update_settings(self, settings: AdaptiveLapseRateDownscaler.Properties):
+        self.combo_interpolation_type.setCurrentIndex(self._interpolation_types.get(settings.interpolation))
+        self.estimator_view.update_settings(settings.estimator)
+        return self
+
+    def set_defaults(self):
+        self.estimator_view.set_defaults()
+        self.update_settings(DEFAULTS_ADAPTIVE_LAPSE_RATE)
+        return self
 
 
 class AdaptiveLapseRateDownscalerController(DownscalingMethodController):
 
     @classmethod
     def from_view(cls, view: AdaptiveLapseRateDownscalerView, pipeline: DownscalingPipelineModel) -> 'AdaptiveLapseRateDownscalerController':
-        estimator_view = view.get_estimator_view()
-        global_data = pipeline.source_domain.data_store
-        estimator_controller = LapseRateEstimatorController.from_view(estimator_view, global_data)
-        estimator: LapseRateEstimator = estimator_controller.model
+        data_store = pipeline.source_domain.data_store
+        neighborhood = NeighborhoodModel(data_store)
+        estimator = LapseRateEstimator(neighborhood)
         model = AdaptiveLapseRateDownscaler(estimator)
-        return cls(view, model, estimator_controller)
+        return cls(view, model)
 
     def __init__(
             self,
             view: AdaptiveLapseRateDownscalerView, model: AdaptiveLapseRateDownscaler,
-            estimator_controller: LapseRateEstimatorController,
             parent=None, apply_defaults=True
     ):
         super().__init__(view, model, parent, apply_defaults)
-        self.estimator_controller = estimator_controller
-        self.estimator_controller.model_changed.connect(self._on_estimator_changed)
 
-    def _on_estimator_changed(self):
-        self.model.synchronize_properties()
-        self.model.output = None
-        self.model_changed.emit()
+
+class CreateDownscalerDialog(QDialog):
+
+    settings_accepted = pyqtSignal()
+
+    LABELS = {
+        DownscalerType.FIXED_LAPSE_RATE: 'Fixed lapse rate',
+        DownscalerType.ADAPTIVE_LAPSE_RATE: 'Adaptive lapse rate',
+        DownscalerType.NETWORK: 'Network',
+    }
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Create downscaler')
+        self.combo_downscaler_type = QComboBox(self)
+        self.interface_stack = QStackedLayout()
+        self._stack_interface(DownscalerType.FIXED_LAPSE_RATE, FixedLapseRateDownscalerView(self))
+        self._stack_interface(DownscalerType.ADAPTIVE_LAPSE_RATE, AdaptiveLapseRateDownscalerView(self))
+        self.combo_downscaler_type.currentIndexChanged.connect(self.interface_stack.setCurrentIndex)
+
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.RestoreDefaults | QDialogButtonBox.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        self.button_box.clicked.connect(self._on_button_clicked)
+
+        self._set_layout()
+
+    def _set_layout(self):
+        layout = QVBoxLayout()
+        layout.addWidget(self.combo_downscaler_type)
+        layout.addLayout(self.interface_stack)
+        layout.addWidget(self.button_box)
+        self.setLayout(layout)
+
+    def _stack_interface(self, downscaler_type: DownscalerType, interface: DownscalerModelView):
+        self.combo_downscaler_type.addItem(self.LABELS[downscaler_type], downscaler_type)
+        self.interface_stack.addWidget(interface)
+
+    def get_settings(self) -> DownscalingMethodModel.Properties:
+        return self.interface_stack.currentWidget().get_settings()
+
+    def _on_button_clicked(self, button):
+        if self.button_box.buttonRole(button) == QDialogButtonBox.ResetRole:
+            self._on_defaults_requested()
+
+    def _on_defaults_requested(self):
+        self.interface_stack.widget(0).set_defaults()
+        self.interface_stack.widget(1).set_defaults()
+        self.combo_downscaler_type.setCurrentIndex(0)

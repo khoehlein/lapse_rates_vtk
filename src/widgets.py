@@ -185,7 +185,7 @@ class LogDoubleSliderSpinner(QWidget):
 
 class RangeSpinner(QWidget):
 
-    range_changed = pyqtSignal(Tuple[float, float])
+    range_changed = pyqtSignal(float, float)
 
     def __init__(
             self,
@@ -199,12 +199,12 @@ class RangeSpinner(QWidget):
         self.global_max = float(global_max)
         self.step = step
         self.min_spinner = QDoubleSpinBox(parent)
-        self.min_spinner.setValue(default_min)
         self.min_spinner.setRange(self.global_min, self.global_max - self.step)
+        self.min_spinner.setValue(default_min)
         self.min_spinner.setPrefix('min: ')
         self.max_spinner = QDoubleSpinBox(parent)
-        self.max_spinner.setValue(default_max)
         self.max_spinner.setRange(self.global_min + self.step, self.global_max)
+        self.max_spinner.setValue(default_max)
         self.max_spinner.setPrefix('max: ')
         self.min_spinner.valueChanged.connect(self._update_max_spinner)
         self.max_spinner.valueChanged.connect(self._update_min_spinner)
@@ -238,6 +238,7 @@ class RangeSpinner(QWidget):
         self.max_spinner.blockSignals(True)
         self.range_changed.emit(self.limits())
         return self
+
 
 class FileSelectionWidget(QWidget):
 

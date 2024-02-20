@@ -1,8 +1,9 @@
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QDockWidget, QScrollArea, QWidget, QVBoxLayout, QTabWidget, QLabel
 
-from src.interaction._legacy.domain_selection import DomainSelectionView
-from src.interaction.model_selection.view import DownscalingSettingsView, NeighborhoodLookupView
+from src.interaction.domain_selection import DomainSelectionView
+from src.interaction.downscaling.neighborhood import NeighborhoodModelView
+from src.interaction.model_selection.view import DownscalingSettingsView
 from src.interaction.plotter_controls.view import PlotterSettingsView
 from src.interaction.visualizations.scene_settings import SceneSettingsView
 
@@ -12,7 +13,7 @@ class GeneralSettingsView(QTabWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.domain_settings = DomainSelectionView(self)
-        self.neighborhood_settings = NeighborhoodLookupView(parent=self)
+        self.neighborhood_settings = NeighborhoodModelView(parent=self)
         self.downscaler_settings = DownscalingSettingsView(parent=self)
         self.plotter_settings = PlotterSettingsView(parent=self)
         self.addTab(self._to_tab_widget(self.plotter_settings), 'View')

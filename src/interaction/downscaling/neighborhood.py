@@ -1,8 +1,7 @@
 from typing import Dict, Any, Union
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QDoubleSpinBox, QFormLayout, QLabel, QComboBox, QStackedLayout, \
-    QPushButton, QVBoxLayout
+from PyQt5.QtWidgets import QDoubleSpinBox, QFormLayout, QLabel, QComboBox, QStackedLayout, QVBoxLayout, QFrame
 
 from src.interaction.interface import PropertyModelView, PropertyModelController
 from src.model.data.data_store import GlobalData
@@ -93,7 +92,7 @@ class RadialNeighborhoodHandles(_NeighborhoodMethodHandles):
 class KNNNeighborhoodHandles(_NeighborhoodMethodHandles):
 
     def __init__(self, parent=None):
-        super(KNNNeighborhoodHandles, self).__init__(NeighborhoodType.RADIAL, parent)
+        super(KNNNeighborhoodHandles, self).__init__(NeighborhoodType.NEAREST_NEIGHBORS, parent)
         self.spinner_neighborhood_size.setSingleStep(1)
         self.spinner_neighborhood_size.setMinimum(16)
         self.spinner_neighborhood_size.setMaximum(256)
@@ -119,18 +118,18 @@ class NeighborhoodModelView(PropertyModelView):
         self._handle_widgets = {}
         self.combo_lookup_type.addItem('Radius', NeighborhoodType.RADIAL)
         radial_interface = RadialNeighborhoodHandles(self)
+        radial_interface.settings_changed.connect(self.settings_changed.emit)
         self.interface_stack.addWidget(radial_interface)
         self._handle_widgets[NeighborhoodType.RADIAL] = radial_interface
 
         self.combo_lookup_type.addItem('Nearest neighbors', NeighborhoodType.NEAREST_NEIGHBORS)
         knn_interface = KNNNeighborhoodHandles(self)
+        knn_interface.settings_changed.connect(self.settings_changed.emit)
         self.interface_stack.addWidget(knn_interface)
         self._handle_widgets[NeighborhoodType.NEAREST_NEIGHBORS] = knn_interface
 
         self.combo_lookup_type.currentIndexChanged.connect(self.interface_stack.setCurrentIndex)
-
-        self.button_apply = QPushButton('Apply')
-        self.button_apply.clicked.connect(self.settings_changed.emit)
+        self.combo_lookup_type.currentIndexChanged.connect(self.settings_changed.emit)
 
         if set_layout:
             self._set_layout()
@@ -139,13 +138,16 @@ class NeighborhoodModelView(PropertyModelView):
         layout = self.build_layout()
         self.setLayout(layout)
 
-    def build_layout(self):
-        layout = QVBoxLayout(self)
+    def build_layout(self, stretch=False):
+        layout = QVBoxLayout()
         layout.addWidget(QLabel('Neighborhood settings:'))
         layout.addWidget(self.combo_lookup_type)
-        layout.addLayout(self.interface_stack)
-        layout.addWidget(self.button_apply)
-        layout.addStretch()
+        form = QFrame(self)
+        form.setFrameStyle(QFrame.Box | QFrame.Sunken)
+        form.setLayout(self.interface_stack)
+        layout.addWidget(form)
+        if stretch:
+            layout.addStretch()
         layout.setAlignment(Qt.AlignTop)
         return layout
 
@@ -157,6 +159,13 @@ class NeighborhoodModelView(PropertyModelView):
         self._handle_widgets[neighborhood_type].update_settings(settings)
         idx = {NeighborhoodType.RADIAL: 0, NeighborhoodType.NEAREST_NEIGHBORS: 1}.get(neighborhood_type)
         self.combo_lookup_type.setCurrentIndex(idx)
+        return self
+
+    def set_defaults(self):
+        self.blockSignals(True)
+        self.update_settings(DEFAULT_NEIGHBORHOOD_NEAREST_NEIGHBORS)
+        self.blockSignals(False)
+        self.update_settings(DEFAULT_NEIGHBORHOOD_RADIAL)
         return self
 
 

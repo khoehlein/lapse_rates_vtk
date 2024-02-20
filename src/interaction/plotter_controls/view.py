@@ -3,7 +3,8 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QWidget, QCheckBox, QComboBox, QPushButton, QFormLayout, QVBoxLayout, QLabel, QDateTimeEdit, \
     QSpinBox, QDoubleSpinBox, QHBoxLayout
-from src.interaction.background_color.view import SelectColorButton
+
+from src.widgets import SelectColorButton
 
 
 class PlotterSettingsView(QWidget):
