@@ -82,6 +82,8 @@ class DownscalerRegisterView(QWidget):
 
 class DownscalerRegisterController(QObject):
 
+    register_reset = pyqtSignal()
+
     def __init__(self, view: DownscalerRegisterView, model: DownscalerRegister, domain_selection: DomainSelectionController, parent=None):
         super(DownscalerRegisterController, self).__init__(parent)
         self.view = view
@@ -117,4 +119,5 @@ class DownscalerRegisterController(QObject):
         self.view.parameter_view.clear()
         self.view.fields_view.clear()
         self.model.clear()
+        self.register_reset.emit()
 
