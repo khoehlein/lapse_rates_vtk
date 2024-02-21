@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 
 
@@ -29,6 +30,7 @@ class PropertyModelUpdateError(Exception):
 
 class PropertyModel(object):
 
+    @dataclass
     class Properties(object):
         pass
 

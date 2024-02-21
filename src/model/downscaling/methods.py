@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xr
 from sklearn.linear_model import LinearRegression
 
-from src.model.data.data_store import DomainData
+from src.model.data.data_store import DomainData, GlobalData
 from src.model.data.output import OutputDataset
 from src.model.downscaling.interpolation import InterpolationType, NearestNeighborInterpolation, \
     BarycentricInterpolation
@@ -23,6 +23,10 @@ class DownscalingMethodModel(PropertyModel):
 
     class Properties(PropertyModel.Properties):
         pass
+
+    @classmethod
+    def from_settings(cls, settings: 'DownscalingMethodModel.Properties', data_store: GlobalData):
+        raise NotImplementedError()
 
     def __init__(self):
         super().__init__(None)
@@ -100,6 +104,12 @@ class FixedLapseRateDownscaler(_InterpolatedDownscaler):
     @dataclass
     class Properties(_InterpolatedDownscaler.Properties):
         lapse_rate: float
+
+    @classmethod
+    def from_settings(cls, settings: 'FixedLapseRateDownscaler.Properties', data_store: GlobalData):
+        model = cls()
+        model.set_properties(settings)
+        return model
 
     def update(self):
         if self.output is None:
@@ -269,6 +279,14 @@ class AdaptiveLapseRateDownscaler(_InterpolatedDownscaler):
     @dataclass
     class Properties(_InterpolatedDownscaler.Properties):
         estimator: LapseRateEstimator.Properties
+
+    @classmethod
+    def from_settings(cls, settings: 'AdaptiveLapseRateDownscaler.Properties', data_store: GlobalData):
+        neighborhood = NeighborhoodModel(data_store)
+        estimator = LapseRateEstimator(neighborhood)
+        model = cls(estimator)
+        model.set_properties(settings)
+        return model
 
     def __init__(self, estimator: LapseRateEstimator):
         super().__init__()
