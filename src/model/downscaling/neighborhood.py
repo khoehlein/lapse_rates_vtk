@@ -67,7 +67,7 @@ class NeighborhoodModel(PropertyModel):
 
     def tree_update_required(self, old_properties: 'NeighborhoodModel.Properties') -> bool:
         new_properties = self.properties
-        if new_properties is None:
+        if new_properties is None or old_properties is None:
             return True
         if new_properties.lsm_threshold != old_properties.lsm_threshold:
             return True

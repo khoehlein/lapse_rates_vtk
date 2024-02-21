@@ -198,11 +198,11 @@ class RangeSpinner(QWidget):
         self.global_min = float(global_min)
         self.global_max = float(global_max)
         self.step = step
-        self.min_spinner = QDoubleSpinBox(parent)
+        self.min_spinner = QDoubleSpinBox(self)
         self.min_spinner.setRange(self.global_min, self.global_max - self.step)
         self.min_spinner.setValue(default_min)
         self.min_spinner.setPrefix('min: ')
-        self.max_spinner = QDoubleSpinBox(parent)
+        self.max_spinner = QDoubleSpinBox(self)
         self.max_spinner.setRange(self.global_min + self.step, self.global_max)
         self.max_spinner.setValue(default_max)
         self.max_spinner.setPrefix('max: ')
@@ -234,9 +234,9 @@ class RangeSpinner(QWidget):
         self.min_spinner.setValue(min_value)
         self.max_spinner.setValue(max_value)
         self._update_min_spinner()
-        self.min_spinner.blockSignals(True)
-        self.max_spinner.blockSignals(True)
-        self.range_changed.emit(self.limits())
+        self.min_spinner.blockSignals(False)
+        self.max_spinner.blockSignals(False)
+        self.range_changed.emit(*self.limits())
         return self
 
 

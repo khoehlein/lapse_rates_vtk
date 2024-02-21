@@ -27,8 +27,12 @@ class DomainSelectionModel(PropertyModel):
 
     def set_properties(self, properties: 'DomainSelectionModel.Properties') -> 'DomainSelectionModel':
         super().set_properties(properties)
+        return self
+
+    def update(self):
         domain_bounds = self.properties.get_domain_limits()
-        self.data = self.data_store.get_domain_dataset(domain_bounds)
+        if self.data_store is not None:
+            self.data = self.data_store.get_domain_dataset(domain_bounds)
         return self
 
 

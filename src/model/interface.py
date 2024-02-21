@@ -35,6 +35,7 @@ class PropertyModel(object):
         pass
 
     def __init__(self, properties: 'PropertyModel.Properties' = None):
+        self.properties = None
         self.set_properties(properties)
 
     def set_properties(self, properties) -> 'PropertyModel':

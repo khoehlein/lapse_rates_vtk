@@ -50,7 +50,7 @@ class DownscalingMethodModel(PropertyModel):
 class _InterpolatedDownscaler(DownscalingMethodModel):
 
     @dataclass
-    class Properties:
+    class Properties(DownscalingMethodModel.Properties):
         interpolation: InterpolationType
 
     def __init__(self):
@@ -160,7 +160,7 @@ DEFAULTS_FIXED_LAPSE_RATE = FixedLapseRateDownscaler.Properties(
 class LapseRateEstimator(PropertyModel):
 
     @dataclass
-    class Properties:
+    class Properties(PropertyModel.Properties):
         use_volume: bool
         use_weights: bool
         weight_scale_km: float

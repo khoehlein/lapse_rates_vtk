@@ -6,6 +6,11 @@ from PyQt5.QtWidgets import QDockWidget, QScrollArea, QWidget, QFrame, QVBoxLayo
 
 import pyvista as pv
 
+from src.interaction.domain_selection import DomainSelectionView, DomainSelectionController
+from src.interaction.downscaling.registry import DownscalerRegister, DownscalerRegisterView, \
+    DownscalerRegisterController
+from src.model.domain_selection import DomainSelectionModel
+
 pv.global_theme.allow_empty_mesh = True
 
 logging.basicConfig(level=logging.INFO)
@@ -49,9 +54,26 @@ class MainView(MainWindow):
         self.settings_menu.setWidget(scroll_area)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.settings_menu)
 
-        downscaler_view = FixedLapseRateDownscalerView(contents)
+        self.domain_selection_view = DomainSelectionView(self)
+        self.domain_o1280 = DomainSelectionModel(None)
+        self.domain_o8000 = DomainSelectionModel(None)
+        self.domain_selection_controller = DomainSelectionController(
+            self.domain_selection_view,
+            self.domain_o1280, self.domain_o8000,
+            self
+        )
+        self.downscaler_registry = DownscalerRegister()
+        self.downscaler_view = DownscalerRegisterView(self)
+        self.downscaler_controller = DownscalerRegisterController(
+            self.downscaler_view,
+            self.downscaler_registry,
+            self.domain_selection_controller,
+            self
+        )
+
         layout = QVBoxLayout()
-        layout.addWidget(downscaler_view)
+        layout.addWidget(self.domain_selection_view)
+        layout.addWidget(self.downscaler_view)
         layout.addStretch()
         contents.setLayout(layout)
 

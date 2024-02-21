@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QObject, pyqtSignal
-from PyQt5.QtWidgets import QWidget, QPushButton
+from PyQt5.QtWidgets import QWidget, QPushButton, QGridLayout, QFormLayout, QHBoxLayout, QVBoxLayout
 
 from src.model.domain_selection import DomainSelectionModel, DEFAULT_DOMAIN
 from src.widgets import RangeSpinner
@@ -24,6 +24,21 @@ class DomainSelectionView(QWidget):
         self.button_apply = QPushButton('Apply', self)
         self.button_apply.clicked.connect(self._on_domain_change_applied)
         self._set_layout()
+
+    def _set_layout(self):
+        layout = QVBoxLayout()
+        form = QFormLayout()
+        lat_layout = QHBoxLayout()
+        lat_layout.addWidget(self.select_latitude.min_spinner)
+        lat_layout.addWidget(self.select_latitude.max_spinner)
+        form.addRow('Latitude:', lat_layout)
+        lon_layout = QHBoxLayout()
+        lon_layout.addWidget(self.select_longitude.min_spinner)
+        lon_layout.addWidget(self.select_longitude.max_spinner)
+        form.addRow('Longitude:', lon_layout)
+        layout.addLayout(form)
+        layout.addWidget(self.button_apply)
+        self.setLayout(layout)
 
     def _on_domain_change_applied(self):
         self.domain_limits_changed.emit(self.get_settings())
@@ -59,6 +74,8 @@ class DomainSelectionController(QObject):
 
     def _on_domain_changed(self):
         self._synchronize_domain_settings()
+        self.model_lr.update()
+        self.model_hr.update()
         self.domain_changed.emit()
 
     def _synchronize_domain_settings(self):

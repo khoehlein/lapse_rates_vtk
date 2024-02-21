@@ -290,7 +290,7 @@ class CreateDownscalerDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle('Create downscaler')
+        self.setWindowTitle('Downscaler properties')
         self.combo_downscaler_type = QComboBox(self)
         self.interface_stack = QStackedLayout()
         self._stack_interface(DownscalerType.FIXED_LAPSE_RATE, FixedLapseRateDownscalerView(self))
@@ -317,6 +317,17 @@ class CreateDownscalerDialog(QDialog):
 
     def get_settings(self) -> DownscalingMethodModel.Properties:
         return self.interface_stack.currentWidget().get_settings()
+
+    def update_settings(self, settings: DownscalingMethodModel.Properties):
+        type_ = type(settings)
+        downscaler_type = {
+            AdaptiveLapseRateDownscaler.Properties: 1,
+            FixedLapseRateDownscaler.Properties: 0,
+        }.get(type_)
+        assert downscaler_type is not None
+        self.combo_downscaler_type.setCurrentIndex(downscaler_type)
+        self.interface_stack.currentWidget().update_settings(settings)
+        return self
 
     def _on_button_clicked(self, button):
         if self.button_box.buttonRole(button) == QDialogButtonBox.ResetRole:
