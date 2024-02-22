@@ -21,6 +21,9 @@ class _GridDataStore(object):
         self.sites = LocationBatch(coords, elevation=elevation, source_reference=None)
         self._grid_lookup = None
 
+    def scalar_names(self):
+        return list(self.data.data_vars.keys())
+
     def get_grid_lookup(self, mask=None):
         if mask is None:
             if self._grid_lookup is None:

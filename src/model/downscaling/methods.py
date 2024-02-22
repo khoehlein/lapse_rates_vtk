@@ -1,16 +1,17 @@
 from dataclasses import dataclass
 from enum import Enum
+from typing import List
 
 import numpy as np
 import xarray as xr
 from sklearn.linear_model import LinearRegression
 
+from src.model.data.data_source import MultiFieldSource
 from src.model.data.data_store import DomainData, GlobalData
 from src.model.data.output import OutputDataset
-from src.model.downscaling.interpolation import InterpolationType, NearestNeighborInterpolation, \
-    BarycentricInterpolation
+from src.model.downscaling.interpolation import InterpolationType, InterpolationModel
 from src.model.downscaling.neighborhood import NeighborhoodModel, NeighborhoodType, DEFAULT_NEIGHBORHOOD_RADIAL
-from src.model.interface import PropertyModel, SurfaceFieldType, GridConfiguration
+from src.model.interface import PropertyModel, SurfaceFieldType, GridConfiguration, FilterNodeModel
 
 
 class DownscalerType(Enum):
@@ -19,9 +20,9 @@ class DownscalerType(Enum):
     NETWORK = 'network'
 
 
-class DownscalingMethodModel(PropertyModel):
+class DownscalingMethodModel(FilterNodeModel):
 
-    class Properties(PropertyModel.Properties):
+    class Properties(FilterNodeModel.Properties):
         pass
 
     @classmethod
@@ -29,19 +30,26 @@ class DownscalingMethodModel(PropertyModel):
         raise NotImplementedError()
 
     def __init__(self):
-        super().__init__(None)
-        self.source_data: DomainData = None
-        self.target_data: DomainData = None
-        self.output: OutputDataset = None
+        super().__init__()
+        self.source_data: MultiFieldSource = None
+        self.target_data: MultiFieldSource = None
+        self.outputs = MultiFieldSource([SurfaceFieldType.T2M.value, SurfaceFieldType.T2M_DIFFERENCE])
+        self.register_input('source_data', MultiFieldSource)
+        self.register_input('target_data', MultiFieldSource)
+        self.register_output('outputs', MultiFieldSource)
 
-    def set_data(self, source_data: DomainData, target_data: DomainData):
+    def set_data(self, source_data: MultiFieldSource, target_data: MultiFieldSource):
         self.source_data = source_data
         self.target_data = target_data
-        self.output = None
+        self.outputs.set_mesh(self.target_data.mesh_source)
+        self.set_outputs_valid(False)
         return self
 
-    def update(self):
-        raise NotImplementedError()
+    def set_properties(self, properties: 'DownscalingMethodModel.Properties') -> 'DownscalingMethodModel':
+        super().set_properties(properties)
+        if self.properties_changed():
+            self.outputs.set_valid(False)
+        return self
 
     def supports_update(self, properties):
         return isinstance(properties, self.Properties)
@@ -51,59 +59,37 @@ class _InterpolatedDownscaler(DownscalingMethodModel):
 
     @dataclass
     class Properties(DownscalingMethodModel.Properties):
-        interpolation: InterpolationType
+        interpolation: InterpolationModel.Properties
 
-    def __init__(self):
+    def __init__(self, interpolation: InterpolationModel):
         super().__init__()
-        self.interpolator = None
-        self._interpolators = {
-            InterpolationType.NEAREST_NEIGHBOR: NearestNeighborInterpolation,
-            InterpolationType.BARYCENTRIC: BarycentricInterpolation,
-        }
+        self.interpolation: InterpolationModel = interpolation
 
-    def set_data(self, source_data: DomainData, target_data: DomainData):
+    def synchronize_properties(self):
+        self.properties.interpolation = self.interpolation.properties
+        return self
+
+    def set_data(self, source_data: MultiFieldSource, target_data: MultiFieldSource):
+        self.interpolation.set_source(source_data)
+        self.interpolation.set_target_mesh(target_data.mesh_source)
         super().set_data(source_data, target_data)
-        self.interpolator = None
+        return self
 
     def set_properties(self, properties: '_InterpolatedDownscaler.Properties') -> '_InterpolatedDownscaler':
-        if self.properties == properties:
-            return self
+        self.interpolation.set_properties(properties)
         super().set_properties(properties)
-        self.interpolator = None
-        return self
-
-    def update(self):
-        if self.properties is None or self.source_data is None:
-            raise RuntimeError('[ERROR] Error updating interpolated downscaler')
-        self._update_interpolator()
-        return self
-
-    def _update_interpolator(self):
-        interpolation_type = self.properties.interpolation
-        if (self.interpolator is None) or (self.interpolator.type != interpolation_type):
-            cls = self._interpolators.get(interpolation_type)
-            self.interpolator = cls(self.source_data)
-        else:
-            self.interpolator.set_source(self.source_data)
         return self
 
 
 class FixedLapseRateDownscaler(_InterpolatedDownscaler):
 
-    FIELDS_O1280 = [
-        SurfaceFieldType.T2M,
-        SurfaceFieldType.Z,
-        SurfaceFieldType.LSM
-    ]
-    FIELDS_O8000 = [
-        SurfaceFieldType.T2M_INTERPOLATION, SurfaceFieldType.T2M_DIFFERENCE,
-        SurfaceFieldType.Z, SurfaceFieldType.Z_INTERPOLATION, SurfaceFieldType.Z_DIFFERENCE,
-        SurfaceFieldType.LSM
-    ]
-
     @dataclass
     class Properties(_InterpolatedDownscaler.Properties):
         lapse_rate: float
+
+    def __init__(self):
+        interpolation = InterpolationModel([SurfaceFieldType.T2M.value, SurfaceFieldType.Z.value])
+        super().__init__(interpolation)
 
     @classmethod
     def from_settings(cls, settings: 'FixedLapseRateDownscaler.Properties', data_store: GlobalData):
@@ -111,56 +97,42 @@ class FixedLapseRateDownscaler(_InterpolatedDownscaler):
         model.set_properties(settings)
         return model
 
-    def update(self):
-        if self.output is None:
-            super().update()
-            self._interpolate_temperatures()
-        return self
+    def update_outputs(self):
+        self.interpolation.update()
+        interp_data = self.interpolation.outputs.data()
+        target_data = self.target_data.data()
 
-    def _interpolate_temperatures(self):
-        source_data = self.source_data.data
-        target_data = self.target_data.data
-        sites = self.target_data.sites
-        interpolated_source = self.interpolator.interpolate(sites, source_data, variables=['t2m', 'z'])
-        lapse_rate = np.full_like(interpolated_source.t2m.values, self.properties.lapse_rate / 1000.)
+        t2m_model_interp = interp_data.t2m.values
+        lapse_rate = np.full_like(t2m_model_interp, self.properties.lapse_rate / 1000.)
 
-        dz = target_data.z.values - interpolated_source.z.values
+        dz = target_data.z.values - interp_data.z.values
         dt2m = lapse_rate * dz
-        t2m_hr = interpolated_source.t2m.values + dt2m
+        t2m_hr = t2m_model_interp + dt2m
 
-        data_hr = target_data.assign({
-            SurfaceFieldType.T2M.value: ('values', t2m_hr),
-            SurfaceFieldType.T2M_INTERPOLATION: interpolated_source['t2m'].rename(
-                SurfaceFieldType.T2M_INTERPOLATION),
-            SurfaceFieldType.T2M_DIFFERENCE: ('values', dt2m),
-            SurfaceFieldType.Z_INTERPOLATION.value: (
-                'values', interpolated_source['z'].rename(SurfaceFieldType.Z_INTERPOLATION.value)),
-            SurfaceFieldType.Z_DIFFERENCE.value: ('values', dz),
-        })
+        output_dataset = xr.Dataset(
+            data_vars={
+                SurfaceFieldType.T2M.value: ('values', t2m_hr),
+                SurfaceFieldType.T2M_DIFFERENCE.value: ('values', dt2m),
+                SurfaceFieldType.Z_DIFFERENCE.value: ('values', dz),
+            },
+        )
+        self.outputs.set_data(output_dataset)
 
-        output = OutputDataset()
-
-        output_hr = output.get_group(GridConfiguration.O8000)
-        for field_type in self.FIELDS_O8000:
-            output_hr.add_surface_field(field_type, data_hr[field_type.value])
-
-        output_lr = output.get_group(GridConfiguration.O1280)
-        for field_type in self.FIELDS_O1280:
-            output_lr.add_surface_field(field_type, source_data[field_type.value])
-
-        self.output = output
+        return self
 
 
 DEFAULTS_FIXED_LAPSE_RATE = FixedLapseRateDownscaler.Properties(
-    InterpolationType.NEAREST_NEIGHBOR,
-    -6.5,
+    interpolation=InterpolationModel.Properties(
+        type=InterpolationType.NEAREST_NEIGHBOR
+    ),
+    lapse_rate=-6.5,
 )
 
 
-class LapseRateEstimator(PropertyModel):
+class LapseRateEstimator(FilterNodeModel):
 
     @dataclass
-    class Properties(PropertyModel.Properties):
+    class Properties(FilterNodeModel.Properties):
         use_volume: bool
         use_weights: bool
         weight_scale_km: float
@@ -170,39 +142,36 @@ class LapseRateEstimator(PropertyModel):
         neighborhood: NeighborhoodModel.Properties
 
     def __init__(self, neighborhood_model: NeighborhoodModel):
-        super().__init__(None)
+        super().__init__()
         self.neighborhood = neighborhood_model
-        self.source_data: DomainData = None
-        self.target_data: DomainData = None
-        self.output = None
+        self.source_data: MultiFieldSource = None
+        self.target_data: MultiFieldSource = None
+        self.output = MultiFieldSource(scalar_names=[SurfaceFieldType.LAPSE_RATE.value])
+        self.register_input('source_data', MultiFieldSource)
+        self.register_input('target_data', MultiFieldSource)
+        self.register_output('output', MultiFieldSource)
 
-    def set_data(self, source_data: DomainData, target_data: DomainData):
+    def set_data(self, source_data: MultiFieldSource, target_data: MultiFieldSource):
         self.source_data = source_data
         self.target_data = target_data
         self.neighborhood.set_domain(self.source_data)
-        self.output = None
+        self.set_outputs_valid(False)
         return self
 
     def set_properties(self, properties: 'LapseRateEstimator.Properties') -> 'LapseRateEstimator':
-        if properties == self.properties:
-            return self
         super().set_properties(properties)
-        self.neighborhood.set_properties(self.properties.neighborhood)
-        self.output = None
-        return self
-
-    def update(self):
-        if self.output is None:
-            if self.neighborhood.data is None:
-                self.neighborhood.update()
-            self._compute_lapse_rates()
+        if self.properties_changed():
+            self.neighborhood.set_properties(self.properties.neighborhood)
+            self.set_outputs_valid(False)
         return self
 
     def synchronize_properties(self):
         self.properties.neighborhood = self.neighborhood.properties
         return self
 
-    def _compute_lapse_rates(self):
+    def update_outputs(self):
+        self.neighborhood.update()
+
         site_data = self.source_data.data
         neighbor_data = self.neighborhood.data
         neighbor_graph = self.neighborhood.graph
