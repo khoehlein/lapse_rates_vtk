@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, List
+from typing import Optional, List, Union
 
 import xarray as xr
 
-from src.model.data.data_source import MeshDataSource, MultiFieldSource
+from src.model.data.data_source import MeshDataSource, MultiFieldSource, MergedFieldSource
 from src.model.geometry import LocationBatch, Coordinates
 from src.model.interface import PropertyModel, FilterNodeModel
 
@@ -24,8 +24,8 @@ class InterpolationModel(FilterNodeModel):
         super().__init__()
         self.source_data = None
         self.target_mesh = None
-        self.outputs = MultiFieldSource(scalar_names=output_scalars)
-        self.register_input('source_data', MultiFieldSource, instance=None)
+        self.output = MultiFieldSource(scalar_names=output_scalars)
+        self.register_input('source_data', (MultiFieldSource, MergedFieldSource), instance=None)
         self.register_input('target_mesh', MeshDataSource, instance=None)
         self.register_output('outputs', MultiFieldSource)
         self.method = None
@@ -37,7 +37,7 @@ class InterpolationModel(FilterNodeModel):
             self.set_outputs_valid(False)
         return self
 
-    def set_source(self, source_data: MultiFieldSource):
+    def set_source(self, source_data: Union[MultiFieldSource, MergedFieldSource]):
         self.source_data = source_data
         if self.method is not None:
             self.method.set_mesh(source_data.mesh_source)
@@ -46,7 +46,7 @@ class InterpolationModel(FilterNodeModel):
 
     def set_target_mesh(self, target_mesh: MeshDataSource):
         self.target_mesh = target_mesh
-        self.outputs.set_mesh(target_mesh)
+        self.output.set_mesh(target_mesh)
         self.set_outputs_valid(False)
         return self
 
@@ -59,9 +59,9 @@ class InterpolationModel(FilterNodeModel):
         mesh_data = self.target_mesh.data()
         data = self.method.interpolate(
             mesh_data.locations, self.source_data.data,
-            variables=self.outputs.scalar_names()
+            variables=self.output.scalar_names()
         )
-        self.outputs.set_data(data)
+        self.output.set_data(data)
         return self
 
     def _update_interpolation_method(self):

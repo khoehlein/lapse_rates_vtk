@@ -6,10 +6,10 @@ import numpy as np
 import xarray as xr
 from sklearn.linear_model import LinearRegression
 
-from src.model.data.data_source import MultiFieldSource
+from src.model.data.data_source import MultiFieldSource, MergedFieldSource
 from src.model.data.data_store import DomainData, GlobalData
 from src.model.data.output import OutputDataset
-from src.model.downscaling.interpolation import InterpolationType, InterpolationModel
+from src.model.downscaling._apply_temperature_correction import InterpolationType, InterpolationModel
 from src.model.downscaling.neighborhood import NeighborhoodModel, NeighborhoodType, DEFAULT_NEIGHBORHOOD_RADIAL
 from src.model.interface import PropertyModel, SurfaceFieldType, GridConfiguration, FilterNodeModel
 
@@ -33,7 +33,10 @@ class DownscalingMethodModel(FilterNodeModel):
         super().__init__()
         self.source_data: MultiFieldSource = None
         self.target_data: MultiFieldSource = None
-        self.outputs = MultiFieldSource([SurfaceFieldType.T2M.value, SurfaceFieldType.T2M_DIFFERENCE])
+        self.output = MultiFieldSource([
+            SurfaceFieldType.T2M.value, SurfaceFieldType.T2M_DIFFERENCE.value,
+            SurfaceFieldType.Z_DIFFERENCE.value
+        ])
         self.register_input('source_data', MultiFieldSource)
         self.register_input('target_data', MultiFieldSource)
         self.register_output('outputs', MultiFieldSource)
@@ -41,14 +44,14 @@ class DownscalingMethodModel(FilterNodeModel):
     def set_data(self, source_data: MultiFieldSource, target_data: MultiFieldSource):
         self.source_data = source_data
         self.target_data = target_data
-        self.outputs.set_mesh(self.target_data.mesh_source)
+        self.output.set_mesh(self.target_data.mesh_source)
         self.set_outputs_valid(False)
         return self
 
     def set_properties(self, properties: 'DownscalingMethodModel.Properties') -> 'DownscalingMethodModel':
         super().set_properties(properties)
         if self.properties_changed():
-            self.outputs.set_valid(False)
+            self.output.set_valid(False)
         return self
 
     def supports_update(self, properties):
@@ -70,10 +73,13 @@ class _InterpolatedDownscaler(DownscalingMethodModel):
         return self
 
     def set_data(self, source_data: MultiFieldSource, target_data: MultiFieldSource):
-        self.interpolation.set_source(source_data)
-        self.interpolation.set_target_mesh(target_data.mesh_source)
+        self._set_interpolator_data(source_data, target_data)
         super().set_data(source_data, target_data)
         return self
+
+    def _set_interpolator_data(self, source_data, target_data):
+        self.interpolation.set_source(source_data)
+        self.interpolation.set_target_mesh(target_data.mesh_source)
 
     def set_properties(self, properties: '_InterpolatedDownscaler.Properties') -> '_InterpolatedDownscaler':
         self.interpolation.set_properties(properties)
@@ -87,19 +93,16 @@ class FixedLapseRateDownscaler(_InterpolatedDownscaler):
     class Properties(_InterpolatedDownscaler.Properties):
         lapse_rate: float
 
-    def __init__(self):
-        interpolation = InterpolationModel([SurfaceFieldType.T2M.value, SurfaceFieldType.Z.value])
-        super().__init__(interpolation)
-
     @classmethod
     def from_settings(cls, settings: 'FixedLapseRateDownscaler.Properties', data_store: GlobalData):
-        model = cls()
+        interpolation = InterpolationModel([SurfaceFieldType.T2M.value, SurfaceFieldType.Z.value])
+        model = cls(interpolation)
         model.set_properties(settings)
         return model
 
     def update_outputs(self):
         self.interpolation.update()
-        interp_data = self.interpolation.outputs.data()
+        interp_data = self.interpolation.output.data()
         target_data = self.target_data.data()
 
         t2m_model_interp = interp_data.t2m.values
@@ -109,14 +112,14 @@ class FixedLapseRateDownscaler(_InterpolatedDownscaler):
         dt2m = lapse_rate * dz
         t2m_hr = t2m_model_interp + dt2m
 
-        output_dataset = xr.Dataset(
+        output = xr.Dataset(
             data_vars={
                 SurfaceFieldType.T2M.value: ('values', t2m_hr),
                 SurfaceFieldType.T2M_DIFFERENCE.value: ('values', dt2m),
                 SurfaceFieldType.Z_DIFFERENCE.value: ('values', dz),
             },
         )
-        self.outputs.set_data(output_dataset)
+        self.output.set_data(output)
 
         return self
 
@@ -154,7 +157,7 @@ class LapseRateEstimator(FilterNodeModel):
     def set_data(self, source_data: MultiFieldSource, target_data: MultiFieldSource):
         self.source_data = source_data
         self.target_data = target_data
-        self.neighborhood.set_domain(self.source_data)
+        self.neighborhood.set_mesh(self.source_data.mesh_source)
         self.set_outputs_valid(False)
         return self
 
@@ -172,9 +175,9 @@ class LapseRateEstimator(FilterNodeModel):
     def update_outputs(self):
         self.neighborhood.update()
 
-        site_data = self.source_data.data
-        neighbor_data = self.neighborhood.data
-        neighbor_graph = self.neighborhood.graph
+        site_data = self.source_data.data()
+        neighbor_data = self.neighborhood.samples.data()
+        neighbor_graph = self.neighborhood.graph.data()
 
         num_links = neighbor_graph.num_links
         site_id_at_link = neighbor_graph.links['location'].values
@@ -198,18 +201,19 @@ class LapseRateEstimator(FilterNodeModel):
             count=count, dtype=float
         )
 
-        coords = self.source_data.sites.coords.as_lat_lon()
-        self.output = xr.DataArray(
+        mesh_data = self.source_data.mesh_source.data().sites
+        output = xr.DataArray(
             data=lapse_rates,
             dims=['values'],
             name=SurfaceFieldType.LAPSE_RATE.value,
             coords={
-                'latitude': ('values', coords.y),
-                'longitude': ('values', coords.x),
+                'latitude': ('values', mesh_data.y),
+                'longitude': ('values', mesh_data.x),
             },
-        )
+        ).to_dataset()
+        self.output.set_data(output)
 
-        return self.output
+        return self
 
     def _estimate_lapse_rate(self, dt, dz, d):
         props = self.properties
@@ -251,74 +255,72 @@ class AdaptiveLapseRateDownscaler(_InterpolatedDownscaler):
 
     @classmethod
     def from_settings(cls, settings: 'AdaptiveLapseRateDownscaler.Properties', data_store: GlobalData):
+        interpolation = InterpolationModel([
+            SurfaceFieldType.T2M.value,
+            SurfaceFieldType.Z.value,
+            SurfaceFieldType.LAPSE_RATE.value
+        ])
         neighborhood = NeighborhoodModel(data_store)
         estimator = LapseRateEstimator(neighborhood)
-        model = cls(estimator)
+        model = cls(interpolation, estimator)
         model.set_properties(settings)
         return model
 
-    def __init__(self, estimator: LapseRateEstimator):
-        super().__init__()
+    def __init__(self, interpolation, estimator):
+        super().__init__(interpolation)
         self.estimator = estimator
 
-    def set_data(self, source_data: DomainData, target_data: DomainData):
+    def _set_interpolator_data(self, source_data, target_data):
+        merged_source = MergedFieldSource(sources=[self.source_data, self.estimator.output])
+        self.interpolation.set_source(merged_source)
+        self.interpolation.set_target_mesh(self.target_data.mesh_source)
+
+    def set_data(self, source_data: MultiFieldSource, target_data: MultiFieldSource):
         super().set_data(source_data, target_data)
         self.estimator.set_data(source_data, target_data)
+        return self
 
     def set_properties(self, properties: 'AdaptiveLapseRateDownscaler.Properties') -> 'AdaptiveLapseRateDownscaler':
-        if self.properties == properties:
-            return self
         super().set_properties(properties)
-        self.estimator.set_properties(properties.estimator)
+        if self.properties_changed():
+            self.estimator.set_properties(properties.estimator)
+            self.set_outputs_valid(False)
         return self
 
-    def update(self):
+    def update_outputs(self):
         if self.output is None:
-            super().update()
             self.estimator.update()
-            self._interpolate_estimator_outputs()
+            self.interpolation.update()
+            self._apply_temperature_correction()
         return self
 
-    def _interpolate_estimator_outputs(self):
-        source_data = self.source_data.data
-        target_data = self.target_data.data
-        sites = self.target_data.sites
-        interpolated_source = self.interpolator.interpolate(sites, source_data, variables=['t2m', 'z'])
-        interpolated_lapse_rate = self.interpolator.interpolate(sites, self.estimator.output)
+    def _apply_temperature_correction(self):
+        target_data = self.target_data.data()
+        interpolation_data = self.interpolation.output.data()
 
-        dz = target_data.z.values - interpolated_source.z.values
-        lapse_rate = interpolated_lapse_rate.values
+        dz = target_data.z.values - interpolation_data.z.values
+        lapse_rate = interpolation_data.lapse_rate.values
         dt2m = lapse_rate * dz
-        t2m_hr = interpolated_source.t2m.values + dt2m
+        t2m_hr = interpolation_data.t2m.values + dt2m
 
-        data_hr = target_data.assign({
-            SurfaceFieldType.T2M.value: ('values', t2m_hr),
-            SurfaceFieldType.T2M_INTERPOLATION: interpolated_source['t2m'].rename(SurfaceFieldType.T2M_INTERPOLATION),
-            SurfaceFieldType.T2M_DIFFERENCE: ('values', dt2m),
-            SurfaceFieldType.LAPSE_RATE.value: ('values', np.full_like(t2m_hr, lapse_rate)),
-            SurfaceFieldType.Z_INTERPOLATION.value: (
-            'values', interpolated_source['z'].rename(SurfaceFieldType.Z_INTERPOLATION.value)),
-            SurfaceFieldType.Z_DIFFERENCE.value: ('values', dz),
-        })
+        outputs = xr.Dataset(
+            data_vars={
+                SurfaceFieldType.T2M.value: ('values', t2m_hr),
+                SurfaceFieldType.T2M_DIFFERENCE: ('values', dt2m),
+                SurfaceFieldType.Z_DIFFERENCE: ('values', dz)
+            },
+        )
 
-        output = OutputDataset()
-
-        output_hr = output.get_group(GridConfiguration.O8000)
-        for field_type in self.FIELDS_O8000:
-            output_hr.add_surface_field(field_type, data_hr[field_type.value])
-
-        output_lr = output.get_group(GridConfiguration.O1280)
-        for field_type in self.FIELDS_O1280:
-            output_lr.add_surface_field(field_type, source_data[field_type.value])
-
-        self.output = output
+        self.output.set_data(outputs)
 
     def synchronize_properties(self):
+        super().synchronize_properties()
+        self.estimator.synchronize_properties()
         self.properties.estimator = self.estimator.properties
 
 
 DEFAULTS_ADAPTIVE_LAPSE_RATE = AdaptiveLapseRateDownscaler.Properties(
-    InterpolationType.NEAREST_NEIGHBOR,
+    InterpolationModel.Properties(InterpolationType.NEAREST_NEIGHBOR),
     DEFAULTS_ADAPTIVE_ESTIMATOR
 )
 

@@ -39,8 +39,9 @@ class DomainSelectionModel(PropertyModel):
 
     def set_properties(self, properties: 'DomainSelectionModel.Properties') -> 'DomainSelectionModel':
         super().set_properties(properties)
-        self.mesh_source.set_valid(not self._properties_changed)
-        self.fields.set_valid(not self._properties_changed)
+        if self.properties_changed():
+            self.mesh_source.set_valid(False)
+            self.fields.set_valid(False)
         return self
 
     def update(self):

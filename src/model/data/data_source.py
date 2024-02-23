@@ -1,8 +1,9 @@
-from typing import List, Union
+from typing import List, Union, Iterable
 
 import numpy as np
 import xarray as xr
 
+from src.model.downscaling.neighborhood_graphs import NeighborhoodGraph
 from src.model.interface import DataNodeModel
 
 
@@ -51,6 +52,38 @@ class ScalarDataSource(DataItem):
         return super().data()
 
     def set_data(self, data: np.ndarray) -> 'ScalarDataSource':
+        super().set_data(data)
+        return self
+
+
+class DatasetSource(DataItem):
+    """
+    object that serves as a source of scalar data
+    """
+
+    def __init__(self, name: str = None, callback=None):
+        super().__init__(name, callback)
+
+    def data(self) -> xr.Dataset:
+        return super().data()
+
+    def set_data(self, data: xr.Dataset) -> 'DatasetSource':
+        super().set_data(data)
+        return self
+
+
+class GraphDataSource(DataItem):
+    """
+    object that serves as a source of scalar data
+    """
+
+    def __init__(self, name: str = None, callback=None):
+        super().__init__(name, callback)
+
+    def data(self) -> NeighborhoodGraph:
+        return super().data()
+
+    def set_data(self, data: NeighborhoodGraph) -> 'GraphDataSource':
         super().set_data(data)
         return self
 
@@ -218,3 +251,23 @@ class MultiFieldSource(DataItem):
 
     def clear(self):
         return self.set_data(None)
+
+
+class MergedFieldSource(DataNodeModel):
+
+    def __init__(self, sources: Iterable[MultiFieldSource], name=None):
+        super().__init__(name)
+        self._sources = list(sources)
+
+    def data(self):
+        if not self.is_valid():
+            return None
+        return xr.merge([source.data() for source in self._sources])
+
+    def is_valid(self):
+        return all([source.is_valid() for source in self._sources])
+
+    def clear(self):
+        for source in self._sources:
+            source.clear()
+        return self

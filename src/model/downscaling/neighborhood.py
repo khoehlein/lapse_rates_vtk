@@ -6,9 +6,10 @@ import numpy as np
 import xarray as xr
 from sklearn.neighbors import NearestNeighbors
 
+from src.model.data.data_source import MeshDataSource, MultiFieldSource, GraphDataSource, DatasetSource
 from src.model.data.data_store import GlobalData, DomainData
 from src.model.geometry import Coordinates, LocationBatch
-from src.model.interface import PropertyModel
+from src.model.interface import PropertyModel, FilterNodeModel
 from src.model.downscaling.neighborhood_graphs import NeighborhoodGraph, UniformNeighborhoodGraph, \
     RadialNeighborhoodGraph
 
@@ -25,44 +26,41 @@ class LookupType(Enum):
     BRUTE = 'brute'
 
 
-class NeighborhoodModel(PropertyModel):
+class NeighborhoodModel(FilterNodeModel):
 
     @dataclass
-    class Properties(PropertyModel.Properties):
+    class Properties(FilterNodeModel.Properties):
         neighborhood_type: NeighborhoodType
         neighborhood_size: Union[int, float]
         tree_type: LookupType
         num_jobs: int # 1 for single-process, -1 for all processors
         lsm_threshold: float
 
-
     def __init__(self, data_store: GlobalData):
-        super().__init__(None)
+        super().__init__()
         self.data_store = data_store
-        self.domain: DomainData = None
-
         self.search_structure = None
-        self.data: xr.Dataset = None
-        self.graph: NeighborhoodGraph = None
-
         self._actions = {
             NeighborhoodType.NEAREST_NEIGHBORS: self._query_k_nearest_neighbors,
             NeighborhoodType.RADIAL: self._query_radial_neighbors,
         }
 
-    def update(self):
-        if self.properties is None or self.domain is None:
-            message = []
-            if self.properties is None:
-                message.append('properties not set')
-            if self.domain is None:
-                message.append('domain not set')
-            message = ' and '.join(message)
-            raise RuntimeError(f'[ERROR] Error in updating neighborhood data: {message}')
+        self.mesh_source: MeshDataSource = None
+        self.graph = GraphDataSource()
+        self.samples = DatasetSource()
+        self.register_input('mesh_source', MeshDataSource)
+        self.register_output('graph', GraphDataSource)
+        self.register_output('samples', DatasetSource)
+
+    def update_outputs(self):
         if self.search_structure is None:
             self._build_search_structure()
-        self.graph = self.query_neighbor_graph(self.domain.sites)
-        self.data = self.data_store.query_link_data(self.graph.links)
+        mesh_data = self.mesh_source.data()
+        graph = self.query_neighbor_graph(mesh_data.sites)
+        samples = self.data_store.query_link_data(graph.links)
+        self.graph.set_data(graph)
+        # TODO: This will likely not work
+        self.samples.set_data(samples)
         return self
 
     def tree_update_required(self, old_properties: 'NeighborhoodModel.Properties') -> bool:
@@ -84,15 +82,13 @@ class NeighborhoodModel(PropertyModel):
         super().set_properties(properties)
         if self.tree_update_required(old_properties):
             self.search_structure = None
-        self.data = None
-        self.graph = None
+        self.set_outputs_valid(False)
         return self
 
-    def set_domain(self, domain: DomainData):
-        self.domain = domain
+    def set_mesh(self, mesh_source: 'MeshDataSource') -> 'NeighborhoodModel':
+        self.mesh_source = mesh_source
         self.search_structure = None
-        self.data = None
-        self.graph = None
+        self.set_outputs_valid(False)
         return self
 
     def _build_search_structure(self):

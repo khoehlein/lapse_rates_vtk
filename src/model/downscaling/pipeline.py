@@ -20,7 +20,7 @@ class DownscalingPipelineModel(object):
     def data(self):
         if self.downscaler is None:
             return None
-        return self.downscaler.outputs
+        return self.downscaler.output
 
     def set_downscaler(self, downscaler: DownscalingMethodModel):
         self.downscaler = downscaler
