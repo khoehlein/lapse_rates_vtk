@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Any
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 from sklearn.neighbors import NearestNeighbors
 
@@ -91,8 +92,5 @@ class GlobalData(_GridDataStore):
         data = self.data.isel(values=mesh.source_reference)
         return DomainData(bounding_box, mesh, self.grid, data)
 
-    def query_site_data(self, domain_bounds):
-        raise NotImplementedError()
-
-    def query_link_data(self, x):
-        raise NotImplementedError()
+    def query_link_data(self, x: pd.DataFrame):
+        return self.data.isel(values=x['neighbor'])

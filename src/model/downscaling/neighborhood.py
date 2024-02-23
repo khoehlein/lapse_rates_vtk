@@ -59,7 +59,6 @@ class NeighborhoodModel(FilterNodeModel):
         graph = self.query_neighbor_graph(mesh_data.sites)
         samples = self.data_store.query_link_data(graph.links)
         self.graph.set_data(graph)
-        # TODO: This will likely not work
         self.samples.set_data(samples)
         return self
 
