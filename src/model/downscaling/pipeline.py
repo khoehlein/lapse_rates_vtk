@@ -28,9 +28,9 @@ class DownscalingPipelineModel(object):
         return self
 
     def update_downscaler_data(self):
-        # self.downscaler.set_data(self.source_domain.data, self.target_domain.data)
+        self.downscaler.set_data(self.source_domain.data, self.target_domain.data)
         return self
 
     def update(self):
-        # self.downscaler.update()
+        self.downscaler.update()
         return self

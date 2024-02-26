@@ -103,21 +103,20 @@ class FilterNodeModel(PropertyModel):
 
     def register_input(self, key: str, cls, instance: DataNodeModel = None):
         self.__inputs[key] = cls
-        if not hasattr(self, key) or instance is not None:
-            self.__setattr__(key, instance)
-        else:
-            existing = getattr(self, key)
-            assert existing is None or isinstance(existing, cls)
+        self._setattr_or_check_existing(cls, instance, key)
         return self
 
     def register_output(self, key: str, cls, instance: DataNodeModel = None):
         self.__outputs[key] = cls
+        self._setattr_or_check_existing(cls, instance, key)
+        return self
+
+    def _setattr_or_check_existing(self, cls, instance, key):
         if not hasattr(self, key) or instance is not None:
             self.__setattr__(key, instance)
         else:
             existing = getattr(self, key)
             assert existing is None or isinstance(existing, cls)
-        return self
 
     def all_inputs_valid(self):
         for key in self.__inputs:

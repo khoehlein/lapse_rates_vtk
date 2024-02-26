@@ -7,7 +7,7 @@ from src.model.downscaling.neighborhood_graphs import NeighborhoodGraph
 from src.model.interface import DataNodeModel
 
 
-class DataItem(DataNodeModel):
+class DataItemSource(DataNodeModel):
     """
     Base class for objects that actually carry data
     """
@@ -23,15 +23,15 @@ class DataItem(DataNodeModel):
             return self._data
         return None
 
-    def set_data(self, data) -> 'DataItem':
+    def set_data(self, data) -> 'DataItemSource':
         self._data = data
         return self
 
-    def set_valid(self, valid: bool) -> 'DataItem':
+    def set_valid(self, valid: bool) -> 'DataItemSource':
         self._is_valid = valid
         return self
 
-    def update(self) -> 'DataItem':
+    def update(self) -> 'DataItemSource':
         if self.is_valid():
             return self
         if self._callback is not None:
@@ -40,7 +40,7 @@ class DataItem(DataNodeModel):
         return self
 
 
-class ScalarDataSource(DataItem):
+class ScalarDataSource(DataItemSource):
     """
     object that serves as a source of scalar data
     """
@@ -56,7 +56,7 @@ class ScalarDataSource(DataItem):
         return self
 
 
-class DatasetSource(DataItem):
+class DatasetSource(DataItemSource):
     """
     object that serves as a source of scalar data
     """
@@ -72,7 +72,7 @@ class DatasetSource(DataItem):
         return self
 
 
-class GraphDataSource(DataItem):
+class GraphDataSource(DataItemSource):
     """
     object that serves as a source of scalar data
     """
@@ -106,7 +106,7 @@ class MeshData(object):
         raise NotImplementedError()
 
 
-class MeshDataSource(DataItem):
+class MeshDataSource(DataItemSource):
     """
     object that serves as a source of 3d mesh data
     """
@@ -189,7 +189,7 @@ class ScalarFieldSource(DataNodeModel):
         return self
 
 
-class MultiFieldSource(DataItem):
+class MultiFieldSource(DatasetSource):
 
     def __init__(self, scalar_names: List[str] = None, mesh_source: MeshDataSource = None, name: str = None):
         super().__init__(name)

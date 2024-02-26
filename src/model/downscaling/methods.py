@@ -9,7 +9,7 @@ from sklearn.linear_model import LinearRegression
 from src.model.data.data_source import MultiFieldSource, MergedFieldSource
 from src.model.data.data_store import DomainData, GlobalData
 from src.model.data.output import OutputDataset
-from src.model.downscaling._apply_temperature_correction import InterpolationType, InterpolationModel
+from src.model.downscaling.interpolation import InterpolationType, InterpolationModel
 from src.model.downscaling.neighborhood import NeighborhoodModel, NeighborhoodType, DEFAULT_NEIGHBORHOOD_RADIAL
 from src.model.interface import PropertyModel, SurfaceFieldType, GridConfiguration, FilterNodeModel
 

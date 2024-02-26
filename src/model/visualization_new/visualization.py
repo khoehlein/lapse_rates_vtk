@@ -2,15 +2,7 @@ import uuid
 from dataclasses import dataclass
 from enum import Enum
 
-from src.model.interface import PropertyModel
-
-
-class MappingSource(object):
-    pass
-
-
-class ScalarData(MappingSource):
-    pass
+from src.model.interface import PropertyModel, DataNodeModel
 
 
 class MappingTarget(object):
@@ -18,8 +10,7 @@ class MappingTarget(object):
 
 
 class SurfaceColor(MappingTarget):
-
-
+    pass
 
 
 class MappingModel(PropertyModel):
@@ -28,7 +19,7 @@ class MappingModel(PropertyModel):
     class Properties(PropertyModel.Properties):
         pass
 
-    def __init__(self, source: DataSource, target: MappingTarget):
+    def __init__(self, source: DataNodeModel, target: MappingTarget):
         super().__init__()
         self.source = source
         self.target = target

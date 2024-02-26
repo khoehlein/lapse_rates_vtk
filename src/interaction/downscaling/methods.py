@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QComboBox, QDoubleSpinBox, QFormLayout, QCheckBox, Q
 from src.interaction.downscaling.neighborhood import NeighborhoodModelView
 from src.interaction.interface import PropertyModelView, PropertyModelController
 from src.model.data.data_store import GlobalData
-from src.model.downscaling._apply_temperature_correction import InterpolationType
+from src.model.downscaling.interpolation import InterpolationType
 from src.model.downscaling.methods import DownscalingMethodModel, FixedLapseRateDownscaler, LapseRateEstimator, \
     AdaptiveLapseRateDownscaler, DownscalerType, DEFAULTS_ADAPTIVE_LAPSE_RATE, DEFAULTS_FIXED_LAPSE_RATE, \
     DEFAULTS_ADAPTIVE_ESTIMATOR
