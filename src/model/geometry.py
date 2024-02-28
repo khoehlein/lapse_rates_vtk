@@ -311,7 +311,7 @@ class OctahedralGrid(object):
 
     def __init__(self, degree: int):
         self.degree = int(degree)
-        self._circle_latitudes = - np.rad2deg(np.arcsin(roots_legendre(2 * self.degree)[0]))
+        self.circle_latitudes = - np.rad2deg(np.arcsin(roots_legendre(2 * self.degree)[0]))
 
     @property
     def num_triangles(self):
@@ -342,7 +342,7 @@ class OctahedralGrid(object):
         counter = 0
         for n in range(2 * self.degree):
             num_nodes = GridCircle(self.degree, n).num_nodes
-            latitudes[counter:(counter + num_nodes)] = self._circle_latitudes[n]
+            latitudes[counter:(counter + num_nodes)] = self.circle_latitudes[n]
             counter = counter + num_nodes
         return latitudes
 
@@ -386,7 +386,7 @@ class OctahedralGrid(object):
 
     def get_mesh_for_subdomain(self, bounds: DomainBoundingBox) -> TriangleMesh:
 
-        latitudes_in_bounds = bounds.latitude.argwhere(self._circle_latitudes)
+        latitudes_in_bounds = bounds.latitude.argwhere(self.circle_latitudes)
         first_latitude = max(0, latitudes_in_bounds[0] - 1)
         last_latitude = min(2 * self.degree - 1, latitudes_in_bounds[-1] + 1)
         all_triangles = []
@@ -397,8 +397,8 @@ class OctahedralGrid(object):
             longitudes = np.concatenate([northern_circle.longitudes, southern_circle.longitudes])
             latitudes = np.zeros_like(longitudes)
             num_northern = northern_circle.num_nodes
-            latitudes[:num_northern] = self._circle_latitudes[northern_circle.index_from_north]
-            latitudes[num_northern:] = self._circle_latitudes[southern_circle.index_from_north]
+            latitudes[:num_northern] = self.circle_latitudes[northern_circle.index_from_north]
+            latitudes[num_northern:] = self.circle_latitudes[southern_circle.index_from_north]
             return Coordinates(lat_lon_system, longitudes, latitudes)
 
         for n in range(first_latitude, last_latitude):
