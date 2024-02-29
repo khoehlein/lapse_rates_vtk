@@ -19,6 +19,10 @@ class Coordinates(object):
     def from_xarray(cls, data: Union[xr.Dataset, xr.DataArray]):
         return cls(lat_lon_system, data['longitude'].values, data['latitude'].values)
 
+    @classmethod
+    def from_lat_lon(cls, latitude: np.ndarray, longitude: np.ndarray):
+        return cls(lat_lon_system, longitude, latitude)
+
     def __init__(self, system: ccrs.CRS, *values: np.ndarray):
         self.components = values
         self.system = system
@@ -108,8 +112,15 @@ class LocationBatch(object):
 
     def get_subset(self, location_ids: np.ndarray) -> 'LocationBatch':
         coords = Coordinates(self.coords.system, *[c[location_ids] for c in self.coords.components])
-        source_reference = self.source_reference[location_ids]
-        return self.__class__(coords, source_reference)
+        if self.source_reference is not None:
+            source_reference = self.source_reference[location_ids]
+        else:
+            source_reference = None
+        if self.elevation is not None:
+            elevation = self.elevation[location_ids]
+        else:
+            elevation = None
+        return self.__class__(coords, elevation=elevation, source_reference=source_reference)
 
     def __len__(self):
         return self.coords.__len__()
@@ -229,7 +240,11 @@ class GridCircle(object):
     def __init__(self, degree: int, index_from_north: int):
         self.degree = int(degree)
         self.index_from_north = int(index_from_north)
-        self.index_from_pole = min(self.index_from_north, 2 * self.degree - 1 - self.index_from_north)
+        self.index_from_pole = int(self.index_from_north_to_index_from_pole(self.index_from_north, self.degree))
+
+    @staticmethod
+    def index_from_north_to_index_from_pole(index_from_north: np.ndarray, degree: np.ndarray) -> np.ndarray:
+        return np.fmin(index_from_north, 2 * degree - 1 - index_from_north)
 
     @property
     def num_nodes(self):
@@ -238,13 +253,18 @@ class GridCircle(object):
     @property
     def first_index(self):
         n = self.index_from_pole
-        if self.index_from_north < self.degree:
-            first_index = 20 * n + 2 * n * (n - 1)
-        else:
-            d = self.degree
-            total_on_hemisphere = 20 * d + 2 * d * (d - 1)
-            total_from_pole = 20 * (n + 1) + 2 * n * (n + 1)
-            first_index = 2 * total_on_hemisphere - total_from_pole
+        return self.first_index_on_circle(n, self.degree)
+
+    @classmethod
+    def first_index_on_circle(cls, index_from_north: np.ndarray, degree: np.ndarray) -> np.ndarray:
+        n = cls.index_from_north_to_index_from_pole(index_from_north, degree)
+        total_on_hemisphere = 20 * degree + 2 * degree * (degree - 1)
+        total_from_pole = 20 * (n + 1) + 2 * n * (n + 1)
+        first_index = np.where(
+            index_from_north < degree,
+            20 * n + 2 * n * (n - 1),
+            2 * total_on_hemisphere - total_from_pole,
+        )
         return first_index
 
     @property
@@ -312,6 +332,62 @@ class OctahedralGrid(object):
     def __init__(self, degree: int):
         self.degree = int(degree)
         self.circle_latitudes = - np.rad2deg(np.arcsin(roots_legendre(2 * self.degree)[0]))
+
+    def find_nearest_neighbor(self, sites: LocationBatch) -> LocationBatch:
+        coords = sites.coords.as_lat_lon()
+        longitudes, latitudes = coords.components
+        latitude_index = np.searchsorted(-self.circle_latitudes, -latitudes)
+        n_upper_circle = np.clip(latitude_index - 1, a_min=0, a_max=(2 * self.degree - 1))
+        latitudes_upper_circle = self.circle_latitudes[n_upper_circle]
+        n_lower_circle = np.clip(latitude_index, a_min=0, a_max=(2 * self.degree - 1))
+        latitudes_lower_circle = self.circle_latitudes[n_lower_circle]
+
+        def get_index_on_circle(n_circle):
+            nodes_on_circle = 4 * GridCircle.index_from_north_to_index_from_pole(n_circle, self.degree) + 20
+            first_index_on_circle = GridCircle.first_index_on_circle(n_circle, self.degree)
+            lons_rescaled = (longitudes % 360) * nodes_on_circle / 360
+            index_left_on_circle = np.floor(lons_rescaled) % nodes_on_circle
+            longitude_left_on_circle = ((360 * index_left_on_circle / nodes_on_circle) + 180) % 360 - 180
+            index_right_on_circle = np.ceil(lons_rescaled) % nodes_on_circle
+            longitude_right_on_circle = ((360 * index_right_on_circle / nodes_on_circle) + 180) % 360 - 180
+            output = (
+                (index_left_on_circle.astype(int) + first_index_on_circle,
+                 index_right_on_circle.astype(int) + first_index_on_circle),
+                (longitude_left_on_circle, longitude_right_on_circle),
+            )
+            return output
+
+        indices_upper, lons_upper = get_index_on_circle(n_upper_circle)
+        indices_lower, lons_lower = get_index_on_circle(n_lower_circle)
+
+        longitudes_test = np.stack(lons_upper + lons_lower, axis=0)
+        latitudes_test = np.stack(
+            (
+                latitudes_upper_circle, latitudes_upper_circle,
+                latitudes_lower_circle, latitudes_lower_circle
+            ), axis=0
+        )
+        xyz_test = Coordinates.from_lat_lon(
+            latitudes_test.ravel(), longitudes_test.ravel()
+        ).as_xyz().values
+        xyz_test = np.reshape(xyz_test, (*longitudes_test.shape, -1))
+
+        xyz_sites = coords.as_xyz().values
+
+        d = np.sum(np.square(xyz_test - xyz_sites[None, ...]), axis=-1)
+        min_distance_index = np.argmin(d, axis=0)
+        site_index = np.arange(len(min_distance_index))
+
+        indices_test = np.stack(indices_upper + indices_lower, axis=0)
+
+        nearest_index = indices_test[min_distance_index, np.arange(len(min_distance_index))]
+        coords_nearest = Coordinates.from_lat_lon(
+            latitudes_test[min_distance_index, site_index],
+            longitudes_test[min_distance_index, site_index]
+        )
+        locations_nearest = LocationBatch(coords_nearest, source_reference=nearest_index)
+
+        return locations_nearest
 
     @property
     def num_triangles(self):
@@ -430,3 +506,49 @@ class OctahedralGrid(object):
             source_reference=unique
         )
         return TriangleMesh(locations, all_triangles)
+
+
+def _verify_neighbor_lookup():
+    import time
+    from sklearn.neighbors import NearestNeighbors
+    from matplotlib import pyplot as plt
+
+    num_samples = 1000000
+    lons = np.random.random(size=(num_samples,)) * 360 - 180
+    lats = np.random.random(size=(num_samples,)) * 180 - 90
+    coords = Coordinates.from_lat_lon(lats, lons)
+
+    grid = OctahedralGrid(2560)
+    coords_grid = grid.coordinates
+    xyz = coords_grid.as_xyz().values
+
+    t1 = time.time()
+    tree = NearestNeighbors()
+    tree.fit(xyz)
+    t2 = time.time()
+    xyz_query = coords.as_xyz().values
+    _, neighbor_tree = tree.kneighbors(xyz_query, n_neighbors=1)
+    t3 = time.time()
+
+    neighbor_tree = neighbor_tree.ravel()
+    locations = LocationBatch(coords)
+
+    t4 = time.time()
+    neighbor_manual = grid.nearest_neighbor(locations)
+    t5 = time.time()
+
+    print(f"""
+    Fitting tree: {t2 - t1} seconds
+    Query tree: {t3 - t2} seconds
+    Manual computation: {t5 - t4} seconds
+    """)
+    mask = neighbor_tree != neighbor_manual
+
+    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    ax.scatter(lons[mask], lats[mask], label='samples')
+    ax.scatter((coords_grid.x + 180) % 360 - 180, coords_grid.y, label='grid')
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+
+    print(np.any(mask))

@@ -36,7 +36,8 @@ class SourceConfiguration(object):
     @classmethod
     def from_config_entry(cls, config_entry: Union[str, Dict[str, Any]], entry_key: str) -> 'SourceConfiguration':
         if isinstance(config_entry, str):
-            return cls(config_entry, entry_key, cls.DEFAULTS[SourceConfigKey.SELECTION], cls.DEFAULTS[SourceConfigKey.ENGINE])
+            return cls(
+                config_entry, entry_key, None, cls.DEFAULTS[SourceConfigKey.SELECTION], cls.DEFAULTS[SourceConfigKey.ENGINE])
         path = config_entry.get(SourceConfigKey.PATH)
         assert path is not None
         attribute_name = config_entry.get(SourceConfigKey.ATTRIBUTE_NAME, entry_key)
@@ -66,6 +67,10 @@ class ConfigReader(object):
     def __init__(self, config_class):
         self.config_class = config_class
 
-    def load_data(self, config_entry: Union[str, Dict[str, Any]]):
-        configuration = self.config_class.from_config_entry(config_entry)
+    def load_data(self, config_entry: Union[str, Dict[str, Any]], key=None):
+        if isinstance(config_entry, dict):
+            if key is None:
+                key = config_entry.get(SourceConfigKey.ATTRIBUTE_NAME)
+        assert key is not None
+        configuration = self.config_class.from_config_entry(config_entry, key)
         return configuration.load_data()
