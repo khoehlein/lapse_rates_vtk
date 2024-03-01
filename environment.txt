@@ -13,7 +13,9 @@ torch
 torchaudio
 torchvision
 tensorboard
-# cudf-cu12==23.12.* 
+pvlib
+
+# cudf-cu12==23.12.*
 # dask-cudf-cu12==23.12.* 
 # cuml-cu12==23.12.*
 # cugraph-cu12==23.12.* 
