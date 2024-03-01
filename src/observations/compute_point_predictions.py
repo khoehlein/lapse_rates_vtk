@@ -7,11 +7,11 @@ import xarray as xr
 
 from src.observations.verify_statistics import load_data, load_metadata
 
-temp_data_root_path = '/mnt/ssd4tb/ECMWF/Temp_Data'
+temp_data_root_path = '/mnt/data2/ECMWF/Temp_Data'
 temp_file_pattern = 'HRES_2m_temp_{}.grib'
-raw_elevation_path = '/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib'
-cache_path = '/mnt/ssd4tb/ECMWF/Cache/predictions_by_day'
-output_path = '/mnt/ssd4tb/ECMWF/Predictions'
+raw_elevation_path = '/mnt/data2/ECMWF/Orog_Data/HRES_orog_o1279_2021-2022.grib'
+cache_path = '/mnt/data2/ECMWF/Cache/predictions_by_day'
+output_path = '/mnt/data2/ECMWF/Predictions'
 
 if cache_path is not None:
     os.makedirs(cache_path, exist_ok=True)
