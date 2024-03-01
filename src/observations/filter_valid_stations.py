@@ -6,8 +6,8 @@ import pandas as pd
 from src.model.data.config_interface import ConfigReader, SourceConfiguration
 from src.model.geometry import LocationBatch, Coordinates, OctahedralGrid
 
-PARQUET_PATH = '/mnt/data2/ECMWF/Obs/observations.parquet'
-CONFIG_FILE_PATH = '/home/hoehlein/PycharmProjects/production/lapse_rates_vtk/cfg/data/2021121906_ubuntu_cg16.json'
+PARQUET_PATH = '/mnt/ssd4tb/ECMWF/Obs/observations.parquet'
+CONFIG_FILE_PATH = '/home/hoehlein/PycharmProjects/local/lapse_rates_vtk/cfg/data/2021121906_ubuntu.json'
 
 data = pd.read_parquet(PARQUET_PATH)
 
@@ -104,8 +104,8 @@ def compute_grid_heights():
     metadata['elevation_o8000'] = z_1km.values
     metadata['latitude_o1280'] = z_hres.latitude.values
     metadata['latitude_o8000'] = z_1km.latitude.values
-    metadata['longitude_o1280'] = z_hres.longitude.values
-    metadata['longitude_o8000'] = z_1km.longitude.values
+    metadata['longitude_o1280'] = (z_hres.longitude.values + 180) % 360 - 180
+    metadata['longitude_o8000'] = (z_1km.longitude.values + 180) % 360 - 180
     metadata['nearest_node_o1280'] = nearest_hres.source_reference
     metadata['nearest_node_o8000'] = nearest_1km.source_reference
 
@@ -115,5 +115,5 @@ def compute_grid_heights():
 
 
 if __name__ == '__main__':
-    export_valid_stations()
+    # export_valid_stations()
     compute_grid_heights()
