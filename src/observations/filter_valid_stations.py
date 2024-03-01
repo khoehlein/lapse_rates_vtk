@@ -7,7 +7,7 @@ from src.model.data.config_interface import ConfigReader, SourceConfiguration
 from src.model.geometry import LocationBatch, Coordinates, OctahedralGrid
 
 PARQUET_PATH = '/mnt/data2/ECMWF/Obs/observations.parquet'
-CONFIG_FILE_PATH = '/home/hoehlein/PycharmProjects/production/lapse_rates_vtk/cfg/data/2021121906_ubuntu.json'
+CONFIG_FILE_PATH = '/home/hoehlein/PycharmProjects/production/lapse_rates_vtk/cfg/data/2021121906_ubuntu_cg16.json'
 
 data = pd.read_parquet(PARQUET_PATH)
 
