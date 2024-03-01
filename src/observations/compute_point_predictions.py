@@ -6,20 +6,25 @@ import xarray as xr
 
 from src.observations.verify_statistics import load_data, load_metadata
 
-temp_data_root_path = '/mnt/data2/ECMWF/Temp_Data'
+temp_data_root_path = '/mnt/ssd4tb/ECMWF/Temp_Data'
 temp_file_pattern = 'HRES_2m_temp_{}.grib'
-raw_elevation_path = '/mnt/data2/ECMWF/Orog_Data/HRES_orog_o1279_2021-2022.grib'
-cache_path = '/mnt/data2/ECMWF/Cache/predictions_by_day'
-output_path = '/mnt/data2/ECMWF/Predictions'
-observation_path = '/mnt/data2/ECMWF/Obs/observations_filtered.parquet'
+raw_elevation_path = '/mnt/ssd4tb/ECMWF/Orog_Data/HRES_orog_o1279_2021-2022.grib'
+cache_path = '/mnt/ssd4tb/ECMWF/Cache/predictions_by_day'
+output_path = '/mnt/ssd4tb/ECMWF/Predictions'
+observation_path = '/mnt/ssd4tb/ECMWF/Obs/observations_filtered.parquet'
 
-if cache_path is not None:
-    os.makedirs(cache_path, exist_ok=True)
-os.makedirs(output_path, exist_ok=True)
+if __name__ == '__main__':
+    if cache_path is not None:
+        os.makedirs(cache_path, exist_ok=True)
+    os.makedirs(output_path, exist_ok=True)
 
-observation_data = load_data(path=observation_path)
-metadata = load_metadata().set_index('stnid')
-elevation_data = xr.open_dataset(raw_elevation_path)['z']
+    observation_data = load_data(path=observation_path)
+    metadata = load_metadata().set_index('stnid')
+    elevation_data = xr.open_dataset(raw_elevation_path)['z']
+else:
+    elevation_data = None
+    metadata = None
+    observation_data = None
 
 
 def model_predictions_plain():
@@ -118,6 +123,11 @@ def model_predictions_constant_lapse():
 
     site_predictions = pd.concat(site_predictions, axis=0)
     site_predictions.to_parquet(os.path.join(output_path, 'predictions_hres-const-lapse.parquet'))
+
+
+def load_predictions(experiment: str):
+    path = os.path.join(output_path, f'{experiment}.parquet')
+    return pd.read_parquet(path)
 
 
 if __name__ == '__main__':

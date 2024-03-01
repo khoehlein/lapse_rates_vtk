@@ -12,6 +12,7 @@ metadata = load_metadata().set_index('stnid')
 eval_path = '/mnt/ssd4tb/ECMWF/Evaluation'
 os.makedirs(eval_path, exist_ok=True)
 
+
 def agg_rmse(data):
     return np.sqrt(np.mean(np.square(data)))
 
@@ -51,10 +52,14 @@ def evaluate(predictions: pd.DataFrame, label: str):
     stats['model_longitude'] = model_longitude
     stats['model_latitude'] = model_latitude
     stats['model_station_distance'] = distance
-    stats.to_csv(os.path.join(eval_path, f'{label}.csv'))
+    output_path = os.path.join(eval_path, label)
+    os.makedirs(output_path, exist_ok=True)
+    stats.to_csv(os.path.join(output_path, 'scores.csv'))
+
+
 
 
 if __name__ == '__main__':
-    prediction_path = '/mnt/ssd4tb/ECMWF/Predictions/predictions_hres.parquet'
+    prediction_path = '/mnt/ssd4tb/ECMWF/Predictions/predictions_hres-const-lapse.parquet'
     predictions = pd.read_parquet(prediction_path)
-    evaluate(predictions, 'predictions_hres')
+    evaluate(predictions, 'predictions_hres-const-lapse')
