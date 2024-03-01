@@ -1,3 +1,4 @@
+import argparse
 import gc
 import os
 
@@ -28,12 +29,14 @@ def convert_to_parquet(path: str):
     print('Concatenating')
     data = pd.concat(data, axis=0, ignore_index=True)
     print('Writing')
-    data.to_parquet(os.path.join(path, 'observations.parquet'))
+    data.to_parquet(os.path.join(path, '..', 'observations.parquet'))
 
 
 def main():
-    root_path = '/mnt/ssd4tb/ECMWF/Obs/'
-    convert_to_parquet(root_path)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('data_root_path', type=str, help='Data root directory')
+    args = vars(parser.parse_args())
+    convert_to_parquet(args['data_root_path'])
 
 
 if __name__ == '__main__':
