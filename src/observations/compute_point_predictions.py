@@ -29,7 +29,7 @@ t_pred = np.ones((len(observation_data),))
 grouped = observation_data.groupby('date')
 groups_date = grouped.groups
 
-for date in sorted(groups_date.keys())[:3]:
+for date in sorted(groups_date.keys()):
     indices = groups_date.get(date)
     observations_per_date = observation_data.loc[indices]
 
