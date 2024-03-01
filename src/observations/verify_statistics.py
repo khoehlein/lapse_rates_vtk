@@ -35,13 +35,12 @@ def load_data(path=None):
     return _data
 
 
-def load_metadata(path=None):
+def load_metadata():
     global _metadata
-    global _parquet_path
-    if path is None:
-        path = PARQUET_PATH
-    if _metadata is None or path != _parquet_path:
-        _metadata = pd.read_csv(os.path.join(os.path.dirname(PARQUET_PATH), 'station_locations_nearest.csv'))
+    if _parquet_path is None:
+        raise Exception('Parquet path is None')
+    if _metadata is None:
+        _metadata = pd.read_csv(os.path.join(os.path.dirname(_parquet_path), 'station_locations_nearest.csv'))
     return _metadata
 
 
