@@ -13,6 +13,7 @@ from src.model.geometry import DomainBoundingBox, LocationBatch, Coordinates
 PARQUET_PATH = '/mnt/ssd4tb/ECMWF/Obs/observations_filtered.parquet'
 CONFIG_FILE_PATH = '/home/hoehlein/PycharmProjects/local/lapse_rates_vtk/cfg/data/2021121906_ubuntu.json'
 _data = None
+_parquet_path = None
 _metadata = None
 metadata_keys = [
     'stnid', 'latitude', 'longitude', 'elevation', 'num_obs',
@@ -23,10 +24,14 @@ metadata_keys = [
 ]
 
 
-def load_data():
+def load_data(path=None):
     global _data
-    if _data is None:
-        _data = pd.read_parquet(PARQUET_PATH)
+    global _parquet_path
+    if path is None:
+        path = PARQUET_PATH
+    if _data is None or path != _parquet_path:
+        _data = pd.read_parquet(path)
+        _parquet_path = path
     return _data
 
 

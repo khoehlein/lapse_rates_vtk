@@ -12,12 +12,13 @@ temp_file_pattern = 'HRES_2m_temp_{}.grib'
 raw_elevation_path = '/mnt/data2/ECMWF/Orog_Data/HRES_orog_o1279_2021-2022.grib'
 cache_path = '/mnt/data2/ECMWF/Cache/predictions_by_day'
 output_path = '/mnt/data2/ECMWF/Predictions'
+observation_path = '/mnt/data2/ECMWF/Obs/observations_filtered.parquet'
 
 if cache_path is not None:
     os.makedirs(cache_path, exist_ok=True)
 os.makedirs(output_path, exist_ok=True)
 
-observation_data = load_data()
+observation_data = load_data(path=observation_path)
 metadata = load_metadata().set_index('stnid')
 elevation_data = xr.open_dataset(raw_elevation_path)['z']
 
