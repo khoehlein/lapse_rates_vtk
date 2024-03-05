@@ -13,12 +13,12 @@ eval_path = '/mnt/ssd4tb/ECMWF/Evaluation'
 os.makedirs(eval_path, exist_ok=True)
 
 
-def agg_rmse(data):
-    return np.sqrt(np.mean(np.square(data)))
-
-
 def agg_bias(data):
     return np.mean(data)
+
+
+def agg_rmse(data):
+    return np.sqrt(np.mean(np.square(data)))
 
 
 def agg_mae(data):
@@ -29,13 +29,28 @@ def agg_max_abs(data):
     return np.max(np.abs(data))
 
 
+def agg_rmse_debiased(data):
+    mu = np.mean(data)
+    return np.sqrt(np.mean(np.square(data - mu)))
+
+
+def agg_mae_debiased(data):
+    mu = np.mean(data)
+    return np.mean(np.abs(data - mu))
+
+
+def agg_max_abs_debiased(data):
+    mu = np.mean(data)
+    return np.max(np.abs(data - mu))
+
+
 def evaluate(predictions: pd.DataFrame, label: str):
     difference = predictions['value_0'] - observations['value_0']
     difference = difference.to_frame()
     difference['stnid'] = predictions['stnid']
     grouped = difference.groupby('stnid')
-    stats = grouped['value_0'].aggregate(func=[agg_rmse, agg_mae, agg_bias, agg_max_abs, 'count'])
-    stats.columns = ['rmse', 'mae', 'bias', 'max', 'count']
+    stats = grouped['value_0'].aggregate(func=[agg_bias, agg_rmse, agg_mae, agg_max_abs, agg_rmse_debiased, agg_mae_debiased, agg_max_abs_debiased, 'count'])
+    stats.columns = ['bias', 'rmse', 'mae', 'max', 'rmse_deb', 'mae_deb', 'max_deb', 'count']
     elevation = metadata['elevation'].loc[stats.index.values]
     elevation_model = metadata['elevation_o1280'].loc[stats.index.values]
     stats['elevation'] = elevation
@@ -57,9 +72,7 @@ def evaluate(predictions: pd.DataFrame, label: str):
     stats.to_csv(os.path.join(output_path, 'scores.csv'))
 
 
-
-
 if __name__ == '__main__':
-    prediction_path = '/mnt/ssd4tb/ECMWF/Predictions/predictions_hres-const-lapse.parquet'
+    prediction_path = '/mnt/ssd4tb/ECMWF/Predictions/predictions_hres.parquet'
     predictions = pd.read_parquet(prediction_path)
-    evaluate(predictions, 'predictions_hres-const-lapse')
+    evaluate(predictions, 'predictions_hres')
