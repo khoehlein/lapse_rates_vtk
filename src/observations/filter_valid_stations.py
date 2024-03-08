@@ -1,3 +1,4 @@
+import argparse
 import os.path
 
 import numpy as np
@@ -8,6 +9,15 @@ from src.model.data.config_interface import ConfigReader, SourceConfiguration
 from src.model.downscaling.neighborhood_graphs import RadialNeighborhoodGraph
 from src.model.geometry import LocationBatch, Coordinates, OctahedralGrid
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--config-path', type=str)
+parser.add_argument('--data-path', type=str)
+args = vars(parser.parse_args())
+
+PARQUET_PATH = args['data_path']
+CONFIG_FILE_PATH = args['config_path']
+
 THRESHOLD_ANGLE = 0.
 THRESHOLD_ELEVATION = 0.
 MAX_FRACTION_MISSING = 0.5
@@ -15,8 +25,8 @@ RADIUS_LSM = 18
 THRESHOLD_LSM = 0.1
 
 
-PARQUET_PATH = '/mnt/data2/ECMWF/Obs/observations.parquet'
-CONFIG_FILE_PATH = '/home/hoehlein/PycharmProjects/production/lapse_rates_vtk/cfg/data/2021121906_ubuntu.json'
+# PARQUET_PATH = '/mnt/data2/ECMWF/Obs/observations.parquet'
+# CONFIG_FILE_PATH = '/home/hoehlein/PycharmProjects/production/lapse_rates_vtk/cfg/data/2021121906_ubuntu.json'
 
 data = pd.read_parquet(PARQUET_PATH)
 
