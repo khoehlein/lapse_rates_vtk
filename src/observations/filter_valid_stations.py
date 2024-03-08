@@ -43,6 +43,7 @@ data = data.loc[has_valid_elevation]
 
 print('After elevation filter:', len(data))
 
+
 def _compute_fraction_of_days_missing():
     grouped = data.groupby(by=['stnid', 'date'])
     counts = grouped['latitude'].count()
@@ -100,10 +101,7 @@ def export_valid_stations():
     valid = np.all(np.stack([mask_sc, mask_lsm, mask_completeness], axis=-1), axis=-1)
     print('Fraction of valid stations:', np.mean(valid))
 
-    valid = pd.Series(valid, index=data.groupby(by='stnid', as_index=True))
-    valid_extended = valid.loc[data.stnid.values]
-
-    print('Fraction of valid observations:', np.mean(valid_extended.values))
+    valid = pd.Series(valid, index=grouped['longitude'].min().index)
 
     metadata = grouped[['latitude', 'longitude', 'elevation']].min()
     metadata['num_obs'] = grouped['latitude'].count()
@@ -113,17 +111,18 @@ def export_valid_stations():
     metadata.to_csv(os.path.join(os.path.dirname(PARQUET_PATH), 'station_locations.csv'))
     print('Done')
 
-    data_ = data.loc[valid_extended.values]
+    valid_extended = valid.loc[data.stnid.values]
+    print('Fraction of valid observations:', np.mean(valid_extended.values))
 
+    data_ = data.loc[valid_extended.values]
     print('Valid observations remaining:', len(data_))
 
     out_path, ext = os.path.splitext(PARQUET_PATH)
     out_path = out_path + '_filtered' + ext
+
     print('Writing filtered data')
     data_.to_parquet(out_path)
     print('Done')
-
-
 
 
 def compute_grid_heights():

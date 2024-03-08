@@ -37,8 +37,9 @@ def load_data(path=None):
 
 def load_metadata():
     global _metadata
+    global _parquet_path
     if _parquet_path is None:
-        raise Exception('Parquet path is None')
+        _parquet_path = PARQUET_PATH
     if _metadata is None:
         _metadata = pd.read_csv(os.path.join(os.path.dirname(_parquet_path), 'station_locations_nearest.csv'))
     return _metadata
@@ -162,4 +163,4 @@ def plot_stations_in_default_domain():
 
 
 if __name__ == '__main__':
-    plot_stations_in_default_domain()
+    plot_elevation_differences()
