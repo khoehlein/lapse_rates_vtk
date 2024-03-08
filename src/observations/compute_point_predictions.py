@@ -20,8 +20,8 @@ if __name__ == '__main__':
         os.makedirs(cache_path, exist_ok=True)
     os.makedirs(output_path, exist_ok=True)
 
-    observation_data = load_data(path=observation_path)
-    metadata = load_metadata().set_index('stnid')
+    observation_data = pd.read_parquet(observation_path)
+    metadata = pd.read_csv(os.path.join(os.path.dirname(observation_path), 'station_locations_nearest.csv')).set_index('stnid')
     elevation_data = xr.open_dataset(raw_elevation_path)['z']
 else:
     elevation_data = None
