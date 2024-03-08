@@ -21,7 +21,7 @@
 	"o8000": {
 		"z": "/mnt/data2/ECMWF/Orog_Data/orog_reduced_gaussian_grid_1km.grib",
 		"lsm": {
-			"path": "/mnt/data2/ECMWF/Orog_Data/orog_reduced_gaussian_grid_1km.grib",
+			"path": "/mnt/data2/ECMWF/LSM_Data/lsm_from_watermask.nc",
 			"engine": "netcdf4"
 		}
 	}

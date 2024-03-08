@@ -2,9 +2,18 @@ import os.path
 
 import numpy as np
 import pandas as pd
+from sklearn.neighbors import NearestNeighbors
 
 from src.model.data.config_interface import ConfigReader, SourceConfiguration
+from src.model.downscaling.neighborhood_graphs import RadialNeighborhoodGraph
 from src.model.geometry import LocationBatch, Coordinates, OctahedralGrid
+
+THRESHOLD_ANGLE = 0.
+THRESHOLD_ELEVATION = 0.
+MAX_FRACTION_MISSING = 0.5
+RADIUS_LSM = 18
+THRESHOLD_LSM = 0.1
+
 
 PARQUET_PATH = '/mnt/ssd4tb/ECMWF/Obs/observations.parquet'
 CONFIG_FILE_PATH = '/home/hoehlein/PycharmProjects/local/lapse_rates_vtk/cfg/data/2021121906_ubuntu.json'
@@ -14,9 +23,9 @@ data = pd.read_parquet(PARQUET_PATH)
 print('Raw observations:', len(data))
 
 elevation = data['elevation'].values
-missing_elevation = elevation == 99999
+missing_elevation = np.isin(elevation, [99999, 999.9, 999.99])
 print('Missing elevation values:', np.sum(missing_elevation))
-invalid_italy_parts = np.logical_and(data['stnid'].str.startswith('3900').values, np.logical_or(elevation == 0, elevation == -1))
+invalid_italy_parts = np.logical_and(data['stnid'].str.startswith('3900').values, np.isin(elevation, [0., -1.]))
 print('Invalid italian parts:' , np.sum(invalid_italy_parts))
 
 has_valid_elevation = np.logical_and(~missing_elevation, ~invalid_italy_parts)
@@ -24,33 +33,64 @@ data = data.loc[has_valid_elevation]
 
 print('After elevation filter:', len(data))
 
-THRESHOLD_ANGLE = 0.
-THRESHOLD_ELEVATION = 0.
-MAX_FRACTION_MISSING = 0.5
-
-
-def export_valid_stations():
+def _compute_fraction_of_days_missing():
     grouped = data.groupby(by=['stnid', 'date'])
     counts = grouped['latitude'].count()
     da = counts.to_xarray()
     fraction_of_days_missing = da.isnull().mean(dim='date')
-    print('Number of stations:', len(fraction_of_days_missing))
+    return fraction_of_days_missing
 
-    grouped = data.groupby(by='stnid')
-    lon_range = grouped['longitude'].max() - grouped['longitude'].min()
-    lat_range = grouped['latitude'].max() - grouped['latitude'].min()
-    elev_range = grouped['elevation'].max() - grouped['elevation'].min()
 
+def _find_selfconsistent_stations(grouped):
+    lon_range = grouped['longitude'].max().values - grouped['longitude'].min().values
+    lat_range = grouped['latitude'].max().values - grouped['latitude'].min().values
+    elev_range = grouped['elevation'].max().values - grouped['elevation'].min().values
     mask = np.logical_and(lat_range <= THRESHOLD_ANGLE, lon_range <= THRESHOLD_ANGLE)
     mask = np.logical_and(mask, elev_range <= THRESHOLD_ELEVATION)
-    print('Fraction of self-consistent stations:', np.mean(mask))
+    return mask
 
-    assert np.all(lon_range.index.values == da.stnid.values)
-    valid = np.logical_and(mask, fraction_of_days_missing.values < MAX_FRACTION_MISSING)
 
+def _find_land_stations(grouped):
+    longitudes = grouped['longitude'].max()
+    latitudes = grouped['latitude'].max()
+    sites = LocationBatch(Coordinates.from_lat_lon(latitudes, longitudes))
+    config_reader = ConfigReader(SourceConfiguration)
+    configs = config_reader.load_json_config(CONFIG_FILE_PATH)
+
+    nearest_1km = OctahedralGrid(8000).find_nearest_neighbor(sites)
+    data_1km = config_reader.load_data(configs['o8000']['lsm'], key='lsm')
+    lsm_1km = data_1km.isel(values=nearest_1km.source_reference).values
+
+    data_hres = config_reader.load_data(configs['o1280']['lsm'], key='lsm')
+    tree = NearestNeighbors()
+    tree.fit(Coordinates.from_xarray(data_hres).as_xyz().values)
+    links = RadialNeighborhoodGraph.from_tree_query(sites, tree, RADIUS_LSM).links
+    links['lsm'] = data_hres.isel(values=links['neighbor'])
+    lsm_hres = links.groupby('location')['lsm'].max().values
+
+    mask_land = np.logical_or(lsm_hres > THRESHOLD_LSM, lsm_1km > THRESHOLD_LSM)
+
+    return mask_land
+
+
+def export_valid_stations():
+
+    # Compute fraction of missing dates
+    fraction_of_days_missing = _compute_fraction_of_days_missing()
+    mask_completeness = fraction_of_days_missing.values < MAX_FRACTION_MISSING
+    print('Fraction of persistent stations:', np.mean(mask_completeness))
+
+    grouped = data.groupby(by='stnid', as_index=True)
+    mask_sc = _find_selfconsistent_stations(grouped)
+    print('Fraction of self-consistent stations:', np.mean(mask_sc))
+
+    mask_lsm = _find_land_stations(grouped)
+    print('Fraction of land stations:', np.mean(mask_lsm))
+
+    valid = np.all(np.stack([mask_sc, mask_lsm, mask_completeness], axis=-1), axis=-1)
     print('Fraction of valid stations:', np.mean(valid))
 
-    valid = pd.Series(valid, index=lon_range.index)
+    valid = pd.Series(valid, index=data.groupby(by='stnid', as_index=True))
     valid_extended = valid.loc[data.stnid.values]
 
     print('Fraction of valid observations:', np.mean(valid_extended.values))
@@ -72,6 +112,8 @@ def export_valid_stations():
     print('Writing filtered data')
     data_.to_parquet(out_path)
     print('Done')
+
+
 
 
 def compute_grid_heights():
@@ -115,5 +157,5 @@ def compute_grid_heights():
 
 
 if __name__ == '__main__':
-    # export_valid_stations()
+    export_valid_stations()
     compute_grid_heights()
