@@ -58,6 +58,7 @@ for stnid in tqdm(grouped.groups.keys()):
     data.append({'stnid': stnid, **stats})
     outliers.append(obs_.loc[mask])
     pred_['value_0'] = predictions
+    pred_['outlier'] = mask
     postprocessed.append(pred_)
 
 data = pd.DataFrame(data)
