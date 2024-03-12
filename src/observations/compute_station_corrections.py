@@ -1,8 +1,17 @@
+import argparse
 
 import numpy as np
 import pandas as pd
+from scipy.stats import norm
 from sklearn.linear_model import RANSACRegressor, LinearRegression
 from tqdm import tqdm
+
+parser = argparse.ArgumentParser(description='Compute station corrections')
+parser.add_argument('--confidence', type=float, default=0.95)
+args = vars(parser.parse_args())
+
+CONFIDENCE = args['confidence']
+MAD_SCALE = np.abs(norm.interval(CONFIDENCE)[-1])
 
 
 def fourier_features(x: np.ndarray, period: float) -> np.ndarray:
@@ -22,7 +31,7 @@ def detrend(y, predictors):
     ], axis=-1)
     residuals_plain = y - predictors.value_0.values
     mad = 1.482 * np.median(np.abs(residuals_plain - np.median(residuals_plain)))
-    threshold = 1.96 * mad # 95 % confidence level for Gaussian distribution
+    threshold = MAD_SCALE * mad # 95 % confidence level for Gaussian distribution
     model = RANSACRegressor(
         LinearRegression(fit_intercept=True),
         residual_threshold=threshold,
@@ -35,6 +44,7 @@ def detrend(y, predictors):
     stats = {
         'fraction_outlier': np.mean(~model.inlier_mask_),
         'mad': mad, 'threshold': threshold,
+        'confidence': CONFIDENCE,
         'bias': estimator.intercept_,
         **{f'c{i}': c for i, c in enumerate(estimator.coef_)}
     }
@@ -58,15 +68,18 @@ for stnid in tqdm(grouped.groups.keys()):
     data.append({'stnid': stnid, **stats})
     outliers.append(obs_.loc[mask])
     pred_['value_0'] = predictions
+    pred_['residual'] = obs_.value_0.values - predictions
     pred_['outlier'] = mask
     postprocessed.append(pred_)
 
+label = 'ransac-{:.2f}'.format(CONFIDENCE * 100)
+
 data = pd.DataFrame(data)
-data.to_csv('/mnt/data2/ECMWF/Predictions/ransac_statistics.csv')
+data.to_csv(f'/mnt/data2/ECMWF/Predictions/{label}_statistics.csv')
 
 outliers = pd.concat(outliers, axis=0).sort_index()
-outliers.to_parquet('/mnt/data2/ECMWF/Predictions/ransac_outliers.parquet')
+outliers.to_parquet(f'/mnt/data2/ECMWF/Predictions/{label}_outliers.parquet')
 
 postprocessed = pd.concat(postprocessed, axis=0).sort_index()
-postprocessed.to_parquet('/mnt/data2/ECMWF/Predictions/predictions_hres-ransac.parquet')
+postprocessed.to_parquet(f'/mnt/data2/ECMWF/Predictions/predictions_hres-{label}.parquet')
 
