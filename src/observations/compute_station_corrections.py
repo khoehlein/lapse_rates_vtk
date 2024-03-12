@@ -56,7 +56,7 @@ for stnid in tqdm(grouped.groups.keys()):
     pred_ = pred.loc[idx]
     predictions, timestamps, stats, mask = detrend(obs_.value_0.values, pred_)
     data.append({'stnid': stnid, **stats})
-    outliers.append(obs.loc[mask])
+    outliers.append(obs_.loc[mask])
     pred_['value_0'] = predictions
     postprocessed.append(pred_)
 
