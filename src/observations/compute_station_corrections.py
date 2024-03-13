@@ -3,8 +3,10 @@ import argparse
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
-from sklearn.linear_model import RANSACRegressor, LinearRegression
+from sklearn.linear_model import RANSACRegressor, LinearRegression, Ridge
 from tqdm import tqdm
+
+from src.utils.weighted_ransac import WeightedRANSACRegressor
 
 parser = argparse.ArgumentParser(description='Compute station corrections')
 parser.add_argument('--confidence', type=float, default=0.95)
@@ -32,13 +34,13 @@ def detrend(y, predictors):
     residuals_plain = y - predictors.value_0.values
     mad = 1.482 * np.median(np.abs(residuals_plain - np.median(residuals_plain)))
     threshold = MAD_SCALE * mad # 95 % confidence level for Gaussian distribution
-    model = RANSACRegressor(
-        LinearRegression(fit_intercept=True),
+    model = WeightedRANSACRegressor(
+        Ridge(fit_intercept=True, alpha=1.e-4),
         residual_threshold=threshold,
-        max_trials=200, min_samples=20,
+        max_trials=500, min_samples=20,
         random_state=42
     )
-    model.fit(x, y)
+    model.fit(x, residuals_plain)
     predicted = model.predict(x)
     estimator = model.estimator_
     stats = {
