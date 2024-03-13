@@ -31,6 +31,11 @@ def detrend(y, predictors):
         fourier_features(day_of_year, 365),
         fourier_features(hour_of_day, 24)
     ], axis=-1)
+    x = x - np.mean(x)
+
+    _, inverse, counts = np.unique(hour_of_day, return_inverse=True, return_counts=True)
+    sample_weight = 1. / counts[inverse] if len(counts) > 1 else None
+
     residuals_plain = y - predictors.value_0.values
     mad = 1.482 * np.median(np.abs(residuals_plain - np.median(residuals_plain)))
     threshold = MAD_SCALE * mad # 95 % confidence level for Gaussian distribution
@@ -40,8 +45,8 @@ def detrend(y, predictors):
         max_trials=500, min_samples=20,
         random_state=42
     )
-    model.fit(x, residuals_plain)
-    predicted = model.predict(x)
+    model.fit(x, residuals_plain, sample_weight=sample_weight)
+    predicted = model.predict(x) + predictors.value_0.values
     estimator = model.estimator_
     stats = {
         'fraction_outlier': np.mean(~model.inlier_mask_),
@@ -50,7 +55,7 @@ def detrend(y, predictors):
         'bias': estimator.intercept_,
         **{f'c{i}': c for i, c in enumerate(estimator.coef_)}
     }
-    return predicted + predictors.value_0.values, timestamps, stats, ~model.inlier_mask_
+    return predicted , timestamps, stats, ~model.inlier_mask_
 
 
 obs = pd.read_parquet('/mnt/data2/ECMWF/Obs/observations_filtered.parquet')
