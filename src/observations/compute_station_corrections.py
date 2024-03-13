@@ -50,7 +50,7 @@ def detrend(y, predictors):
         'bias': estimator.intercept_,
         **{f'c{i}': c for i, c in enumerate(estimator.coef_)}
     }
-    return predicted, timestamps, stats, ~model.inlier_mask_
+    return predicted + predictors.value_0.values, timestamps, stats, ~model.inlier_mask_
 
 
 obs = pd.read_parquet('/mnt/data2/ECMWF/Obs/observations_filtered.parquet')
