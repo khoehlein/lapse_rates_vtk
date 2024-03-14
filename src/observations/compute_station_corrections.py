@@ -28,13 +28,15 @@ def detrend(y, predictors):
     timestamps = timestamps.values + hour_of_day.astype('timedelta64[h]')
     x = np.concatenate([
         predictors.value_0.values[:, None],
-        fourier_features(day_of_year, 365),
-        fourier_features(hour_of_day, 24)
+        # fourier_features(day_of_year, 365),
+        # fourier_features(hour_of_day, 24)
     ], axis=-1)
     x = x - np.mean(x)
 
-    _, inverse, counts = np.unique(hour_of_day, return_inverse=True, return_counts=True)
-    sample_weight = 1. / counts[inverse] if len(counts) > 1 else None
+    # _, inverse, counts = np.unique(hour_of_day, return_inverse=True, return_counts=True)
+    # sample_weight = 1. / counts[inverse] if len(counts) > 1 else None
+
+    sample_weight = None
 
     residuals_plain = y - predictors.value_0.values
     mad = 1.482 * np.median(np.abs(residuals_plain - np.median(residuals_plain)))
