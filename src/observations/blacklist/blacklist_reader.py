@@ -30,6 +30,7 @@ def read_entry(entry: Union[Dict[str, Any], List[Dict[str, Any]]]) -> Union[Mask
         max_date = np.datetime64(max_date + 'T00:00')
     assert min_date >= MIN_DATE
     assert max_date <= MAX_DATE
+    assert min_date < max_date
     data = None
     if 'default' in entry:
         type_ = 'default'

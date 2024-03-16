@@ -1,6 +1,8 @@
-Found 13581 in blacklist
-Invalid after blacklist: 0.0
-Found 16400 in blacklist
-Invalid after blacklist: 0.00021150592216582064
-Found 16539 in blacklist
-Invalid after blacklist: 0.0
+All valid after blacklist: 13581
+All valid after blacklist: 16539
+All valid after blacklist: 3896
+All valid after blacklist: 39001124
+All valid after blacklist: 60621
+All valid after blacklist: 63882
+All valid after blacklist: 68353
+All valid after blacklist: 68361
