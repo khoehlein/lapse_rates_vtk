@@ -32,14 +32,13 @@ def main():
         stn_obs = observations.loc[group.index.values]
         stn_res = residuals.loc[group.index.values]
         assert np.all(stn_obs.stnid.values == stnid)
-        # print(f'Processing {stnid}')
         if stnid in blacklist:
-            print(f'Found {stnid} in blacklist')
             stn_mask = build_mask(stn_obs, blacklist.get(stnid))
-            print('Invalid after blacklist: {}'.format(np.mean(stn_mask)))
+            invalid = np.mean(stn_mask)
+            if invalid ==0.:
+                print('All valid after blacklist: {}'.format(stnid))
         else:
             stn_mask = np.full(len(stn_obs), False)
-
         if not np.all(stn_mask):
             stn_residuals = stn_res['residual']
             residual_threshold = compute_outlier_threshold(stn_residuals.loc[~stn_mask], THRESHOLD_PROBABILITY, MIN_RESIDUAL)

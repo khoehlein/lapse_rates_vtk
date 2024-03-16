@@ -1,0 +1,6 @@
+Found 13581 in blacklist
+Invalid after blacklist: 0.0
+Found 16400 in blacklist
+Invalid after blacklist: 0.00021150592216582064
+Found 16539 in blacklist
+Invalid after blacklist: 0.0
