@@ -53,7 +53,7 @@ def main():
     print('Concat')
     mask_data = pd.concat(mask_data, axis=0).sort_index()
     valid = mask_data['valid'].values
-    print('Number valid observations: {} of {} ({:.2f}%)'.format(np.sum(valid), len(valid), np.mean(valid)))
+    print('Number valid observations: {} of {} ({:.2f}%)'.format(np.sum(valid), len(valid), np.mean(valid) * 100))
 
     print('Writing')
     mask_data.to_parquet('/mnt/data2/ECMWF/Obs/observations_masked.parquet')
