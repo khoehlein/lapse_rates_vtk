@@ -41,8 +41,7 @@ def compute_half_level_pressure(surface_pressure: np.ndarray, min_level=117, max
 
 def compute_full_level_pressure(surface_pressure: np.ndarray, min_level=118, max_level=137):
     p_half = compute_half_level_pressure(surface_pressure, min_level - 1, max_level)
-    p_full = p_half.rolling(level=2).mean()
-    p_full = p_full.isel(level=slice(1, None, None))
+    p_full = (p_half[1:, :] + p_half[:-1, :]) / 2.
     return p_full
 
 
@@ -116,3 +115,38 @@ def _compute_sp_t2m_level_height(p_surf: np.ndarray, t2m: np.ndarray, orography:
         base_temperature=t2m, base_temperature_height=height_2m
     )
     return height
+
+
+def silly_interpolation(query, coords, data):
+    # silly interpolation due to absence of efficient broadcasting interpolation solution in xarray
+    # assuming that coords are ordered DESCENDING
+    i_lower = ((coords > query).astype(int).sum(dim='level') - 1).clip(min=0, max=(coords.sizes['level'] - 2))
+    i_upper = i_lower + 1
+    c_lower = coords.isel(level=i_lower)
+    c_upper = coords.isel(level=i_upper)
+    a_upper = (query - c_lower) / (c_upper - c_lower)
+    # circumvent interpolation to areas below the available 3d data by clamping,
+    # admit linear extrapolation to altitude above the available 3d data
+    a_upper = a_upper.clip(max=1.)
+    v_lower = data.isel(level=i_lower)
+    v_upper = data.isel(level=i_upper)
+    out = v_lower + a_upper * (v_upper - v_lower)
+    return out
+
+
+def silly_interpolation_np(query, coords, data):
+    # silly interpolation due to absence of efficient broadcasting interpolation solution in xarray
+    # assuming that coords are ordered DESCENDING
+    i_lower = np.clip((np.sum((coords > query).astype(int), axis=0) - 1), 0, (coords.shape[0] - 2))
+    i_upper = i_lower + 1
+    site_idx = np.arange(coords.shape[1])
+    c_lower = coords[i_lower, site_idx]
+    c_upper = coords[i_upper, site_idx]
+    a_upper = (query - c_lower) / (c_upper - c_lower)
+    # circumvent interpolation to areas below the available 3d data by clamping,
+    # admit linear extrapolation to altitude above the available 3d data
+    a_upper = np.clip(a_upper, a_min=None, a_max=1.)
+    v_lower = data[i_lower, site_idx]
+    v_upper = data[i_upper, site_idx]
+    out = v_lower + a_upper * (v_upper - v_lower)
+    return out
