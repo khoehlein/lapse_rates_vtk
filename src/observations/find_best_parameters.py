@@ -7,20 +7,20 @@ observations = pd.read_parquet('/mnt/data2/ECMWF/Obs/observations_masked.parquet
 mask = observations['valid'].values
 stnids = observations['stnid'].values[mask]
 obs = observations['value_0'].values[mask]
-predictions = pd.read_parquet('/mnt/data2/ECMWF/Predictions/20240317212043/predictions.parquet', columns=['value_0', 'stnid', 'hres', 'elevation_difference', 'lapse_rate'])
+predictions = pd.read_parquet('/mnt/data2/ECMWF/Predictions/20240318031830/predictions.parquet', columns=['value_0', 'stnid', 'hres', 'elevation_difference', 'lapse_rate'])
 
 t0 = predictions['hres'].values[mask]
 dz = predictions['elevation_difference'].values[mask] / 1000.
 lr = predictions['lapse_rate'].values[mask]
 
 plt.figure()
-plt.hist(lr + 13, bins=np.linspace(-20, 20, 100), log=True)
+plt.hist(lr, bins=np.linspace(-20, 20, 100), log=True)
 plt.tight_layout()
 plt.show()
 plt.close()
 
-min_cutoffs = np.arange(-14, -6., 0.5)
-max_cutoffs = np.arange(-6.5, 20.5, 0.5)
+min_cutoffs = np.arange(-14, -6., 1)
+max_cutoffs = np.arange(-6.5, 20.5, 1)
 
 results = np.zeros((len(min_cutoffs), len(max_cutoffs)))
 
@@ -35,7 +35,7 @@ results = np.sqrt(results)
 X, Y = np.meshgrid(max_cutoffs, min_cutoffs, indexing='xy')
 
 fig, ax = plt.subplots(1, 1)
-p = ax.pcolor(X, Y, results, vmin=0.)
+p = ax.pcolor(X, Y, results)
 plt.colorbar(p, ax=ax)
 ax.set(xlabel='max cutoff', ylabel='min cutoff')
 plt.tight_layout()

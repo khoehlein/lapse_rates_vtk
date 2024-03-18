@@ -13,8 +13,12 @@ import pandas as pd
 import xarray as xr
 from sklearn.linear_model import LinearRegression, Ridge, RANSACRegressor
 from sklearn.neighbors import NearestNeighbors
+from scipy.stats import norm
 
 from src.model.geometry import Coordinates
+
+P_LEVEL = 0.95
+P_LEVEL_SCALE = norm.ppf(P_LEVEL)
 
 
 class LapseRateEstimator(object):
@@ -54,13 +58,20 @@ class LapseRateEstimator(object):
             'method': self.method
         }
 
+    def _make_output(self, lr: float, score: float = None):
+        if score is None:
+            score = np.nan
+        return pd.Series({'lapse_rate': lr, 'score': score})
+
     def compute(self, df: pd.DataFrame):
         df = df.loc[df['lsm'].values >= self.lsm_threshold]
         if len(df) < self.min_samples:
-            return self.default_lr
+            return self._make_output(self.default_lr)
         t2m = df['t2m'].values
         z = df['z'].values
         weights = None
+        dt2m = t2m + (self.default_lr / 1000.) * z
+        outlier_threshold = np.median(np.abs(dt2m - np.median(dt2m))) * (1.4826 * P_LEVEL_SCALE)
         if self.weight_scale is not None:
             try:
                 distance = df['distance'].values
@@ -76,17 +87,20 @@ class LapseRateEstimator(object):
         elif self.method == 'ransac':
             model = RANSACRegressor(
                 Ridge(fit_intercept=self.fit_intercept, alpha=0.01),
-                min_samples=4, max_trials=200, random_state=42
+                min_samples=3, max_trials=100, random_state=42, residual_threshold=outlier_threshold
             )
         else:
             raise NotImplementedError()
-        dt2m = t2m + 0.0065 * z
         model.fit(z[:, None], dt2m, sample_weight=weights)
         if self.method == 'ransac':
+            is_inlier = model.inlier_mask_
             model = model.estimator_
-        lr_raw = (model.coef_[0] * 1000.) - 6.5
+            score = model.score(z[is_inlier, None], dt2m[is_inlier], sample_weight=weights[is_inlier])
+        else:
+            score = model.score(z[:, None], dt2m, sample_weight=weights)
+        lr_raw = (model.coef_[0] * 1000.) - self.default_lr
         lr = max(min(lr_raw, self.max_lr), self.min_lr)
-        return lr
+        return self._make_output(lr, score)
 
 
 parser = argparse.ArgumentParser()
@@ -170,12 +184,13 @@ def process_day(x):
         ).values
         site_neighbor_data['t2m'] = predictions_in_surrounding
         neighbor_groups = site_neighbor_data.groupby('stnid')
-        lapse_rates = neighbor_groups.apply(estimator.compute)
-        lapse_rates = lapse_rates.loc[station_ids].values
+        outputs = neighbor_groups.apply(estimator.compute)
+        outputs = outputs.loc[station_ids]
+        lapse_rate = outputs['lapse_rate'].values
         aggregates = neighbor_groups['z'].agg(['min', 'max', 'count'])
-        aggregates = aggregates.loc[station_ids].values
+        aggregates = aggregates.loc[station_ids]
 
-        t_pred = predictions_per_site.values + lapse_rates / 1000. * dz
+        t_pred = predictions_per_site.values + lapse_rate / 1000. * dz
 
         data = pd.DataFrame({
             'stnid': station_ids,
@@ -184,10 +199,11 @@ def process_day(x):
             'date': [date] * len(station_ids),
             'time': [hour] * len(station_ids),
             'elevation': site_metadata['elevation'].values,
-            'elevation_min': aggregates[:, 0],
-            'elevation_max': aggregates[:, 1],
-            'neighbor_count': aggregates[:, 2],
-            'lapse_rate': lapse_rates,
+            'elevation_min': aggregates['min'].values,
+            'elevation_max': aggregates['max'].values,
+            'neighbor_count': aggregates['count'].values,
+            'lapse_rate': lapse_rate,
+            'score': outputs['score'].values,
             'hres': predictions_per_site.values,
             'elevation_difference': dz,
             'value_0': t_pred
