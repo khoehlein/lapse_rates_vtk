@@ -57,7 +57,7 @@ def process_day(x):
     path_to_t2m = os.path.join(temp_data_root_path, t2m_file_pattern.format(date))
     path_to_t3d = os.path.join(temp_data_root_path, t3d_file_pattern.format(date))
     t2m_per_date = xr.open_dataset(path_to_t2m)['t2m'].stack(hour=('time', 'step'))
-    t3d_per_date = xr.open_dataset(path_to_t3d)['t'].stack(hour=('time', 'step'))
+    t3d_per_date = xr.open_dataset(path_to_t3d, engine='cfgrib')['t'].stack(hour=('time', 'step'))
 
     output_per_day = []
     for hour, observations_per_hour in observations_per_date.groupby('time'):
@@ -102,7 +102,7 @@ def process_day(x):
 def model_predictions_interpolated():
     dates = list(observation_data.groupby('date'))
     print('Running predictions')
-    with Pool(4) as p:
+    with Pool(3) as p:
         site_predictions = p.map(process_day, dates)
     # site_predictions = [process_day(k) for k in dates]
     site_predictions = pd.concat(site_predictions, axis=0)
