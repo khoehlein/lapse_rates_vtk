@@ -16,7 +16,7 @@ from src.observations.verify_statistics import load_data
 pred_path = '/mnt/ssd4tb/ECMWF/Predictions'
 eval_path = '/mnt/ssd4tb/ECMWF/Evaluation'
 
-experiment = 'predictions_hres-const-lapse'
+experiment = 'predictions_hres'
 
 data = pd.read_csv(os.path.join(eval_path, experiment, 'scores.csv'))
 elevation_difference = data['elevation_difference'].values
@@ -269,9 +269,9 @@ def plot_all_time_series():
 
 
 if __name__ == '__main__':
-    plot_all_time_series()
-    # plot_overview()
-    # plot_extreme_cases()
+    # plot_all_time_series()
+    plot_overview()
+    plot_extreme_cases()
     # plot_time_series_for_extremes()
     # plot_correlations()
     # plot_time_series_for_stnid('78896')
