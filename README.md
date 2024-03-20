@@ -9,6 +9,10 @@ pip install -r environment.txt
 
 # Software architecture
 
+# Data cleansing
+- run `src/observations/compute_point_predictions.py` to export station predictions for plain HRES and corrected HRES
+- run `src/observations/compute_station_corrections.py` with various confidence settings to compute RANSAC corrected station predictions based on HRES
+- run `src/observations/blacklist/build_mask.py` to export filter outputs and masked observations  
 
 
 

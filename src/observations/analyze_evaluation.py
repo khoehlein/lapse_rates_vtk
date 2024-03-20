@@ -244,19 +244,19 @@ def plot_all_time_series():
 
     stnids = observations.stnid.unique()
 
-    for stnid in tqdm(stnids[10000:]):
+    for stnid in tqdm(stnids):
         obs_ = observations.loc[observations.stnid == stnid]
         time_stamps_ = np.asarray([_get_timestamp(date, time) for date, time in zip(obs_.date.values, obs_.time.values)])
         pred_ = predictions.loc[predictions.stnid == stnid]
         time_stamps__ = np.asarray([_get_timestamp(date, time) for date, time in zip(pred_.date.values, pred_.time.values)])
         assert np.all(time_stamps_ == time_stamps__)
         fig, ax = plt.subplots(1, 1, figsize=(16, 4), dpi=100)
-        # fig.suptitle(
-        #     'Station ID: {}, Lat: {:.2f}°, Lon: {:.2f}°, Elev(Stn): {:d} m, Elev(Mod): {:d} m'.format(
-        #         stnid,obs_.latitude.iloc[0],obs_.longitude.iloc[0],
-        #         int(np.round(obs_.elevation.iloc[0])), int(np.round(pred_.elevation.iloc[0]))
-        #     )
-        # )
+        fig.suptitle(
+            'Station ID: {}, Lat: {:.2f}°, Lon: {:.2f}°, Elev(Stn): {:d} m, Elev(Mod): {:d} m'.format(
+                stnid, obs_.latitude.iloc[0], obs_.longitude.iloc[0],
+                int(np.round(obs_.elevation.iloc[0])), int(np.round(pred_.elevation.iloc[0]))
+            )
+        )
         ax.plot(time_stamps_, obs_.value_0.values, label='observations', c='r')
         ax.plot(time_stamps_, pred_.value_0.values, linestyle='--', label='predictions', c='k')
         # ax.set(xlabel='time', ylabel='T [K]')
