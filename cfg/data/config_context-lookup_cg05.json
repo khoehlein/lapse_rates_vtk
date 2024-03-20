@@ -1,0 +1,41 @@
+{
+  "stations": {
+    "observations": "/mnt/ssd4tb/ECMWF/Obs/observations_masked.parquet",
+    "predictions": "/mnt/ssd4tb/ECMWF/Predictions/predictions_hres-const-lapse.parquet",
+    "meta_data": "/mnt/ssd4tb/ECMWF/Obs/station_locations_nearest.csv"
+  },
+  "model_outputs": {
+    "surface": {
+      "root": "/mnt/ssd4tb/ECMWF/Temp_Data",
+      "pattern": "HRES_2m_temp_{date}.grib",
+      "key": "t2m"
+    },
+    "volume": {
+      "root": "/mnt/ssd4tb/ECMWF/Temp_Data",
+      "pattern": "HRES_Model_Level_temp_{date}.grib",
+      "key": "t"
+    }
+  },
+  "grid_data": {
+    "o1280": {
+      "lsm": {
+        "path": "/mnt/ssd4tb/ECMWF/LSM_HRES_Sep2022.grib",
+        "key": "lsm"
+      },
+      "z": {
+        "path": "/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib",
+        "key": "z"
+      }
+    },
+    "o8000": {
+      "lsm": {
+        "path": "/mnt/ssd4tb/ECMWF/lsm_from_watermask.nc",
+        "key": "lsm"
+      },
+      "z": {
+        "path": "/mnt/ssd4tb/ECMWF/orog_reduced_gaussian_grid_1km.grib",
+        "key": "z"
+      }
+    }
+  }
+}
