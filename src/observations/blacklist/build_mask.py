@@ -5,8 +5,7 @@ import pandas as pd
 from blacklist_reader import read_blacklist, build_mask
 from src.observations.helpers import compute_outlier_threshold
 
-SHORT_FILTER_WINDOW = 7
-LONG_FILTER_WINDOW = 31
+
 RANSAC_VERSION = 'ransac-95.00'
 MIN_RESIDUAL = 20.
 THRESHOLD_PROBABILITY = 0.999
