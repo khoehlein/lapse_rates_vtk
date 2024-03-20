@@ -1,0 +1,41 @@
+{
+  "stations": {
+    "observations": "",
+    "predictions": "",
+    "meta_data": "",
+  },
+  "model_outputs": {
+    "surface": {
+      "root": "",
+      "pattern": "",
+      "key"
+    },
+    "volume": {
+      "root": "",
+      "pattern": "",
+      "key": ""
+    }
+  },
+  "grid_data": {
+    "o1280": {
+      "lsm": {
+        "path": "",
+        "key": ""
+      },
+      "z": {
+        "path": "",
+        "key": ""
+      }
+    },
+    "o8000": {
+      "lsm": {
+        "path": "",
+        "key": ""
+      },
+      "z": {
+        "path": "",
+        "key": ""
+      }
+    }
+  }
+}
