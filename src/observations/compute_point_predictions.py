@@ -29,12 +29,12 @@ def model_predictions_plain():
     site_predictions = []
 
     grouped = observation_data.groupby('date')
-    groups_date = grouped.groups
+    groups_date = grouped
 
     for date, observations_per_date in groups_date:
         path_to_predictions = os.path.join(temp_data_root_path, temp_file_pattern.format(date))
         predictions_per_date = xr.open_dataset(path_to_predictions)['t2m'].stack(hour=('time', 'step'))
-        groups_hour = observations_per_date.groupby('time').groups
+        groups_hour = observations_per_date.groupby('time')
         assert len(groups_hour) == 24
 
         output_per_day = []
@@ -70,12 +70,12 @@ def model_predictions_constant_lapse():
     site_predictions = []
 
     grouped = observation_data.groupby('date')
-    groups_date = grouped.groups
+    groups_date = grouped
 
     for date, observations_per_date in groups_date:
         path_to_predictions = os.path.join(temp_data_root_path, temp_file_pattern.format(date))
         predictions_per_date = xr.open_dataset(path_to_predictions)['t2m'].stack(hour=('time', 'step'))
-        groups_hour = observations_per_date.groupby('time').groups
+        groups_hour = observations_per_date.groupby('time')
         output_per_day = []
         with tqdm.tqdm(total=24, desc=date) as pbar:
             for hour, observations_per_hour in groups_hour:
