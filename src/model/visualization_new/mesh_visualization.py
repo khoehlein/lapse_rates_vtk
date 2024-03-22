@@ -47,6 +47,7 @@ class MeshDisplayModel(DisplayItem):
         self.style = MeshStyleModel()
 
     def set_mesh(self):
+        raise NotImplementedError()
 
     def paint(self, host: pv.Plotter, adapter: KeywordAdapter = None):
         super().paint(host, adapter)

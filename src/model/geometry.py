@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Union
 
 import numpy as np
+import pandas as pd
 import pyvista as pv
 import cartopy.crs as ccrs
 from scipy.special import roots_legendre
@@ -17,6 +18,10 @@ class Coordinates(object):
 
     @classmethod
     def from_xarray(cls, data: Union[xr.Dataset, xr.DataArray]):
+        return cls(lat_lon_system, data['longitude'].values, data['latitude'].values)
+
+    @classmethod
+    def from_dataframe(cls, data: pd.DataFrame):
         return cls(lat_lon_system, data['longitude'].values, data['latitude'].values)
 
     @classmethod
@@ -80,7 +85,7 @@ class AngularInterval(object):
         return (self._max - self.min) % self.period if self.is_periodic() else self._max
 
     def argwhere(self, x: np.ndarray) -> np.ndarray:
-        return np.argwhere(self.contains(x))
+        return np.argwhere(self.contains(x)).ravel()
 
     def contains(self, x: np.ndarray) -> np.ndarray:
         if self.is_periodic():
@@ -137,13 +142,13 @@ class TriangleMesh(object):
     @property
     def x(self):
         if self._x is None:
-            self._x = self.nodes.x[self.vertices]
+            self._x = self.nodes.x#[self.vertices]
         return self._x
 
     @property
     def y(self):
         if self._y is None:
-            self._y = self.nodes.y[self.vertices]
+            self._y = self.nodes.y#[self.vertices]
         return self._y
 
     @property
@@ -152,19 +157,19 @@ class TriangleMesh(object):
 
     @property
     def left(self) -> np.ndarray:
-        return np.amin(self.x, axis=-1)
+        return np.amin(self.x[self.vertices], axis=-1)
 
     @property
     def right(self) -> np.ndarray:
-        return np.amax(self.x, axis=-1)
+        return np.amax(self.x[self.vertices], axis=-1)
 
     @property
     def bottom(self) -> np.ndarray:
-        return np.amin(self.y, axis=-1)
+        return np.amin(self.y[self.vertices], axis=-1)
 
     @property
     def top(self) -> np.ndarray:
-        return np.amax(self.y, axis=-1)
+        return np.amax(self.y[self.vertices], axis=-1)
 
 
     @property
@@ -177,7 +182,7 @@ class TriangleMesh(object):
 
     @property
     def num_nodes(self):
-        return len(self.x)
+        return len(self.nodes)
 
     def get_node_positions(self) -> np.ndarray:
         z = self.z
@@ -198,6 +203,49 @@ class TriangleMesh(object):
         faces = self.get_faces()
         points = self.get_node_positions()
         return pv.PolyData(points, faces)
+
+
+class WedgeMesh(object):
+
+    def __init__(self, base_mesh: TriangleMesh, z: np.ndarray):
+        self.base_mesh = base_mesh
+        assert len(z.shape) == 2 and z.shape[-1] == self.base_mesh.num_nodes
+        self.z = z
+
+    @property
+    def num_levels(self):
+        return len(self.z)
+
+    def get_node_positions(self) -> np.ndarray:
+        level_coordinates = self.base_mesh.get_node_positions()
+        coordinates = np.tile(level_coordinates, (self.num_levels, 1))
+        coordinates[:, -1] = self.z.ravel()
+        return coordinates
+
+    def get_wedges(self, add_prefix: bool = False):
+        triangles = self.base_mesh.vertices
+        num_triangles = len(triangles)
+        num_nodes = self.base_mesh.num_nodes
+        prefix_offset = int(add_prefix)
+        j_lower = prefix_offset
+        j_upper = prefix_offset + 3
+        wedges = np.zeros(((self.num_levels - 1) * num_triangles, 6 + prefix_offset), dtype=int)
+        if add_prefix:
+            wedges[:, 0] = 6
+        current_triangles = triangles.copy()
+        for level in range(self.num_levels - 1):
+            i_lower = level * num_triangles
+            i_upper = (level + 1) * num_triangles
+            wedges[i_lower:i_upper, j_lower:j_upper] = current_triangles
+            current_triangles += num_nodes
+            wedges[i_lower:i_upper, j_upper:] = current_triangles
+        return wedges
+
+    def to_wedge_grid(self) -> pv.UnstructuredGrid:
+        coords = self.get_node_positions()
+        wedges = self.get_wedges(add_prefix=True)
+        cell_types = [pv.CellType.WEDGE] * len(wedges)
+        return pv.UnstructuredGrid(wedges, cell_types, coords)
 
 
 @dataclass
@@ -487,14 +535,16 @@ class OctahedralGrid(object):
             triangles = TriangleMesh(locations, vertices)
             valid = bounds.intersects(triangles)
             all_triangles.append(vertices[valid] + first_index)
-            all_longitudes.append(triangles.x[valid])
-            all_latitudes.append(triangles.y[valid])
+            tvv_ = triangles.vertices[valid]
+            all_longitudes.append(triangles.x[tvv_])
+            all_latitudes.append(triangles.y[tvv_])
             vertices = southern_circle.triangles_to_northern_circle() - first_index
             triangles = TriangleMesh(locations, vertices)
             valid = bounds.intersects(triangles)
             all_triangles.append(vertices[valid] + first_index)
-            all_longitudes.append(triangles.x[valid])
-            all_latitudes.append(triangles.y[valid])
+            tvv_ = triangles.vertices[valid]
+            all_longitudes.append(triangles.x[tvv_])
+            all_latitudes.append(triangles.y[tvv_])
 
         all_triangles = np.concatenate(all_triangles, axis=0)
         unique, indices, inverse = np.unique(all_triangles.ravel(), return_inverse=True, return_index=True)
