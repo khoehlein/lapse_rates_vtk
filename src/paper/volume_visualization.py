@@ -176,16 +176,16 @@ class MyMainWindow(MainWindow):
         exitButton.triggered.connect(self.close)
         fileMenu.addAction(exitButton)
 
-        color_lookup = AsymmetricDivergentColorLookup(
+        gradient_colors = AsymmetricDivergentColorLookup(
             AsymmetricDivergentColorLookup.Properties(
-                'coolwarm', -12, 50, -6.5, 256, 0., 0., 1., 1., 'blue', 'red'
+                'coolwarm', -12, 50, -6.5, 256, 2., 2., 1., 1., 'blue', 'red'
             )
         )
         self.gradient_volume = VolumeVisualization(
             'grad_t', 'Temperature gradient (K/km)',
             VERTICAL_SCALE,
             model_data, terrain_data_o1280,
-            color_lookup, self.plotter,
+            gradient_colors, self.plotter,
         )
 
         # self.plotter.add_mesh(terrain_visuals.land_surface(), color='k', style='wireframe')
