@@ -1,8 +1,7 @@
 {
   "stations": {
-    "observations": "/mnt/data2/ECMWF/Obs/observations_masked.parquet",
-    "predictions": "/mnt/data2/ECMWF/Predictions/predictions_hres-const-lapse.parquet",
-    "meta_data": "/mnt/data2/ECMWF/Obs/station_locations_nearest.csv"
+    "historic": null,
+    "metadata": "/mnt/data2/ECMWF/Obs/station_locations_nearest.csv"
   },
   "model_outputs": {
     "surface": {
@@ -16,7 +15,7 @@
       "key": "t"
     }
   },
-  "grid_data": {
+  "terrain": {
     "o1280": {
       "lsm": {
         "path": "/mnt/data2/ECMWF/LSM_Data/LSM_HRES_Sep2022.grib",

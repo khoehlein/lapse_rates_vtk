@@ -1,8 +1,7 @@
 {
   "stations": {
-    "observations": "/mnt/ssd4tb/ECMWF/Obs/observations_masked.parquet",
-    "predictions": "/mnt/ssd4tb/ECMWF/Predictions/predictions_hres-const-lapse.parquet",
-    "meta_data": "/mnt/ssd4tb/ECMWF/Obs/station_locations_nearest.csv"
+    "historic": "/mnt/ssd4tb/ECMWF/Vis/station_data_europe_hres-const-lapse.parquet",
+    "metadata": "/mnt/ssd4tb/ECMWF/Obs/station_locations_nearest.csv"
   },
   "model_outputs": {
     "surface": {
@@ -16,7 +15,7 @@
       "key": "t"
     }
   },
-  "grid_data": {
+  "terrain": {
     "o1280": {
       "lsm": {
         "path": "/mnt/ssd4tb/ECMWF/LSM_HRES_Sep2022.grib",
@@ -37,5 +36,6 @@
         "key": "z"
       }
     }
-  }
+  },
+  "cache": "/mnt/ssd4tb/ECMWF/VisCache"
 }

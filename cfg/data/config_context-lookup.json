@@ -1,14 +1,13 @@
 {
   "stations": {
-    "observations": "",
-    "predictions": "",
-    "meta_data": "",
+    "historic": "",
+    "metadata": ""
   },
   "model_outputs": {
     "surface": {
       "root": "",
       "pattern": "",
-      "key"
+      "key": ""
     },
     "volume": {
       "root": "",
@@ -16,7 +15,7 @@
       "key": ""
     }
   },
-  "grid_data": {
+  "terrain": {
     "o1280": {
       "lsm": {
         "path": "",
