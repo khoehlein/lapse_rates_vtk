@@ -11,7 +11,8 @@ from matplotlib import pyplot as plt
 from src.model.geometry import Coordinates, WedgeMesh, TriangleMesh, LocationBatch
 from src.paper.volume_visualization.color_lookup import AsymmetricDivergentColorLookup, ADCLController
 from src.paper.volume_visualization.left_side_menu import LeftSideMenu
-from src.paper.volume_visualization.volume import VolumeVisualization, VolumeVisualController
+from src.paper.volume_visualization.volume import VolumeVisualController, VolumeFieldData, \
+    ScalarVolumeVisualization, VolumeProperties, PlotterSlot, ScalingParameters
 
 os.environ["QT_API"] = "pyqt5"
 
@@ -186,14 +187,14 @@ class MyMainWindow(MainWindow):
             )
         )
         self.gradient_color_controls = ADCLController(self.left_dock_menu.colormap_settings, self.gradient_colors)
-        self.gradient_volume = VolumeVisualization(
-            'grad_t', 'Temperature gradient (K/km)',
-            VERTICAL_SCALE,
-            model_data, terrain_data_o1280,
-            self.gradient_colors, self.plotter,
+        gradient_field = VolumeFieldData('grad_t', model_data, terrain_data_o1280)
+        plotter_slot = PlotterSlot(self.plotter, 'Temperature gradient (K/km)')
+        self.gradient_volume = ScalarVolumeVisualization(
+            gradient_field, self.gradient_colors, VolumeProperties(),
+            plotter_slot, ScalingParameters(4000., 1.)
         )
         self.gradient_volume_controls = VolumeVisualController(self.left_dock_menu.volume_vis_settings, self.gradient_volume)
-        self.gradient_volume.draw()
+        self.gradient_volume.show()
 
         # self.plotter.add_mesh(terrain_visuals.land_surface(), color='k', style='wireframe')
         # self.plotter.add_mesh(terrain_visuals.sea_surface(), color='blue', style='wireframe')
