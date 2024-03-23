@@ -7,7 +7,8 @@ import matplotlib as mpl
 import pyvista as pv
 from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QWidget, QComboBox, QDoubleSpinBox, QSpinBox
+from PyQt5.QtWidgets import QWidget, QComboBox, QDoubleSpinBox, QSpinBox, QVBoxLayout, QFormLayout, QHBoxLayout, \
+    QPushButton
 
 from src.widgets import RangeSpinner, SelectColorButton
 
@@ -17,7 +18,7 @@ class InteractiveColorLookup(QObject):
     samples: np.ndarray
     colors: np.ndarray
 
-    colormap_changed = pyqtSignal()
+    lookup_table_changed = pyqtSignal()
 
     @dataclass
     class Properties(object):
@@ -92,6 +93,7 @@ class AsymmetricDivergentColorLookup(InteractiveColorLookup):
     def set_properties(self, properties: 'AsymmetricDivergentColorLookup.Properties'):
         self.props = properties
         self.update_lookup_table()
+        self.lookup_table_changed.emit()
         return self
 
     def get_opacity_function(self):
@@ -104,67 +106,107 @@ CMAP_NAMES = [
 ]
 
 
-class AsymmetricLookupSettingsView(QWidget):
+class ADCLSettingsView(QWidget):
     settings_changed = pyqtSignal()
 
     def __init__(self, parent: QObject = None):
         super().__init__(parent)
         self.combo_cmap_name = QComboBox(self)
         self.combo_cmap_name.addItems(CMAP_NAMES)
-        self.combo_cmap_name.currentIndexChanged.connect(self.settings_changed.emit)
-        self.value_range = RangeSpinner(self, -13., 50, -15., 100.)
+        self.scalar_range = RangeSpinner(self, -13., 50, -15., 100.)
         self.spinner_vcenter = QDoubleSpinBox(self)
         self.spinner_vcenter.setValue(-6.5)
-        self.value_range.range_changed.connect(self.on_range_changed)
-        self.spinner_vcenter.valueChanged.connect(self.settings_changed)
-        self.value_range.range_changed.connect(self.settings_changed.emit)
+        self.spinner_vcenter.setSingleStep(0.05)
         self.spinner_num_samples = QSpinBox(self)
         self.spinner_num_samples.setMinimum(3)
         self.spinner_num_samples.setMaximum(1024)
-        self.spinner_num_samples.valueChanged.connect(self.settings_changed)
         self.spinner_log_n_lower = QDoubleSpinBox(self)
         self.spinner_log_n_lower.setMinimum(-4)
         self.spinner_log_n_lower.setMaximum(4)
-        self.spinner_log_n_lower.valueChanged.connect(self.settings_changed)
+        self.spinner_log_n_lower.setSingleStep(0.01)
         self.spinner_log_n_upper = QDoubleSpinBox(self)
         self.spinner_log_n_upper.setMinimum(-4)
         self.spinner_log_n_upper.setMaximum(4)
-        self.spinner_log_n_upper.valueChanged.connect(self.settings_changed)
+        self.spinner_log_n_upper.setSingleStep(0.01)
         self.spinner_opacity_lower = QDoubleSpinBox(self)
         self.spinner_opacity_lower.setMinimum(0.)
         self.spinner_opacity_lower.setMaximum(1.)
-        self.spinner_opacity_lower.valueChanged.connect(self.settings_changed)
+        self.spinner_opacity_lower.setSingleStep(0.01)
         self.spinner_opacity_upper = QDoubleSpinBox(self)
         self.spinner_opacity_upper.setMinimum(0.)
         self.spinner_opacity_upper.setMaximum(1.)
-        self.spinner_opacity_upper.valueChanged.connect(self.settings_changed)
+        self.spinner_opacity_upper.setSingleStep(0.01)
         self.button_color_below = SelectColorButton(parent=self)
-        self.button_color_below.color_changed.connect(self.settings_changed)
         self.button_color_above = SelectColorButton(parent=self)
-        self.button_color_above.color_changed.connect(self.settings_changed)
+        self.button_apply = QPushButton(self)
+        self.button_apply.setText('Apply')
+        self._connect_signals()
         self._set_layout()
 
     def _set_layout(self):
-        raise NotImplementedError()
+        outer_layout = QVBoxLayout()
+        layout = QFormLayout()
+        layout.addRow("Colormap:", self.combo_cmap_name)
+        range_layout = QHBoxLayout()
+        range_layout.addWidget(self.scalar_range.min_spinner)
+        range_layout.addWidget(self.scalar_range.max_spinner)
+        layout.addRow("Scalar range:", range_layout)
+        layout.addRow("Center:", self.spinner_vcenter)
+        layout.addRow("Samples:", self.spinner_num_samples)
+        color_layout = QHBoxLayout()
+        color_layout.addWidget(self.button_color_below)
+        color_layout.addWidget(self.button_color_above)
+        layout.addRow("Outlier colors:", color_layout)
+        exponent_layout = QHBoxLayout()
+        exponent_layout.addWidget(self.spinner_log_n_lower)
+        exponent_layout.addWidget(self.spinner_log_n_upper)
+        layout.addRow("Exponents:", exponent_layout)
+        opacity_layout = QHBoxLayout()
+        opacity_layout.addWidget(self.spinner_opacity_lower)
+        opacity_layout.addWidget(self.spinner_opacity_upper)
+        layout.addRow("Max. opacity:", opacity_layout)
+        outer_layout.addLayout(layout)
+        outer_layout.addWidget(self.button_apply)
+        self.setLayout(outer_layout)
+
+    def _connect_signals(self):
+        # self.combo_cmap_name.currentIndexChanged.connect(self.settings_changed.emit)
+        self.scalar_range.range_changed.connect(self.on_range_changed)
+        self.button_apply.clicked.connect(self.settings_changed)
+        # self.spinner_vcenter.valueChanged.connect(self.settings_changed.emit)
+        # self.scalar_range.range_changed.connect(self.settings_changed.emit)
+        # self.spinner_num_samples.valueChanged.connect(self.settings_changed.emit)
+        # self.spinner_log_n_lower.valueChanged.connect(self.settings_changed.emit)
+        # self.spinner_log_n_upper.valueChanged.connect(self.settings_changed.emit)
+        # self.spinner_opacity_lower.valueChanged.connect(self.settings_changed.emit)
+        # self.spinner_opacity_upper.valueChanged.connect(self.settings_changed.emit)
+        # self.button_color_below.color_changed.connect(self.settings_changed.emit)
+        # self.button_color_above.color_changed.connect(self.settings_changed.emit)
 
     def on_range_changed(self):
-        new_range = self.value_range.limits()
+        new_range = self.scalar_range.limits()
         self.spinner_vcenter.setMinimum(new_range[0])
         self.spinner_vcenter.setMaximum(new_range[1])
 
     def apply_settings(self, settings: AsymmetricDivergentColorLookup.Properties):
         self.combo_cmap_name.setCurrentText(settings.cmap_name)
-        self.value_range.set_limits(settings.vmin, settings.vmax)
+        self.scalar_range.set_limits(settings.vmin, settings.vmax)
+        self.spinner_vcenter.setValue(settings.vcenter)
+        self.spinner_num_samples.setValue(settings.num_samples)
         self.spinner_log_n_lower.setValue(settings.log_n_lower)
         self.spinner_log_n_upper.setValue(settings.log_n_upper)
         self.spinner_opacity_lower.setValue(settings.opacity_lower)
         self.spinner_opacity_upper.setValue(settings.opacity_upper)
+        self.button_color_below.set_current_color(QColor(settings.color_below))
         self.button_color_above.set_current_color(QColor(settings.color_above))
-        self.button_color_above.set_current_color(QColor(settings.color_below))
         return self
 
     def get_settings(self):
-        limits = self.value_range.limits()
+        limits = self.scalar_range.limits()
+        color_below = list(self.button_color_below.current_color.getRgb())
+        color_below[-1] = int(self.spinner_opacity_lower.value() * 255)
+        color_above = list(self.button_color_above.current_color.getRgb())
+        color_above[-1] = int(self.spinner_opacity_upper.value() * 255)
         return AsymmetricDivergentColorLookup.Properties(
             cmap_name=self.combo_cmap_name.currentText(),
             vmin=limits[0], vmax=limits[1],
@@ -174,14 +216,14 @@ class AsymmetricLookupSettingsView(QWidget):
             log_n_upper=self.spinner_log_n_upper.value(),
             opacity_lower=self.spinner_opacity_lower.value(),
             opacity_upper=self.spinner_opacity_upper.value(),
-            color_above=self.button_color_above.current_color,
-            color_below=self.button_color_below.current_color,
+            color_above=color_above,
+            color_below=color_below,
         )
 
 
-class AsymetricColorLookupControls(QObject):
+class ADCLController(QObject):
 
-    def __init__(self, view: AsymmetricLookupSettingsView, model: AsymmetricDivergentColorLookup, parent=None):
+    def __init__(self, view: ADCLSettingsView, model: AsymmetricDivergentColorLookup, parent=None):
         super().__init__(parent)
         self.view = view
         self.model = model
@@ -190,4 +232,5 @@ class AsymetricColorLookupControls(QObject):
 
     def synchronize_settings(self):
         settings = self.view.get_settings()
+
         self.model.set_properties(settings)

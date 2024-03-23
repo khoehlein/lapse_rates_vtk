@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 print(os.getcwd())
@@ -163,7 +164,7 @@ def model_predictions_adaptive_lapse(radius_km: float, use_3d_data=False):
         site_predictions.append(output_per_day)
 
     site_predictions = pd.concat(site_predictions, axis=0)
-    output_path_ = os.path.join(output_path, datetime.utcnow().strftime('%Y%m%d%H%M%S'))
+    output_path_ = os.path.join(output_path, datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S'))
     os.makedirs(output_path_, exist_ok=True)
     with open(os.path.join(output_path_, 'config.json')) as f:
         configs = estimator.get_config_dict()

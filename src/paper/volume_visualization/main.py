@@ -5,11 +5,13 @@ import os
 from typing import List, Union
 
 import numpy as np
+from PyQt5 import QtCore
 from matplotlib import pyplot as plt
 
 from src.model.geometry import Coordinates, WedgeMesh, TriangleMesh, LocationBatch
-from src.paper.color_lookup import AsymmetricDivergentColorLookup
-from src.paper.volume import VolumeVisualization
+from src.paper.volume_visualization.color_lookup import AsymmetricDivergentColorLookup, ADCLController
+from src.paper.volume_visualization.left_side_menu import LeftSideMenu
+from src.paper.volume_visualization.volume import VolumeVisualization, VolumeVisualController
 
 os.environ["QT_API"] = "pyqt5"
 
@@ -23,7 +25,6 @@ import os
 import pandas as pd
 import xarray as xr
 
-import matplotlib as mpl
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data-dir', type=str, required=True)
@@ -176,17 +177,23 @@ class MyMainWindow(MainWindow):
         exitButton.triggered.connect(self.close)
         fileMenu.addAction(exitButton)
 
-        gradient_colors = AsymmetricDivergentColorLookup(
+        self.left_dock_menu = LeftSideMenu(self)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.left_dock_menu)
+
+        self.gradient_colors = AsymmetricDivergentColorLookup(
             AsymmetricDivergentColorLookup.Properties(
                 'coolwarm', -12, 50, -6.5, 256, 2., 2., 1., 1., 'blue', 'red'
             )
         )
+        self.gradient_color_controls = ADCLController(self.left_dock_menu.colormap_settings, self.gradient_colors)
         self.gradient_volume = VolumeVisualization(
             'grad_t', 'Temperature gradient (K/km)',
             VERTICAL_SCALE,
             model_data, terrain_data_o1280,
-            gradient_colors, self.plotter,
+            self.gradient_colors, self.plotter,
         )
+        self.gradient_volume_controls = VolumeVisualController(self.left_dock_menu.volume_vis_settings, self.gradient_volume)
+        self.gradient_volume.draw()
 
         # self.plotter.add_mesh(terrain_visuals.land_surface(), color='k', style='wireframe')
         # self.plotter.add_mesh(terrain_visuals.sea_surface(), color='blue', style='wireframe')

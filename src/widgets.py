@@ -217,6 +217,7 @@ class RangeSpinner(QWidget):
         new_min_value = min(self.min_spinner.value() + self.step, self.global_max)
         if value <= new_min_value:
             self.max_spinner.setValue(new_min_value)
+        self.range_changed.emit(*self.limits())
         return self
 
     def _update_min_spinner(self):
@@ -224,6 +225,7 @@ class RangeSpinner(QWidget):
         new_max_value = max(self.max_spinner.value() - self.step, self.global_min)
         if value >= new_max_value:
             self.min_spinner.setValue(new_max_value)
+        self.range_changed.emit(*self.limits())
         return self
 
     def set_limits(self, min_value: float, max_value: float):
