@@ -12,7 +12,8 @@ from src.model.geometry import Coordinates, WedgeMesh, TriangleMesh, LocationBat
 from src.paper.volume_visualization.color_lookup import AsymmetricDivergentColorLookup, ADCLController
 from src.paper.volume_visualization.left_side_menu import LeftSideMenu
 from src.paper.volume_visualization.volume import VolumeVisualController, VolumeFieldData, \
-    ScalarVolumeVisualization, VolumeProperties, PlotterSlot, ScalingParameters
+    ScalarVolumeVisualization, VolumeProperties, PlotterSlot, ScalingParameters, SceneScalingModel, \
+    SceneScalingController
 
 os.environ["QT_API"] = "pyqt5"
 
@@ -181,6 +182,9 @@ class MyMainWindow(MainWindow):
         self.left_dock_menu = LeftSideMenu(self)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.left_dock_menu)
 
+        self.plotter_scene = SceneScalingModel(parent=self)
+        self.scaling_controls = SceneScalingController(self.left_dock_menu.scaling_settings, self.plotter_scene)
+
         self.gradient_colors = AsymmetricDivergentColorLookup(
             AsymmetricDivergentColorLookup.Properties(
                 'coolwarm', -12, 50, -6.5, 256, 2., 2., 1., 1., 'blue', 'red'
@@ -191,9 +195,10 @@ class MyMainWindow(MainWindow):
         plotter_slot = PlotterSlot(self.plotter, 'Temperature gradient (K/km)')
         self.gradient_volume = ScalarVolumeVisualization(
             gradient_field, self.gradient_colors, VolumeProperties(),
-            plotter_slot, ScalingParameters(4000., 1.)
+            plotter_slot,
         )
         self.gradient_volume_controls = VolumeVisualController(self.left_dock_menu.volume_vis_settings, self.gradient_volume)
+        self.plotter_scene.add_visual(self.gradient_volume)
         self.gradient_volume.show()
 
         # self.plotter.add_mesh(terrain_visuals.land_surface(), color='k', style='wireframe')
