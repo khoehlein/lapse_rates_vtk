@@ -23,7 +23,7 @@ from src.widgets import SelectColorButton
 class VolumeRepresentation(Enum):
     MODEL_LEVELS = 'model_levels'
     DVR = 'dvr'
-    ISO_LEVELS = 'iso_levels'
+    ISO_CONTOURS = 'iso_levels'
 
 
 class InterpolationType(Enum):
@@ -85,6 +85,11 @@ class SurfaceProperties(ActorProperties):
     culling: CullingMethod = CullingMethod.NONE
 
 
+@dataclass
+class IsocontourProperties(SurfaceProperties):
+    contours: ContourParameters = ContourParameters('z_model_levels', 10)
+
+
 class VolumeFieldData(object):
 
     def __init__(self, key: str, field_data: xr.Dataset, terrain_data: xr.Dataset):
@@ -134,9 +139,14 @@ class VolumeFieldData(object):
 
     def get_iso_mesh(self, contour_params: ContourParameters, scale_params: ScalingParameters) -> pv.PolyData:
         mesh = self.get_volume_mesh(scale_params)
-        mesh[contour_params.contour_key] = self.field_data[contour_params.contour_key].values.ravel()
+        contour_key = contour_params.contour_key
+        if contour_key is None:
+            contour_key = self.key
+        if contour_key != self.key:
+            mesh[self.key] = self.field_data[self.key].values.ravel()
+        mesh[contour_key] = self.field_data[contour_key].values.ravel()
         iso_mesh = mesh.contour(
-            scalars=contour_params.contour_key, isosurfaces=contour_params.num_levels, method='contour', compute_scalars=True,
+            scalars=contour_key, isosurfaces=contour_params.num_levels, method='contour', compute_scalars=True,
         )
         iso_mesh.set_active_scalars(self.key)
         return iso_mesh
@@ -171,7 +181,7 @@ class PlotterSlot(object):
         kws = {}
         for field in fields(actor_props):
             field_name = field.name
-            if field_name in ['interpolation_type']:
+            if field_name in ['interpolation_type', 'contours']:
                 continue
             value = getattr(actor_props, field_name)
             if value is None:
@@ -214,6 +224,8 @@ class PlotterSlot(object):
             actor_props = self.actor.prop
             for field in fields(properties):
                 prop_name = field.name
+                if prop_name in ['contours']:
+                    continue
                 value = getattr(properties, prop_name)
                 if value is None:
                     continue
@@ -289,6 +301,31 @@ class DVRRepresentation(VisualRepresentation3d):
         return self
 
 
+class IsocontourRepresentation(VisualRepresentation3d):
+
+    def __init__(self, slot: PlotterSlot, field_data: VolumeFieldData, color_lookup, properties: VolumeProperties = None, scaling: ScalingParameters = None):
+        if properties is None:
+            properties = VolumeProperties()
+        if scaling is None:
+            scaling = ScalingParameters(1., 1.)
+        super().__init__(slot, field_data, scaling, properties, color_lookup)
+
+    def set_properties(self, properties: IsocontourProperties):
+        if properties.contours != self.properties.contours:
+            self.clear(render=False)
+            self.properties = properties
+            self.show()
+        else:
+            super().set_properties(properties)
+        return self
+
+    def show(self, render: bool = True):
+        iso_mesh = self.field_data.get_iso_mesh(self.properties.contours, self.scaling)
+        lookup_table = self.color_lookup.lookup_table
+        self.slot.show_surface_mesh(iso_mesh, lookup_table, self.properties, render=render)
+        return self
+
+
 class ModelLevelRepresentation(VisualRepresentation3d):
 
     def __init__(self, slot: PlotterSlot, field_data: VolumeFieldData, color_lookup, properties: SurfaceProperties = None, scaling: ScalingParameters = None):
@@ -358,6 +395,10 @@ class ScalarVolumeVisualization(QObject):
             self.representation = ModelLevelRepresentation(
                 self.plotter_slot, self.data, self.color_lookup, self.properties, self.scaling
             )
+        elif properties_type == IsocontourProperties:
+            self.representation = IsocontourRepresentation(
+                self.plotter_slot, self.data, self.color_lookup, self.properties, self.scaling
+            )
         else:
             raise NotImplementedError()
         self.representation.show(render=render)
@@ -396,7 +437,8 @@ class ScalarVolumeVisualization(QObject):
     def representation_mode(self):
         return {
             VolumeProperties: VolumeRepresentation.DVR,
-            SurfaceProperties: VolumeRepresentation.MODEL_LEVELS
+            SurfaceProperties: VolumeRepresentation.MODEL_LEVELS,
+            IsocontourProperties: VolumeRepresentation.ISO_CONTOURS,
         }.get(type(self.properties))
 
 
@@ -476,6 +518,11 @@ class SurfaceSettingsView(QWidget):
 
     def __init__(self, parent=None):
         super(SurfaceSettingsView, self).__init__(parent)
+        self.build_handles()
+        self._connect_signals()
+        self._set_layout()
+
+    def build_handles(self):
         self.combo_surface_style = QComboBox(self)
         self.combo_surface_style.addItem('wireframe', SurfaceStyle.WIREFRAME)
         self.combo_surface_style.addItem('surface', SurfaceStyle.SURFACE)
@@ -519,8 +566,6 @@ class SurfaceSettingsView(QWidget):
         self.checkbox_show_edges = QCheckBox(self)
         self.button_edge_color = SelectColorButton()
         self.checkbox_lighting = QCheckBox(self)
-        self._connect_signals()
-        self._set_layout()
 
     def _connect_signals(self):
         self.combo_surface_style.currentTextChanged.connect(self.settings_changed)
@@ -542,6 +587,10 @@ class SurfaceSettingsView(QWidget):
         self.checkbox_lighting.stateChanged.connect(self.settings_changed)
 
     def _set_layout(self):
+        layout = self._build_form_layout()
+        self.setLayout(layout)
+
+    def _build_form_layout(self):
         layout = QFormLayout()
         layout.addRow("Style:", self.combo_surface_style)
         layout.addRow("Culling:", self.combo_culling)
@@ -560,7 +609,7 @@ class SurfaceSettingsView(QWidget):
         layout.addRow("Edge opacity:", self.spinner_edge_opacity)
         layout.addRow("Show edges:", self.checkbox_show_edges)
         layout.addRow("Lighting:", self.checkbox_lighting)
-        self.setLayout(layout)
+        return layout
 
     def apply_settings(self, settings: SurfaceProperties):
         self.combo_surface_style.setCurrentText(settings.style.value)
@@ -602,6 +651,57 @@ class SurfaceSettingsView(QWidget):
         )
 
 
+class IsocontourSettingsView(SurfaceSettingsView):
+
+    def build_handles(self):
+        super().build_handles()
+        self.combo_contour_key = QComboBox(self)
+        self.combo_contour_key.addItems(['z_model_levels', 't', 'grad_t'])
+        self.spinner_num_contours = QSpinBox(self)
+        self.spinner_num_contours.setRange(4, 32)
+
+    def _connect_signals(self):
+        super()._connect_signals()
+        self.combo_contour_key.currentTextChanged.connect(self.settings_changed)
+        self.spinner_num_contours.valueChanged.connect(self.settings_changed)
+
+    def _set_layout(self):
+        layout = self._build_form_layout()
+        layout.addRow('Contour parameter:', self.combo_contour_key)
+        layout.addRow('Num. of contours:', self.spinner_num_contours)
+        self.setLayout(layout)
+
+    def get_settings(self):
+        return IsocontourProperties(
+            self.combo_surface_style.currentData(),
+            self.spinner_line_width.value(),
+            self.checkbox_lines_as_tubes.isChecked(),
+            self.spinner_metallic.value(),
+            self.spinner_roughness.value(),
+            self.spinner_point_size.value(),
+            self.checkbox_points_as_spheres.isChecked(),
+            self.spinner_opacity.value(),
+            self.spinner_ambient.value(),
+            self.spinner_diffuse.value(),
+            self.spinner_specular.value(),
+            self.spinner_specular_power.value(),
+            self.checkbox_show_edges.isChecked(),
+            self.spinner_edge_opacity.value(), self.button_edge_color.current_color.getRgb(),
+            self.checkbox_lighting.isChecked(),self.combo_culling.currentData(),
+            ContourParameters(
+                self.combo_contour_key.currentText(),
+                self.spinner_num_contours.value()
+            )
+        )
+
+    def apply_settings(self, settings: IsocontourProperties):
+        super().apply_settings(settings)
+        contours = settings.contours
+        self.combo_contour_key.setCurrentText(contours.contour_key)
+        self.spinner_num_contours.setValue(contours.num_levels)
+        return self
+
+
 class VolumeVisualSettingsView(QWidget):
 
     settings_changed = pyqtSignal()
@@ -612,13 +712,16 @@ class VolumeVisualSettingsView(QWidget):
         self.combo_representation_type = QComboBox(self)
         self.combo_representation_type.addItem("DVR", VolumeRepresentation.DVR)
         self.combo_representation_type.addItem("model levels", VolumeRepresentation.MODEL_LEVELS)
+        self.combo_representation_type.addItem("isocontours", VolumeRepresentation.ISO_CONTOURS)
         self.representation_views = {
             VolumeRepresentation.DVR: DVRSettingsView(self),
             VolumeRepresentation.MODEL_LEVELS: SurfaceSettingsView(self),
+            VolumeRepresentation.ISO_CONTOURS: IsocontourSettingsView(self)
         }
         self.interface_stack = QStackedLayout()
         self.interface_stack.addWidget(self.representation_views[VolumeRepresentation.DVR])
         self.interface_stack.addWidget(self.representation_views[VolumeRepresentation.MODEL_LEVELS])
+        self.interface_stack.addWidget(self.representation_views[VolumeRepresentation.ISO_CONTOURS])
         self._connect_signals()
         self._set_layout()
 
@@ -645,14 +748,16 @@ class VolumeVisualSettingsView(QWidget):
         return self.interface_stack.currentWidget().get_settings()
 
     def apply_settings(self, settings: Dict[VolumeRepresentation, ActorProperties], use_defaults=False):
+        defaults = {
+            VolumeRepresentation.DVR: VolumeProperties(),
+            VolumeRepresentation.MODEL_LEVELS: SurfaceProperties(),
+            VolumeRepresentation.ISO_CONTOURS: IsocontourProperties()
+        }
         for key in VolumeRepresentation:
             if key in settings:
                 props = settings[key]
             elif use_defaults:
-                props = {
-                    VolumeRepresentation.DVR: VolumeProperties(),
-                    VolumeRepresentation.MODEL_LEVELS: SurfaceProperties(),
-                }.get(key)
+                props = defaults.get(key)
             else:
                 props = None
             if props is not None and key in self.representation_views:
