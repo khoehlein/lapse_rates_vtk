@@ -59,7 +59,7 @@ class MeshDataRepresentation(VolumeDataRepresentation):
 
     def set_scaling(self, scaling: ScalingParameters, render: bool = True):
         self.scaling = scaling
-        if self.mesh is not None:
+        if self.is_visible():
             self.mesh.points[:, -1] = self.volume_data.compute_elevation_coordinate(self.scaling).ravel()
             if render:
                 self.slot.plotter.render()

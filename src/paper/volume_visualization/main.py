@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 
 from src.model.geometry import Coordinates, WedgeMesh, TriangleMesh, LocationBatch
 from src.paper.volume_visualization.color_lookup import AsymmetricDivergentColorLookup, ADCLController, \
-    CustomOpacityProperties
+    CustomOpacityProperties, ECMWFColors
 from src.paper.volume_visualization.left_side_menu import LeftSideMenu
 from src.paper.volume_visualization.reference_grid import ReferenceGridVisualization, ReferenceGridController
 from src.paper.volume_visualization.scaling import SceneScalingModel, SceneScalingController
@@ -202,8 +202,17 @@ class MyMainWindow(MainWindow):
         self.gradient_volume = ScalarVolumeVisualization(
             plotter_slot, gradient_field, self.gradient_colors, VolumeProperties(), visible=False
         )
-        self.gradient_volume_controls = ScalarVolumeController(self.left_dock_menu.gradient_representation_settings, self.gradient_volume)
+        self.gradient_volume_controls = ScalarVolumeController(self.left_dock_menu.gradient_volume_settings, self.gradient_volume)
         self.plotter_scene.add_visual(self.gradient_volume)
+
+        self.temperature_colors = ECMWFColors()
+        temperature_field = VolumeData(model_data, terrain_data_o1280, scalar_key='t')
+        plotter_slot = PlotterSlot(self.plotter, 'Temperature (K)')
+        self.temperature_volume = ScalarVolumeVisualization(
+            plotter_slot, temperature_field, self.temperature_colors, VolumeProperties(), visible=False
+        )
+        self.temperature_volume_controls = ScalarVolumeController(self.left_dock_menu.temperature_volume_settings, self.temperature_volume)
+        self.plotter_scene.add_visual(self.temperature_volume)
 
         self.volume_reference_mesh = ReferenceGridVisualization(
             PlotterSlot(self.plotter), VolumeData(model_data, terrain_data_o1280, scalar_key=None),

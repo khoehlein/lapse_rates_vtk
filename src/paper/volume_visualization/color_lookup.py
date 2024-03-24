@@ -1,5 +1,6 @@
 import math
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any
 
 import numpy as np
@@ -11,6 +12,46 @@ from PyQt5.QtWidgets import QWidget, QComboBox, QDoubleSpinBox, QSpinBox, QVBoxL
     QPushButton, QLabel
 
 from src.widgets import RangeSpinner, SelectColorButton
+
+
+ECMWF_COLORS = [
+    '#ffffff',
+    '#e5e5e5',
+    '#cccccc',
+    '#b2b2b2',
+    '#ad99ad',
+    '#7a667a',
+    '#473347',
+    '#330066',
+    '#59007f',
+    '#7f00ff',
+    '#007fff',
+    '#00ccff',
+    '#00ffff',
+    '#26e599',
+    '#66bf26',
+    '#bfe526',
+    '#ffff7f',
+    '#ffff00',
+    '#ffd900',
+    '#ffb000',
+    '#ff7200',
+    '#ff0000',
+    '#cc0000',
+    '#7f002c',
+    '#cc3d6e',
+    '#ff00ff',
+    '#ff7fff',
+    '#ffbfff',
+    '#e5cce5',
+    '#e5e5e5',
+    '#ffffff'
+]
+
+
+class OutlierColor(Enum):
+    ABOVE = '#fa39fa'
+    BELOW = '#39fafa'
 
 
 class InteractiveColorLookup(QObject):
@@ -36,9 +77,32 @@ class InteractiveColorLookup(QObject):
         raise NotImplementedError()
 
     def set_properties(self, properties: 'InteractiveColorLookup.Properties'):
-        self.props = properties
-        self.update_lookup_table()
-        return self
+        raise NotImplementedError()
+
+
+class ECMWFColors(InteractiveColorLookup):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.cmap = mpl.colors.ListedColormap(
+            ECMWF_COLORS[1:-1]
+        ).with_extremes(over=ECMWF_COLORS[-1], under=ECMWF_COLORS[0])
+        self.samples = bounds = 273 + 28 - 2 * np.arange(len(ECMWF_COLORS) - 1)
+        self.clim = (bounds.min(), bounds.max())
+        self.lookup_table = pv.LookupTable(
+            cmap=self.cmap, scalar_range=self.clim,
+            below_range_color=ECMWF_COLORS[0],
+            above_range_color=ECMWF_COLORS[-1],
+        )
+
+    def update_lookup_table(self):
+        pass
+
+    def get_opacity_function(self):
+        return self.samples, np.ones_like(self.samples)
+
+    def set_properties(self, properties: 'InteractiveColorLookup.Properties'):
+        pass
 
 
 @dataclass

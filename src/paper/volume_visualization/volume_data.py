@@ -12,7 +12,7 @@ class VolumeData(object):
     def __init__(
             self,
             field_data: xr.Dataset, terrain_data: xr.Dataset,
-            scalar_key: str = None, terrain_level_key: str = 'z_surf', model_level_key: str = 'z_model_levels'
+            scalar_key: str = None, terrain_level_key: str = 'z_surf_o1280', model_level_key: str = 'z_model_levels'
     ):
         self.field_data = field_data
         self.terrain_data = terrain_data
@@ -21,7 +21,7 @@ class VolumeData(object):
         self.terrain_level_key = terrain_level_key
         self.model_level_key = model_level_key
 
-        self._terrain_level_elevation = self.terrain_data[self.terrain_level_key].values
+        self._terrain_elevation = self.terrain_data[self.terrain_level_key].values
         z = None
         try:
             z = self.field_data[self.model_level_key].values
@@ -30,7 +30,7 @@ class VolumeData(object):
         if z is None:
             z = self.terrain_data[self.model_level_key].values[None, :]
         assert z is not None
-        self._relative_elevation = z - self._terrain_level_elevation
+        self._relative_elevation = z - self._terrain_elevation
 
     def get_volume_mesh(self, scale_params: ScalingParameters, use_scalar_key: bool = True) -> pv.UnstructuredGrid:
         surface_mesh = TriangleMesh(
@@ -68,7 +68,7 @@ class VolumeData(object):
         z = self._relative_elevation.copy()
         if scale_params.offset_scale != 1.:
             z *= scale_params.offset_scale
-        z += self._terrain_level_elevation
+        z += self._terrain_elevation
         z *= inv_scale
         return z
 

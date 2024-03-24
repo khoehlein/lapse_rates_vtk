@@ -1,9 +1,8 @@
 from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QWidget, QFormLayout, QCheckBox, QVBoxLayout
-from aiosignal import Signal
 
-from src.paper.volume_visualization.plotter_slot import ReferenceGridProperties, PlotterSlot, VolumeProperties
+from src.paper.volume_visualization.plotter_slot import ReferenceGridProperties, PlotterSlot
 from src.paper.volume_visualization.scaling import ScalingParameters
 from src.paper.volume_visualization.volume import SurfaceSettingsView
 from src.paper.volume_visualization.volume_data import VolumeData
