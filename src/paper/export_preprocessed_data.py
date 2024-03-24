@@ -139,8 +139,8 @@ def main():
 
     bbox = DomainBoundingBox(DEFAULT_DOMAIN)
 
-    # station_data = extract_station_data(bbox)
-    # station_data.to_parquet(os.path.join(output_path, 'station_data_2021121906.parquet'))
+    station_data = extract_station_data(bbox)
+    station_data.to_parquet(os.path.join(output_path, 'station_data_2021121906.parquet'))
 
     mesh = OctahedralGrid(1280).get_mesh_for_subdomain(bbox)
     node_ids = mesh.nodes.source_reference
@@ -152,12 +152,12 @@ def main():
     model_data = extract_model_data(node_ids)
     model_data.to_netcdf(os.path.join(output_path, 'model_data_2021121906_o1280.nc'))
 
-    # mesh = OctahedralGrid(8000).get_mesh_for_subdomain(bbox)
-    # node_ids = mesh.nodes.source_reference
-    # triangles = mesh.vertices
-    #
-    # surface_data = extract_terrain_data(node_ids, triangles, paths_o8000)
-    # surface_data.to_netcdf(os.path.join(output_path, 'terrain_data_o8000.nc'))
+    mesh = OctahedralGrid(8000).get_mesh_for_subdomain(bbox)
+    node_ids = mesh.nodes.source_reference
+    triangles = mesh.vertices
+
+    surface_data = extract_terrain_data(node_ids, triangles, paths_o8000)
+    surface_data.to_netcdf(os.path.join(output_path, 'terrain_data_o8000.nc'))
 
     print('Done')
 
