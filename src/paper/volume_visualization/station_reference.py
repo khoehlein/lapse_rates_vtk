@@ -43,7 +43,7 @@ class StationSiteVisualization(StationDataVisualization):
     def set_scaling(self, scaling: ScalingParameters, render: bool = True):
         self.scaling = scaling
         if self.is_visible():
-            self.mesh.points[:, -1] = self.volume_data.compute_station_elevation(self.scaling).ravel()
+            self.mesh.points[:, -1] = self.station_data.compute_station_elevation(self.scaling).ravel()
             if render:
                 self.slot.plotter.render()
         return self

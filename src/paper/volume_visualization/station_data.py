@@ -3,7 +3,7 @@ import numpy as np
 import xarray as xr
 import pyvista as pv
 
-from src.model.geometry import TriangleMesh, Coordinates
+from src.model.geometry import TriangleMesh, Coordinates, LocationBatch
 from src.paper.volume_visualization.scaling import ScalingParameters
 
 
@@ -23,10 +23,7 @@ class StationData(object):
         self._compute_terrain_altitude()
 
     def _compute_terrain_altitude(self):
-        longitude = self.terrain_data['longitude'].values
-        latitude = self.terrain_data['latitude'].values
-        terrain_coords = np.stack([longitude, latitude, np.zeros_like(longitude)], axis=-1)
-        terrain_mesh = TriangleMesh(terrain_coords, self.terrain_data['triangles'].values).to_polydata()
+        terrain_mesh = TriangleMesh(LocationBatch(Coordinates.from_xarray(self.terrain_data)), self.terrain_data['triangles'].values).to_polydata()
         terrain_mesh['elevation'] = self.terrain_data['z_surf'].values.ravel()
         station_sites = pv.PolyData(self._points.copy())
         self._terrain_elevation = np.asarray(station_sites.sample(terrain_mesh)['elevation'])
@@ -49,7 +46,7 @@ class StationData(object):
         points = self._points.copy()
         z = self.compute_station_elevation(scale_params)
         points[:, -1] = z
-        return pv.Polydata(points)
+        return pv.PolyData(points)
 
     def get_station_reference(self, scale_parameters: ScalingParameters):
         points = np.tile(self._points, (2, 1))

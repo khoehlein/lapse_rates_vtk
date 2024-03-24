@@ -111,7 +111,9 @@ def extract_model_data(node_ids):
     model_data = xr.open_dataset("C:\\Users\\kevin\\data\\ECMWF\\HRES_Model_Level_temp_20211219.grib").isel(time=0, step=6,
                                                                                                 values=node_ids)
     model_data = model_data.assign({
-        'z_model_levels': (['hybrid', 'values'], z_model_levels)
+        'z_model_levels': (['hybrid', 'values'], z_model_levels),
+        'latitude_3d': (['hybrid', 'values'], np.tile(model_data['latitude'].values[None, :], (20, 1))),
+        'longitude_3d': (['hybrid', 'values'], np.tile(model_data['longitude'].values[None, :], (20, 1))),
     })
     z_model_levels = model_data['z_model_levels']
     t = model_data['t']

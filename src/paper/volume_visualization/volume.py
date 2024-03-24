@@ -437,7 +437,7 @@ class IsocontourSettingsView(SurfaceSettingsView):
     def build_handles(self):
         super().build_handles()
         self.combo_contour_key = QComboBox(self)
-        self.combo_contour_key.addItems(['z_model_levels', 't', 'grad_t'])
+        self.combo_contour_key.addItems(['z_model_levels', 't', 'grad_t', 'latitude_3d', 'longitude_3d'])
         self.spinner_num_contours = QSpinBox(self)
         self.spinner_num_contours.setRange(4, 128)
 

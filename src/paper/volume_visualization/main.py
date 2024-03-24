@@ -12,8 +12,11 @@ from src.model.geometry import Coordinates, WedgeMesh, TriangleMesh, LocationBat
 from src.paper.volume_visualization.color_lookup import AsymmetricDivergentColorLookup, ADCLController, \
     CustomOpacityProperties, ECMWFColors
 from src.paper.volume_visualization.left_side_menu import LeftSideMenu
+from src.paper.volume_visualization.plotter_slot import ReferenceGridProperties, SurfaceStyle
 from src.paper.volume_visualization.reference_grid import ReferenceGridVisualization, ReferenceGridController
 from src.paper.volume_visualization.scaling import SceneScalingModel, SceneScalingController
+from src.paper.volume_visualization.station_data import StationData
+from src.paper.volume_visualization.station_reference import StationSiteVisualization, StationReferenceVisualization
 from src.paper.volume_visualization.volume import ScalarVolumeController, VolumeData, \
     ScalarVolumeVisualization, VolumeProperties, PlotterSlot
 
@@ -179,6 +182,9 @@ class MyMainWindow(MainWindow):
         # simple menu to demo functions
         mainMenu = self.menuBar()
         fileMenu = mainMenu.addMenu('File')
+        clear_scalar_bars_button = QtWidgets.QAction('Clear scalar bars', self)
+        clear_scalar_bars_button.triggered.connect(self.clear_scalar_bars)
+        fileMenu.addAction(clear_scalar_bars_button)
         exitButton = QtWidgets.QAction('Exit', self)
         exitButton.setShortcut('Ctrl+Q')
         exitButton.triggered.connect(self.close)
@@ -232,17 +238,24 @@ class MyMainWindow(MainWindow):
         self.surface_controls_o8000 = ReferenceGridController(self.left_dock_menu.surface_settings_o8000, self.surface_reference_o8000)
         self.plotter_scene.add_visual(self.surface_reference_o8000)
 
+        station_data_ = StationData(station_data, terrain_data_o1280)
+        self.station_sites = StationSiteVisualization(
+            PlotterSlot(self.plotter), station_data_, ReferenceGridProperties(point_size=10, render_points_as_spheres=True)
+        )
+        self.plotter_scene.add_visual(self.station_sites)
+        self.station_sites.show()
 
-
-
-        # self.plotter.add_mesh(terrain_visuals.land_surface(), color='k', style='wireframe')
-        # self.plotter.add_mesh(terrain_visuals.sea_surface(), color='blue', style='wireframe')
-        self.plotter.add_mesh(station_visuals.station_sites(), color='red', render_points_as_spheres=True)
-        # self.plotter.add_mesh(model_visuals.surface_temperatures(), scalars='t2m', render_points_as_spheres=True)
-        # self.plotter.add_mesh_slice(model_visuals.temperature_gradients(), cmap=cmap_gradient)
+        self.station_refs = StationReferenceVisualization(
+            PlotterSlot(self.plotter), station_data_, ReferenceGridProperties(show_edges=True, style=SurfaceStyle.WIREFRAME)
+        )
+        self.plotter_scene.add_visual(self.station_refs)
+        self.station_refs.show()
 
         if show:
             self.show()
+
+    def clear_scalar_bars(self):
+        self.plotter.scalar_bars.clear()
 
 
 if __name__ == '__main__':
