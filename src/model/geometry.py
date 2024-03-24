@@ -200,7 +200,7 @@ class TriangleMesh(object):
         return faces
 
     def to_polydata(self) -> pv.PolyData:
-        faces = self.get_faces()
+        faces = self.get_faces(add_prefix=True)
         points = self.get_node_positions()
         return pv.PolyData(points, faces)
 

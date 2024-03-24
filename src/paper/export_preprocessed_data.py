@@ -84,14 +84,14 @@ def extract_terrain_data(node_ids, triangles, paths):
     safe_bbox = DomainBoundingBox(DEFAULT_DOMAIN.plus_safety_margin())
     mesh_o1280 = OctahedralGrid(1280).get_mesh_for_subdomain(safe_bbox)
     nodes_o1280 = mesh_o1280.source_reference
-    z_surf_o1280 = xr.open_dataset("/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib").z.isel(values=nodes_o1280)
+    z_surf_o1280 = xr.open_dataset("C:\\Users\\kevin\\data\\ECMWF\\HRES_orog_o1279_2021-2022.grib").z.isel(values=nodes_o1280)
     mesh_o1280 = mesh_o1280.to_polydata()
     mesh_o1280['elevation'] = z_surf_o1280.values.ravel()
 
     mesh_other = TriangleMesh(LocationBatch(Coordinates.from_xarray(z_surf)), triangles).to_polydata()
 
-    interpolated = mesh_o1280.sample(mesh_other)
-    interpolated = np.asarray(interpolated)
+    interpolated = mesh_other.sample(mesh_o1280)
+    interpolated = np.asarray(interpolated['elevation'])
 
     terrain_data = terrain_data.assign({
         'node_id': ('values', node_ids),
@@ -105,10 +105,10 @@ def extract_terrain_data(node_ids, triangles, paths):
 
 
 def extract_model_data(node_ids):
-    t2m = xr.open_dataset("/mnt/ssd4tb/ECMWF/HRES_2m_temp_20211219.grib").t2m.isel(time=0, step=6, values=node_ids)
-    z_surf = xr.open_dataset("/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib").z.isel(values=node_ids)
+    t2m = xr.open_dataset("C:\\Users\\kevin\\data\\ECMWF\\HRES_2m_temp_20211219.grib").t2m.isel(time=0, step=6, values=node_ids)
+    z_surf = xr.open_dataset("C:\\Users\\kevin\\data\\ECMWF\\HRES_orog_o1279_2021-2022.grib").z.isel(values=node_ids)
     z_model_levels = compute_level_heights(z_surf, t2m)
-    model_data = xr.open_dataset("/mnt/ssd4tb/ECMWF/HRES_Model_Level_temp_20211219.grib").isel(time=0, step=6,
+    model_data = xr.open_dataset("C:\\Users\\kevin\\data\\ECMWF\\HRES_Model_Level_temp_20211219.grib").isel(time=0, step=6,
                                                                                                 values=node_ids)
     model_data = model_data.assign({
         'z_model_levels': (['hybrid', 'values'], z_model_levels)
@@ -124,23 +124,23 @@ def extract_model_data(node_ids):
 
 
 def main():
-    output_path = '/mnt/ssd4tb/ECMWF/Vis/detailed_alps'
+    output_path = 'C:\\Users\\kevin\\data\\ECMWF\\Vis/detailed_alps'
     os.makedirs(output_path, exist_ok=True)
 
     paths_o1280 = {
-        'lsm': "/mnt/ssd4tb/ECMWF/LSM_HRES_Sep2022.grib",
-        'z': "/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib"
+        'lsm': "C:\\Users\\kevin\\data\\ECMWF\\LSM_HRES_Sep2022.grib",
+        'z': "C:\\Users\\kevin\\data\\ECMWF\\HRES_orog_o1279_2021-2022.grib"
     }
 
     paths_o8000 = {
-        'lsm': "/mnt/ssd4tb/ECMWF/lsm_from_watermask.nc",
-        'z': "/mnt/ssd4tb/ECMWF/orog_reduced_gaussian_grid_1km.grib"
+        'lsm': "C:\\Users\\kevin\\data\\ECMWF\\lsm_from_watermask.nc",
+        'z': "C:\\Users\\kevin\\data\\ECMWF\\orog_reduced_gaussian_grid_1km.grib"
     }
 
     bbox = DomainBoundingBox(DEFAULT_DOMAIN)
-
-    station_data = extract_station_data(bbox)
-    station_data.to_parquet(os.path.join(output_path, 'station_data_2021121906.parquet'))
+    #
+    # station_data = extract_station_data(bbox)
+    # station_data.to_parquet(os.path.join(output_path, 'station_data_2021121906.parquet'))
 
     mesh = OctahedralGrid(1280).get_mesh_for_subdomain(bbox)
     node_ids = mesh.nodes.source_reference
