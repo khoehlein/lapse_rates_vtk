@@ -5,8 +5,6 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QWidget, QComboBox, QDoubleSpinBox, QPushButton, QVBoxLayout, QFormLayout, QLabel, \
     QCheckBox, QStackedLayout
 from pyvista.plotting.opts import InterpolationType
-
-from src.interaction.background_color.view import SelectColorButton
 from src.model.visualization.mesh_geometry import ShadingType, LightingProperties, WireframeProperties, \
     TranslucentSurfaceProperties, PointsSurfaceProperties
 

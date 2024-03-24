@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from src.model.geometry import OctahedralGrid, DomainLimits, DomainBoundingBox, LocationBatch, Coordinates
+from src.model.geometry import OctahedralGrid, DomainLimits, DomainBoundingBox, LocationBatch, Coordinates, TriangleMesh
 from src.model.level_heights import compute_standard_surface_pressure, compute_full_level_pressure, \
     compute_approximate_level_height
 import networkx as nx
@@ -80,10 +80,24 @@ def extract_terrain_data(node_ids, triangles, paths):
     })
     z_wm_med = df.groupby('id')['z'].median()
     z_watermass = z_wm_med.loc[watermass_id].values
+
+    safe_bbox = DomainBoundingBox(DEFAULT_DOMAIN.plus_safety_margin())
+    mesh_o1280 = OctahedralGrid(1280).get_mesh_for_subdomain(safe_bbox)
+    nodes_o1280 = mesh_o1280.source_reference
+    z_surf_o1280 = xr.open_dataset("/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib").z.isel(values=nodes_o1280)
+    mesh_o1280 = mesh_o1280.to_polydata()
+    mesh_o1280['elevation'] = z_surf_o1280.values.ravel()
+
+    mesh_other = TriangleMesh(LocationBatch(Coordinates.from_xarray(z_surf)), triangles).to_polydata()
+
+    interpolated = mesh_o1280.sample(mesh_other)
+    interpolated = np.asarray(interpolated)
+
     terrain_data = terrain_data.assign({
         'node_id': ('values', node_ids),
         'watermass_id': ('values', watermass_id),
         'z_surf': ('values', z_surf.values),
+        'z_surf_o1280': ('values', interpolated),
         'z_watermass': ('values', z_watermass),
         'triangles': (['mesh_cell', 'vertex'], triangles)
     })

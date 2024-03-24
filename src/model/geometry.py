@@ -255,6 +255,9 @@ class DomainLimits(object):
     min_longitude: float
     max_longitude: float
 
+    def plus_safety_margin(self):
+        return DomainLimits(self.min_latitude - 0.5, self.max_latitude + 0.5, self.min_longitude - 0.5, self.max_latitude + 0.5)
+
 
 class DomainBoundingBox(object):
 

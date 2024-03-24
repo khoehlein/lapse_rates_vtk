@@ -9,11 +9,13 @@ from PyQt5 import QtCore
 from matplotlib import pyplot as plt
 
 from src.model.geometry import Coordinates, WedgeMesh, TriangleMesh, LocationBatch
-from src.paper.volume_visualization.color_lookup import AsymmetricDivergentColorLookup, ADCLController
+from src.paper.volume_visualization.color_lookup import AsymmetricDivergentColorLookup, ADCLController, \
+    CustomOpacityProperties
 from src.paper.volume_visualization.left_side_menu import LeftSideMenu
-from src.paper.volume_visualization.volume import VolumeVisualController, VolumeFieldData, \
-    ScalarVolumeVisualization, VolumeProperties, PlotterSlot, ScalingParameters, SceneScalingModel, \
-    SceneScalingController
+from src.paper.volume_visualization.reference_grid import ReferenceGridVisualization, ReferenceGridController
+from src.paper.volume_visualization.scaling import SceneScalingModel, SceneScalingController
+from src.paper.volume_visualization.volume import ScalarVolumeController, VolumeData, \
+    ScalarVolumeVisualization, VolumeProperties, PlotterSlot
 
 os.environ["QT_API"] = "pyqt5"
 
@@ -151,6 +153,9 @@ terrain_visuals = TerrainVisuals(terrain_data_o1280)
 station_visuals = StationVisuals(station_data)
 model_visuals = ModelVisuals(model_data, terrain_data_o1280)
 
+terrain_data_o8000 = xr.open_dataset(os.path.join(DATA_DIR, 'terrain_data_o8000.nc'))
+coords_o8000 = Coordinates.from_xarray(terrain_data_o8000)
+
 
 class MyMainWindow(MainWindow):
 
@@ -163,8 +168,8 @@ class MyMainWindow(MainWindow):
 
         # add the pyvista interactor object
         self.plotter: pv.Plotter = QtInteractor(self.frame)
-        self.plotter.enable_anti_aliasing(multi_samples=8)
-        self.plotter.enable_depth_peeling()
+        self.plotter.enable_anti_aliasing(multi_samples=4)
+        self.plotter.enable_depth_peeling(32)
         vlayout.addWidget(self.plotter.interactor)
         self.signal_close.connect(self.plotter.close)
 
@@ -187,19 +192,39 @@ class MyMainWindow(MainWindow):
 
         self.gradient_colors = AsymmetricDivergentColorLookup(
             AsymmetricDivergentColorLookup.Properties(
-                'coolwarm', -12, 50, -6.5, 256, 2., 2., 1., 1., 'blue', 'red'
+                'coolwarm', -12, 50, -6.5, 256, 'blue', 'red',
+                CustomOpacityProperties()
             )
         )
-        self.gradient_color_controls = ADCLController(self.left_dock_menu.colormap_settings, self.gradient_colors)
-        gradient_field = VolumeFieldData('grad_t', model_data, terrain_data_o1280)
+        self.gradient_color_controls = ADCLController(self.left_dock_menu.gradient_color_settings, self.gradient_colors)
+        gradient_field = VolumeData(model_data, terrain_data_o1280, scalar_key='grad_t')
         plotter_slot = PlotterSlot(self.plotter, 'Temperature gradient (K/km)')
         self.gradient_volume = ScalarVolumeVisualization(
-            gradient_field, self.gradient_colors, VolumeProperties(),
-            plotter_slot,
+            plotter_slot, gradient_field, self.gradient_colors, VolumeProperties(), visible=False
         )
-        self.gradient_volume_controls = VolumeVisualController(self.left_dock_menu.volume_vis_settings, self.gradient_volume)
+        self.gradient_volume_controls = ScalarVolumeController(self.left_dock_menu.gradient_representation_settings, self.gradient_volume)
         self.plotter_scene.add_visual(self.gradient_volume)
-        self.gradient_volume.show()
+
+        self.volume_reference_mesh = ReferenceGridVisualization(
+            PlotterSlot(self.plotter), VolumeData(model_data, terrain_data_o1280, scalar_key=None),
+        )
+        self.volume_mesh_controls = ReferenceGridController(self.left_dock_menu.volume_mesh_settings, self.volume_reference_mesh)
+        self.plotter_scene.add_visual(self.volume_reference_mesh)
+
+        self.surface_reference_o1280 = ReferenceGridVisualization(
+            PlotterSlot(self.plotter), VolumeData(model_data, terrain_data_o1280, scalar_key=None, model_level_key='z_surf'),
+        )
+        self.surface_controls_o1280 = ReferenceGridController(self.left_dock_menu.surface_settings_o1280, self.surface_reference_o1280)
+        self.plotter_scene.add_visual(self.surface_reference_o1280)
+
+        self.surface_reference_o8000 = ReferenceGridVisualization(
+            PlotterSlot(self.plotter), VolumeData(model_data, terrain_data_o8000, scalar_key=None, model_level_key='z_surf'),
+        )
+        self.surface_controls_o8000 = ReferenceGridController(self.left_dock_menu.surface_settings_o8000, self.surface_reference_o8000)
+        self.plotter_scene.add_visual(self.surface_reference_o8000)
+
+
+
 
         # self.plotter.add_mesh(terrain_visuals.land_surface(), color='k', style='wireframe')
         # self.plotter.add_mesh(terrain_visuals.sea_surface(), color='blue', style='wireframe')
