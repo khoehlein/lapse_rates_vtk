@@ -41,6 +41,7 @@ class LeftSideMenu(QDockWidget):
         self.model_data_tabs = QTabWidget(container)
         self._build_gradient_volume_tab()
         self._build_temperature_volume_tab()
+        self._build_t2m_volume_tab()
         layout = QVBoxLayout()
         layout.addWidget(self.model_data_tabs)
         layout.addStretch()
@@ -74,13 +75,23 @@ class LeftSideMenu(QDockWidget):
 
     def _build_temperature_volume_tab(self):
         self.temperature_volume_settings = ScalarVolumeSettingsView(self.scroll_area_contents)
-        gradient_tab = QWidget(self.model_data_tabs)
-        layout = QVBoxLayout(gradient_tab)
+        temperature_tab = QWidget(self.model_data_tabs)
+        layout = QVBoxLayout(temperature_tab)
         layout.addWidget(QLabel('Volume properties'))
         layout.addWidget(self.temperature_volume_settings)
         layout.addStretch()
-        gradient_tab.setLayout(layout)
-        self.model_data_tabs.addTab(gradient_tab, 'Temperature')
+        temperature_tab.setLayout(layout)
+        self.model_data_tabs.addTab(temperature_tab, 'T')
+
+    def _build_t2m_volume_tab(self):
+        self.t2m_volume_settings = ScalarVolumeSettingsView(parent=self.scroll_area_contents, use_dvr=False, use_contours=False)
+        t2m_tab = QWidget(self.model_data_tabs)
+        layout = QVBoxLayout(t2m_tab)
+        layout.addWidget(QLabel('Volume properties'))
+        layout.addWidget(self.t2m_volume_settings)
+        layout.addStretch()
+        t2m_tab.setLayout(layout)
+        self.model_data_tabs.addTab(t2m_tab, 'T2m')
 
     def _build_volume_grid_tab(self):
         self.volume_mesh_settings = ReferenceGridSettingsView(self.scroll_area_contents)

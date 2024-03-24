@@ -489,21 +489,24 @@ class ScalarVolumeSettingsView(QWidget):
     representation_changed = pyqtSignal()
     visibility_changed = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, use_dvr=True, use_model_levels=True, use_contours=True, parent=None):
         super().__init__(parent)
         self.combo_representation_type = QComboBox(self)
-        self.combo_representation_type.addItem("DVR", VolumeRepresentationMode.DVR)
-        self.combo_representation_type.addItem("model levels", VolumeRepresentationMode.MODEL_LEVELS)
-        self.combo_representation_type.addItem("isocontours", VolumeRepresentationMode.ISO_CONTOURS)
-        self.representation_views = {
-            VolumeRepresentationMode.DVR: DVRSettingsView(self),
-            VolumeRepresentationMode.MODEL_LEVELS: SurfaceSettingsView(self),
-            VolumeRepresentationMode.ISO_CONTOURS: IsocontourSettingsView(self)
-        }
         self.interface_stack = QStackedLayout()
-        self.interface_stack.addWidget(self.representation_views[VolumeRepresentationMode.DVR])
-        self.interface_stack.addWidget(self.representation_views[VolumeRepresentationMode.MODEL_LEVELS])
-        self.interface_stack.addWidget(self.representation_views[VolumeRepresentationMode.ISO_CONTOURS])
+        self.representation_views = {}
+        if use_dvr:
+            self.combo_representation_type.addItem("DVR", VolumeRepresentationMode.DVR)
+            self.representation_views[VolumeRepresentationMode.DVR] = DVRSettingsView(self)
+            self.interface_stack.addWidget(self.representation_views[VolumeRepresentationMode.DVR])
+        if use_model_levels:
+            self.combo_representation_type.addItem("model levels", VolumeRepresentationMode.MODEL_LEVELS)
+            self.representation_views[VolumeRepresentationMode.MODEL_LEVELS] = SurfaceSettingsView(self)
+            self.interface_stack.addWidget(self.representation_views[VolumeRepresentationMode.MODEL_LEVELS])
+        if use_contours:
+            self.combo_representation_type.addItem("isocontours", VolumeRepresentationMode.ISO_CONTOURS)
+            self.representation_views[VolumeRepresentationMode.ISO_CONTOURS] = IsocontourSettingsView(self)
+            self.interface_stack.addWidget(self.representation_views[VolumeRepresentationMode.ISO_CONTOURS])
+        assert len(self.representation_views)
         self.checkbox_visible = QCheckBox(self)
         self.checkbox_visible.setChecked(True)
         self.checkbox_visible.setText('show')

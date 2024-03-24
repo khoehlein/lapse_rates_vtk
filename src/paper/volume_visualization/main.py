@@ -12,7 +12,7 @@ from src.model.geometry import Coordinates, WedgeMesh, TriangleMesh, LocationBat
 from src.paper.volume_visualization.color_lookup import AsymmetricDivergentColorLookup, ADCLController, \
     CustomOpacityProperties, ECMWFColors
 from src.paper.volume_visualization.left_side_menu import LeftSideMenu
-from src.paper.volume_visualization.plotter_slot import ReferenceGridProperties, SurfaceStyle
+from src.paper.volume_visualization.plotter_slot import ReferenceGridProperties, SurfaceStyle, SurfaceProperties
 from src.paper.volume_visualization.reference_grid import ReferenceGridVisualization, ReferenceGridController
 from src.paper.volume_visualization.scaling import SceneScalingModel, SceneScalingController
 from src.paper.volume_visualization.station_data import StationData
@@ -204,7 +204,7 @@ class MyMainWindow(MainWindow):
         )
         self.gradient_color_controls = ADCLController(self.left_dock_menu.gradient_color_settings, self.gradient_colors)
         gradient_field = VolumeData(model_data, terrain_data_o1280, scalar_key='grad_t')
-        plotter_slot = PlotterSlot(self.plotter, 'Temperature gradient (K/km)')
+        plotter_slot = PlotterSlot(self.plotter, 'T gradient (K/km)')
         self.gradient_volume = ScalarVolumeVisualization(
             plotter_slot, gradient_field, self.gradient_colors, VolumeProperties(), visible=False
         )
@@ -213,12 +213,22 @@ class MyMainWindow(MainWindow):
 
         self.temperature_colors = ECMWFColors()
         temperature_field = VolumeData(model_data, terrain_data_o1280, scalar_key='t')
-        plotter_slot = PlotterSlot(self.plotter, 'Temperature (K)')
+        plotter_slot = PlotterSlot(self.plotter, 'T (K)')
         self.temperature_volume = ScalarVolumeVisualization(
             plotter_slot, temperature_field, self.temperature_colors, VolumeProperties(), visible=False
         )
         self.temperature_volume_controls = ScalarVolumeController(self.left_dock_menu.temperature_volume_settings, self.temperature_volume)
         self.plotter_scene.add_visual(self.temperature_volume)
+
+        self.t2m_colors = ECMWFColors()
+        temperature_field = VolumeData(model_data, terrain_data_o1280, scalar_key='t2m', model_level_key='z_surf')
+        plotter_slot = PlotterSlot(self.plotter, 'T2m (K)')
+        self.t2m_volume = ScalarVolumeVisualization(
+            plotter_slot, temperature_field, self.t2m_colors, SurfaceProperties(), visible=False
+        )
+        self.t2m_volume_controls = ScalarVolumeController(self.left_dock_menu.t2m_volume_settings,
+                                                                  self.t2m_volume)
+        self.plotter_scene.add_visual(self.t2m_volume)
 
         self.volume_reference_mesh = ReferenceGridVisualization(
             PlotterSlot(self.plotter), VolumeData(model_data, terrain_data_o1280, scalar_key=None),
