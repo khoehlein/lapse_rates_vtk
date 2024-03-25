@@ -1,7 +1,7 @@
 import numpy as np
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QWidget, QCheckBox, QComboBox, QPushButton, QFormLayout, QVBoxLayout, QLabel, QDateTimeEdit, \
+from PyQt5.QtWidgets import QWidget, QCheckBox, QComboBox, QPushButton, QFormLayout, QVBoxLayout, QLabel, \
     QSpinBox, QDoubleSpinBox, QHBoxLayout
 
 from src.widgets import SelectColorButton
@@ -79,11 +79,13 @@ class PlotterSettingsView(QWidget):
         self.solar_longitude = QDoubleSpinBox(self)
         self.solar_longitude.setMinimum(-180.)
         self.solar_longitude.setMaximum(180.)
+        self.solar_longitude.setValue(9.)
         self.solar_longitude.setPrefix('lon: ')
         self.solar_longitude.valueChanged.connect(self.on_solar_location_changed)
         self.solar_latitude = QDoubleSpinBox(self)
         self.solar_latitude.setMinimum(-90.)
         self.solar_latitude.setMaximum(90.)
+        self.solar_latitude.setValue(45.)
         self.solar_latitude.setPrefix('lat: ')
         self.solar_latitude.valueChanged.connect(self.on_solar_location_changed)
         self._set_layout()
@@ -91,7 +93,6 @@ class PlotterSettingsView(QWidget):
     def on_solar_timestamp_changed(self):
         date = np.datetime64('2020-01-01T00', 'h')
         date = date + (24 * self.utc_day.value() + self.utc_hour.value()) * np.timedelta64(1, 'h')
-        print(date)
         self.solar_timestamp_changed.emit(date)
 
     def on_solar_location_changed(self):

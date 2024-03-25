@@ -108,11 +108,11 @@ class StationSiteProperties(SurfaceProperties):
 
 @dataclass(init=False)
 class StationSiteReferenceProperties(StationSiteProperties):
-    color: Any = pv.global_theme.color
+    color: Any = pv.global_theme.color.int_rgb
 
     def __init__(
             self,
-            color: Any = pv.global_theme.color,
+            color: Any = pv.global_theme.color.int_rgb,
             metallic: float = pv.global_theme.lighting_params.metallic,
             roughness: float = pv.global_theme.lighting_params.roughness,
             point_size: float = pv.global_theme.point_size,
@@ -163,11 +163,11 @@ class StationOnTerrainProperties(SurfaceProperties):
 
 @dataclass(init=False)
 class StationOnTerrainReferenceProperties(StationOnTerrainProperties):
-    color: Any = pv.global_theme.color
+    color: Any = pv.global_theme.color.int_rgb
 
     def __init__(
             self,
-            color: Any = pv.global_theme.color,
+            color: Any = pv.global_theme.color.int_rgb,
             line_width: float = pv.global_theme.line_width,
             render_lines_as_tubes: bool = pv.global_theme.render_lines_as_tubes,
             metallic: float = pv.global_theme.lighting_params.metallic,
@@ -177,11 +177,9 @@ class StationOnTerrainReferenceProperties(StationOnTerrainProperties):
             diffuse: float = pv.global_theme.lighting_params.diffuse,
             specular: float = pv.global_theme.lighting_params.specular,
             specular_power: float = pv.global_theme.lighting_params.specular_power,
-            edge_opacity: float = pv.global_theme.edge_opacity,
-            edge_color: Any = pv.global_theme.edge_color.int_rgb,
             lighting: bool = pv.global_theme.lighting,
     ):
-        super().__init__(line_width, render_lines_as_tubes, metallic, roughness, opacity, ambient, diffuse, specular, specular_power, edge_opacity, edge_color, lighting)
+        super().__init__(line_width, render_lines_as_tubes, metallic, roughness, opacity, ambient, diffuse, specular, specular_power, lighting)
         self.color = color
 
 

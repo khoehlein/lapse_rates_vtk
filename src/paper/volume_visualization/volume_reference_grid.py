@@ -119,6 +119,7 @@ class ReferenceGridController(QObject):
         self.view.apply_visibility(self.model.is_visible())
 
     def on_visibility_changed(self):
+
         self.model.set_visible(self.view.get_visibility())
 
     def on_settings_changed(self):

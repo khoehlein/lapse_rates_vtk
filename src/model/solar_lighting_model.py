@@ -36,7 +36,6 @@ class SolarLightingModel(object):
         output = pvlib.solarposition.get_solarposition(datetime_index, self.location[1], self.location[0], method=self.method)
         self.elevation = output['elevation'][0]
         self.azimuth = (90 - output['azimuth'][0]) % 360
-        print(self.elevation, self.azimuth)
 
     def set_method(self, method: str):
         self.method = method

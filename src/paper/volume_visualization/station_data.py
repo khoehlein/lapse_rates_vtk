@@ -35,7 +35,7 @@ class StationData(object):
     def _compute_effective_gradients(self):
         z_diff = self.station_data['elevation_difference'].values
         z_diff = np.sign(z_diff) * (np.abs(z_diff) + 1)
-        self.station_data['grad_t'] = self.station_data['difference'] / z_diff
+        self.station_data['grad_t'] = 1000. * self.station_data['difference'] / z_diff
 
     def compute_station_elevation(self, scale_params: ScalingParameters):
         inv_scale = 1.0 / scale_params.scale

@@ -8,13 +8,15 @@ import numpy as np
 from PyQt5 import QtCore
 from matplotlib import pyplot as plt
 
+from src.interaction.plotter_controls.controller import PlotterController
 from src.model.geometry import Coordinates, WedgeMesh, TriangleMesh, LocationBatch
 from src.paper.volume_visualization.color_lookup import AsymmetricDivergentColorLookup, ADCLController, \
     CustomOpacityProperties, ECMWFColors
-from src.paper.volume_visualization.left_side_menu import LeftSideMenu
+from src.paper.volume_visualization.left_side_menu import RightDockMenu
 from src.paper.volume_visualization.multi_method_visualization import MultiMethodVisualizationController
-from src.paper.volume_visualization.plotter_slot import SurfaceReferenceProperties, SurfaceStyle, SurfaceProperties, \
-    PlotterSlot, VolumeProperties, StationSiteProperties
+from src.paper.volume_visualization.plotter_slot import SurfaceProperties, \
+    PlotterSlot, VolumeProperties, StationSiteProperties, StationSiteReferenceProperties, \
+    StationOnTerrainReferenceProperties
 from src.paper.volume_visualization.station import StationScalarVisualization
 from src.paper.volume_visualization.volume import VolumeScalarVisualization
 from src.paper.volume_visualization.volume_data import VolumeData
@@ -85,30 +87,20 @@ class MyMainWindow(MainWindow):
         exitButton.triggered.connect(self.close)
         fileMenu.addAction(exitButton)
 
-        self.left_dock_menu = LeftSideMenu(self)
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.left_dock_menu)
+        self.right_dock_menu = RightDockMenu(self)
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.right_dock_menu)
+
+        self.plotter_controls = PlotterController(self.right_dock_menu.plotter_settings, self.plotter, self)
 
         self.plotter_scene = SceneScalingModel(parent=self)
-        self.scaling_controls = SceneScalingController(self.left_dock_menu.scaling_settings, self.plotter_scene)
+        self.scaling_controls = SceneScalingController(self.right_dock_menu.scaling_settings, self.plotter_scene)
         self.color_controls = {}
         self.visualization_controls = {}
 
         self._build_model_scalar_visuals()
         self._build_reference_visuals()
         self._build_station_visuals()
-
-        # station_data_ = StationData(station_data, terrain_data_o1280)
-        # self.station_sites = StationSiteReferenceVisualization(
-        #     PlotterSlot(self.plotter), station_data_, SurfaceReferenceProperties(point_size=10, render_points_as_spheres=True)
-        # )
-        # self.plotter_scene.add_visual(self.station_sites)
-        # self.station_sites.show()
-        #
-        # self.station_refs = StationOnTerrainReferenceVisualization(
-        #     PlotterSlot(self.plotter), station_data_, SurfaceReferenceProperties(show_edges=True, style=SurfaceStyle.WIREFRAME)
-        # )
-        # self.plotter_scene.add_visual(self.station_refs)
-        # self.station_refs.show()
+        self._build_station_references()
 
         if show:
             self.show()
@@ -118,13 +110,13 @@ class MyMainWindow(MainWindow):
            visual = ReferenceGridVisualization(plotter_slot, dataset, properties)
         else:
             visual = VolumeScalarVisualization(plotter_slot, dataset, color_lookup, properties)
-            if key in self.left_dock_menu.color_settings_views:
-                settings_view = self.left_dock_menu.color_settings_views[key]
+            if key in self.right_dock_menu.color_settings_views:
+                settings_view = self.right_dock_menu.color_settings_views[key]
                 controller = color_lookup.get_controller(settings_view)
                 if controller is not None:
                     self.color_controls[key] = controller
-        if key in self.left_dock_menu.vis_settings_views:
-            settings_view = self.left_dock_menu.vis_settings_views[key]
+        if key in self.right_dock_menu.vis_settings_views:
+            settings_view = self.right_dock_menu.vis_settings_views[key]
             if color_lookup is None:
                 controller = ReferenceGridController(settings_view, visual)
             else:
@@ -134,15 +126,36 @@ class MyMainWindow(MainWindow):
 
     def _build_station_visual(self, key, plotter_slot, dataset, properties, color_lookup):
         visual = StationScalarVisualization(plotter_slot, dataset, color_lookup, properties)
-        if key in self.left_dock_menu.color_settings_views:
-            settings_view = self.left_dock_menu.color_settings_views[key]
+        if key in self.right_dock_menu.color_settings_views:
+            settings_view = self.right_dock_menu.color_settings_views[key]
             controller = color_lookup.get_controller(settings_view)
             if controller is not None:
                 self.color_controls[key] = controller
-        if key in self.left_dock_menu.vis_settings_views:
-            settings_view = self.left_dock_menu.vis_settings_views[key]
+        if key in self.right_dock_menu.vis_settings_views:
+            settings_view = self.right_dock_menu.vis_settings_views[key]
             controller = MultiMethodVisualizationController(settings_view, visual)
             self.visualization_controls[key] = controller
+        self.plotter_scene.add_visual(visual)
+
+    def _build_station_references(self):
+        key = 'station_sites'
+        visual = StationSiteReferenceVisualization(
+            PlotterSlot(self.plotter), StationData(station_data, terrain_data_o1280),
+            StationSiteReferenceProperties()
+        )
+        settings_view = self.right_dock_menu.vis_settings_views[key]
+        controller = ReferenceGridController(settings_view, visual)
+        self.visualization_controls[key] = controller
+        self.plotter_scene.add_visual(visual)
+
+        key = 'station_on_terrain'
+        visual = StationOnTerrainReferenceVisualization(
+            PlotterSlot(self.plotter), StationData(station_data, terrain_data_o1280),
+            StationOnTerrainReferenceProperties()
+        )
+        settings_view = self.right_dock_menu.vis_settings_views[key]
+        controller = ReferenceGridController(settings_view, visual)
+        self.visualization_controls[key] = controller
         self.plotter_scene.add_visual(visual)
 
     def _build_station_visuals(self):
@@ -201,6 +214,7 @@ class MyMainWindow(MainWindow):
             PlotterSlot(self.plotter),
             VolumeData(model_data, terrain_data_o8000, scalar_key=None, model_level_key='z_surf')
         )
+
         self._build_grid_visual(
             'lsm_o1280',
             PlotterSlot(self.plotter, 'LSM (O1280)'),
@@ -252,7 +266,7 @@ class MyMainWindow(MainWindow):
         self._build_station_visual(
             'station_offset',
             PlotterSlot(self.plotter, 'Offset (m)'),
-            StationData(station_data, terrain_data_o1280, scalar_key='difference'),
+            StationData(station_data, terrain_data_o1280, scalar_key='elevation_difference'),
             StationSiteProperties(),
             AsymmetricDivergentColorLookup(
                 AsymmetricDivergentColorLookup.Properties(

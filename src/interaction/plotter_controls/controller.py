@@ -133,7 +133,6 @@ class PlotterController(QObject):
         has_grid = self.plotter_settings.checkbox_grid.isChecked()
         if show_box and not has_grid:
             logging.info('Adding bunding box')
-            color = pv.global_theme.color
             self.plotter.add_bounding_box()
         elif not has_grid:
             logging.info('Removing bounding box')
