@@ -1,27 +1,61 @@
 import math
-import uuid
 from collections import namedtuple
-from dataclasses import dataclass, fields
 from enum import Enum
-from typing import Any, Dict, Union
 
-import numpy as np
-import xarray as xr
 import pyvista as pv
 from PyQt5.QtCore import pyqtSignal, QObject, Qt
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QWidget, QDoubleSpinBox, QCheckBox, QComboBox, QFormLayout, QStackedWidget, QStackedLayout, \
-    QVBoxLayout, QSpinBox, QPushButton, QSlider
+from PyQt5.QtWidgets import QWidget, QFormLayout,QVBoxLayout, QPushButton, QSlider
+
+
+class SceneGeometry(Enum):
+    SURFACE = 'surface'
+    VOLUME = 'volume'
+    CONTOUR = 'contour'
+    STATION = 'station'
+
+
+class SurfaceSlot(Enum):
+    O1280 = 'o1280'
+    O8000 = 'o8000'
+
+
+class VolumeSlot(Enum):
+    MODEL_LEVELS = 'model_levels'
+    DVR = 'dvr'
+
+
+class ContourSlot(Enum):
+    T = 't'
+    GRAD_T = 'grad_t'
+    Z_MODEL_LEVELS = 'z_model_levels'
+    LATITUDE_3D = 'latitude_3d'
+    LONGITUDE_3D = 'longitude_3d'
+
+
+class StationSlot(Enum):
+    STATION_SITE = 'station_site'
+    STATION_ON_TERRAIN = 'station_on_terrain'
+
 
 ScalingParameters = namedtuple('ScaleParameters', ['scale', 'offset_scale'])
+VisualizationSlot = namedtuple('VisualizationSlot', ['geometry', 'slot'])
+VisualizationSlotRequest = namedtuple('VisualizationSlotRequest', ['uid', 'slot'])
 
 
 class VolumeVisual(QObject):
 
     visibility_changed = pyqtSignal(bool)
+    visualization_slot_requested = pyqtSignal(str, VisualizationSlotRequest)
 
     def is_visible(self) -> bool:
         raise NotImplementedError()
+
+    def set_visible(self, visible: bool):
+        if visible and not self.is_visible():
+            self.show()
+        if not visible and self.is_visible():
+            self.clear()
+        return self
 
     def set_scaling(self, scaling: ScalingParameters, render: bool = True):
         raise NotImplementedError()

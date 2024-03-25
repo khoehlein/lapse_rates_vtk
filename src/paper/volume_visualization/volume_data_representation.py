@@ -43,13 +43,6 @@ class VolumeDataRepresentation(VolumeVisual):
     def get_plotter(self) -> pv.Plotter:
         return self.slot.plotter
 
-    def set_visible(self, visible: bool):
-        if visible and not self.is_visible():
-            self.show()
-        if not visible and self.is_visible():
-            self.clear()
-        return self
-
 
 class MeshDataRepresentation(VolumeDataRepresentation):
 

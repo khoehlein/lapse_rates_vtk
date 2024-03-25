@@ -79,6 +79,9 @@ class InteractiveColorLookup(QObject):
     def set_properties(self, properties: 'InteractiveColorLookup.Properties'):
         raise NotImplementedError()
 
+    def get_controller(self, settings_view):
+        raise NotImplementedError()
+
 
 class ECMWFColors(InteractiveColorLookup):
 
@@ -104,6 +107,9 @@ class ECMWFColors(InteractiveColorLookup):
     def set_properties(self, properties: 'InteractiveColorLookup.Properties'):
         pass
 
+    def get_controller(self, settings_view):
+        return None
+
 
 @dataclass
 class CustomOpacityProperties(object):
@@ -119,6 +125,7 @@ class AsymmetricDivergentColorLookup(InteractiveColorLookup):
     @dataclass
     class Properties(InteractiveColorLookup.Properties):
         cmap_name: str
+        cmap_center: float
         vmin: float
         vmax: float
         vcenter: float
@@ -154,13 +161,14 @@ class AsymmetricDivergentColorLookup(InteractiveColorLookup):
         vcenter = self.props.vcenter
         cmap = mpl.colormaps[self.props.cmap_name]
         lower_samples = self.samples < vcenter
+        cmap_center = self.props.cmap_center
         colors_lower = [
-            cmap(0.5 * (x - vmin) / (vcenter - vmin))
+            cmap(cmap_center * (x - vmin) / (vcenter - vmin))
             for x in self.samples[lower_samples]
         ]
         upper_samples = self.samples >= vcenter
         colors_upper = [
-            cmap(0.5 + 0.5 * (x - vcenter) / (vmax - vcenter))
+            cmap(cmap_center + (1. - cmap_center) * (x - vcenter) / (vmax - vcenter))
             for x in self.samples[upper_samples]
         ]
         self.colors = np.asarray(colors_lower + colors_upper)
@@ -197,11 +205,17 @@ class AsymmetricDivergentColorLookup(InteractiveColorLookup):
     def get_opacity_function(self):
         return self.samples, self.colors[:, -1]
 
+    def get_controller(self, settings_view):
+        return ADCLController(settings_view, self)
+
 
 CMAP_NAMES = [
+    'viridis', 'plasma', 'inferno', 'magma', 'cividis'
     'PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu',
-    'RdYlBu', 'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic'
+    'RdYlBu', 'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic',
+    'ocean', 'gist_earth', 'terrain', 'gist_heat', 'gist_gray', 'gist_rainbow'
 ]
+CMAP_NAMES = CMAP_NAMES + [cmap_name + '_r' for cmap_name in CMAP_NAMES]
 
 
 class CustomOpacitySettingsView(QWidget):
@@ -319,7 +333,11 @@ class ADCLSettingsView(QWidget):
         super().__init__(parent)
         self.combo_cmap_name = QComboBox(self)
         self.combo_cmap_name.addItems(CMAP_NAMES)
-        self.scalar_range = RangeSpinner(self, -13., 50, -15., 1000.)
+        self.spinner_cmap_center = QDoubleSpinBox(self)
+        self.spinner_cmap_center.setRange(0., 1.)
+        self.spinner_cmap_center.setValue(0.5)
+        self.spinner_cmap_center.setSingleStep(0.05)
+        self.scalar_range = RangeSpinner(self, -13., 50, -10000., 10000.)
         self.spinner_vcenter = QDoubleSpinBox(self)
         self.spinner_vcenter.setValue(-6.5)
         self.spinner_vcenter.setSingleStep(0.05)
@@ -340,11 +358,12 @@ class ADCLSettingsView(QWidget):
         outer_layout = QVBoxLayout()
         layout = QFormLayout()
         layout.addRow("Colormap:", self.combo_cmap_name)
+        layout.addRow("Colormap center:", self.spinner_cmap_center)
         range_layout = QHBoxLayout()
         range_layout.addWidget(self.scalar_range.min_spinner)
         range_layout.addWidget(self.scalar_range.max_spinner)
         layout.addRow("Scalar range:", range_layout)
-        layout.addRow("Center:", self.spinner_vcenter)
+        layout.addRow("Scalar center:", self.spinner_vcenter)
         layout.addRow("Samples:", self.spinner_num_samples)
         color_layout = QHBoxLayout()
         color_layout.addWidget(self.button_color_below)
@@ -372,6 +391,7 @@ class ADCLSettingsView(QWidget):
 
     def apply_settings(self, settings: AsymmetricDivergentColorLookup.Properties):
         self.combo_cmap_name.setCurrentText(settings.cmap_name)
+        self.spinner_cmap_center.setValue(settings.cmap_center)
         self.scalar_range.set_limits(settings.vmin, settings.vmax)
         self.spinner_vcenter.setValue(settings.vcenter)
         self.spinner_num_samples.setValue(settings.num_samples)
@@ -388,6 +408,7 @@ class ADCLSettingsView(QWidget):
         color_above[-1] = int(self.custom_opacity_view.opacity_above() * 255)
         return AsymmetricDivergentColorLookup.Properties(
             cmap_name=self.combo_cmap_name.currentText(),
+            cmap_center=self.spinner_cmap_center.value(),
             vmin=limits[0], vmax=limits[1],
             vcenter=self.spinner_vcenter.value(),
             num_samples=self.spinner_num_samples.value(),

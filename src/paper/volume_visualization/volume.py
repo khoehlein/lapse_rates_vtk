@@ -6,6 +6,8 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QWidget, QDoubleSpinBox, QCheckBox, QComboBox, QFormLayout, QStackedLayout, \
     QVBoxLayout, QSpinBox, QSlider
 from src.paper.volume_visualization.color_lookup import InteractiveColorLookup
+from src.paper.volume_visualization.multi_method_visualization import MultiMethodScalarVisualization, \
+    MultiMethodSettingsView
 from src.paper.volume_visualization.plotter_slot import ActorProperties, ContourParameters, PlotterSlot, \
     VolumeProperties, IsocontourProperties, SurfaceProperties, InterpolationType, SurfaceStyle, CullingMethod
 from src.paper.volume_visualization.scaling import ScalingParameters
@@ -40,7 +42,7 @@ class DVRRepresentation(MeshDataRepresentation):
             return self
         self.mesh = self.volume_data.get_volume_mesh(self.scaling)
         lookup_table = self.color_lookup.lookup_table
-        self.slot.show_volume_mesh(self.mesh, lookup_table, self.properties, render=False)
+        self.slot.show_scalar_volume(self.mesh, lookup_table, self.properties, render=False)
         self.slot.update_actor(self.properties, render=render)
         self.visibility_changed.emit(True)
         return self
@@ -70,7 +72,7 @@ class ModelLevelRepresentation(MeshDataRepresentation):
             return self
         self.mesh = self.volume_data.get_level_mesh(self.scaling)
         lookup_table = self.color_lookup.lookup_table
-        self.slot.show_surface_mesh(self.mesh, lookup_table, self.properties, render=render)
+        self.slot.show_scalar_mesh(self.mesh, lookup_table, self.properties, render=render)
         self.visibility_changed.emit(True)
         return self
 
@@ -109,7 +111,7 @@ class IsocontourRepresentation(VolumeDataRepresentation):
             return self
         self.mesh = self.volume_data.get_contour_mesh(self.properties.contours, self.scaling)
         lookup_table = self.color_lookup.lookup_table
-        self.slot.show_surface_mesh(self.mesh, lookup_table, self.properties, render=render)
+        self.slot.show_scalar_mesh(self.mesh, lookup_table, self.properties, render=render)
         self.visibility_changed.emit(True)
         return self
 
@@ -137,39 +139,17 @@ class IsocontourRepresentation(VolumeDataRepresentation):
         return self
 
 
-class ScalarVolumeVisualization(VolumeDataRepresentation):
-
-    properties_changed = pyqtSignal(str)
-    visibility_changed = pyqtSignal(bool)
+class VolumeScalarVisualization(MultiMethodScalarVisualization):
 
     def __init__(
             self,
             slot: PlotterSlot, volume_data: VolumeData, color_lookup: InteractiveColorLookup,
-            properties: ActorProperties, scaling: ScalingParameters = None, visible=True, parent: QObject = None
+            properties: ActorProperties, scaling: ScalingParameters = None, parent: QObject = None
     ):
-        super().__init__(slot, volume_data, properties, scaling, parent)
-        self.color_lookup = color_lookup
-        self.representation = None
+        super().__init__(slot, color_lookup, properties, scaling, parent)
+        self.volume_data = volume_data
 
-        self.color_lookup.lookup_table_changed.connect(self.on_color_lookup_changed)
-
-        if visible:
-            self.show()
-
-    def on_color_lookup_changed(self):
-        if self.representation is not None:
-            self.representation.update_scalar_colors()
-
-    def clear(self, render: bool = True):
-        if self.representation is not None:
-            self.representation.clear(render=render)
-            self.representation = None
-        self.visibility_changed.emit(False)
-        return self
-
-    def show(self, render: bool = True):
-        if self.representation is not None:
-            return self
+    def _build_representation(self):
         properties_type = type(self.properties)
         if properties_type == VolumeProperties:
             self.representation = DVRRepresentation(
@@ -185,33 +165,6 @@ class ScalarVolumeVisualization(VolumeDataRepresentation):
             )
         else:
             raise NotImplementedError()
-        self.representation.show(render=render)
-        self.visibility_changed.emit(True)
-        return self
-
-    def change_representation(self, properties: ActorProperties, render: bool = True):
-        self.properties = properties
-        if self.representation is not None:
-            self.blockSignals(True)
-            self.clear(render=False)
-            self.show()
-            self.blockSignals(False)
-        return self
-
-    def set_properties(self, properties: ActorProperties, render: bool = True):
-        self.properties = properties
-        if self.representation is not None:
-            self.representation.set_properties(properties, render=render)
-        return self
-
-    def set_scaling(self, scaling: ScalingParameters, render: bool = True):
-        self.scaling = scaling
-        if self.representation is not None:
-            self.representation.set_scaling(scaling, render=render)
-        return self
-
-    def is_visible(self):
-        return self.representation is not None
 
     @property
     def representation_mode(self):
@@ -483,110 +436,23 @@ class IsocontourSettingsView(SurfaceSettingsView):
         return self
 
 
-class ScalarVolumeSettingsView(QWidget):
-
-    settings_changed = pyqtSignal()
-    representation_changed = pyqtSignal()
-    visibility_changed = pyqtSignal()
+class VolumeScalarSettingsView(MultiMethodSettingsView):
 
     def __init__(self, use_dvr=True, use_model_levels=True, use_contours=True, parent=None):
-        super().__init__(parent)
-        self.combo_representation_type = QComboBox(self)
-        self.interface_stack = QStackedLayout()
-        self.representation_views = {}
-        if use_dvr:
-            self.combo_representation_type.addItem("DVR", VolumeRepresentationMode.DVR)
-            self.representation_views[VolumeRepresentationMode.DVR] = DVRSettingsView(self)
-            self.interface_stack.addWidget(self.representation_views[VolumeRepresentationMode.DVR])
-        if use_model_levels:
-            self.combo_representation_type.addItem("model levels", VolumeRepresentationMode.MODEL_LEVELS)
-            self.representation_views[VolumeRepresentationMode.MODEL_LEVELS] = SurfaceSettingsView(self)
-            self.interface_stack.addWidget(self.representation_views[VolumeRepresentationMode.MODEL_LEVELS])
-        if use_contours:
-            self.combo_representation_type.addItem("isocontours", VolumeRepresentationMode.ISO_CONTOURS)
-            self.representation_views[VolumeRepresentationMode.ISO_CONTOURS] = IsocontourSettingsView(self)
-            self.interface_stack.addWidget(self.representation_views[VolumeRepresentationMode.ISO_CONTOURS])
-        assert len(self.representation_views)
-        self.checkbox_visible = QCheckBox(self)
-        self.checkbox_visible.setChecked(True)
-        self.checkbox_visible.setText('show')
-        self._connect_signals()
-        self._set_layout()
-
-    def _set_layout(self):
-        layout = QVBoxLayout()
-        layout.addWidget(self.checkbox_visible)
-        layout.addWidget(self.combo_representation_type)
-        layout.addLayout(self.interface_stack)
-        # layout.addWidget(self.representation_views[VolumeRepresentation.DVR])
-        # layout.addWidget(self.representation_views[VolumeRepresentation.MODEL_LEVELS])
-        layout.addStretch()
-        self.setLayout(layout)
-
-    def _connect_signals(self):
-        self.combo_representation_type.currentIndexChanged.connect(self.interface_stack.setCurrentIndex)
-        self.combo_representation_type.currentIndexChanged.connect(self.representation_changed)
-        for key in VolumeRepresentationMode:
-            if key in self.representation_views:
-                self.representation_views[key].settings_changed.connect(self.settings_changed)
-        self.checkbox_visible.stateChanged.connect(self.visibility_changed)
-
-    def get_representation_mode(self):
-        return self.combo_representation_type.currentData()
-
-    def get_settings(self):
-        return self.interface_stack.currentWidget().get_settings()
-
-    def apply_settings(self, settings: Dict[VolumeRepresentationMode, ActorProperties], use_defaults=False):
         defaults = {
             VolumeRepresentationMode.DVR: VolumeProperties(),
             VolumeRepresentationMode.MODEL_LEVELS: SurfaceProperties(),
             VolumeRepresentationMode.ISO_CONTOURS: IsocontourProperties()
         }
-        for key in VolumeRepresentationMode:
-            if key in settings:
-                props = settings[key]
-            elif use_defaults:
-                props = defaults.get(key)
-            else:
-                props = None
-            if props is not None and key in self.representation_views:
-                self.representation_views[key].apply_settings(props)
-        return self
-
-    def apply_visibility(self, visible):
-        self.checkbox_visible.setChecked(visible)
-        return self
-
-    def get_visibility(self):
-        return self.checkbox_visible.isChecked()
-
-
-class ScalarVolumeController(QObject):
-
-    def __init__(self, view: ScalarVolumeSettingsView, model: ScalarVolumeVisualization, parent=None):
-        super().__init__(parent)
-        self.view = view
-        self.model = model
-        self._synchronize_settings()
-        self.view.settings_changed.connect(self.on_settings_changed)
-        self.view.representation_changed.connect(self.on_representation_changed)
-        self.view.visibility_changed.connect(self.on_visibility_changed)
-        self.model.visibility_changed.connect(self.view.apply_visibility)
-
-    def _synchronize_settings(self):
-        self.view.apply_settings({self.model.representation_mode: self.model.properties}, use_defaults=True)
-        self.view.apply_visibility(self.model.is_visible())
-
-    def on_visibility_changed(self):
-        self.model.set_visible(self.view.get_visibility())
-
-    def on_settings_changed(self):
-        settings = self.view.get_settings()
-        self.model.set_properties(settings)
-        return self
-
-    def on_representation_changed(self):
-        settings = self.view.get_settings()
-        self.model.change_representation(settings)
-        return self
+        view_mapping = {}
+        labels = {}
+        if use_dvr:
+            view_mapping[VolumeRepresentationMode.DVR] = DVRSettingsView
+            labels[VolumeRepresentationMode.DVR] = 'DVR'
+        if use_model_levels:
+            view_mapping[VolumeRepresentationMode.MODEL_LEVELS] = SurfaceSettingsView
+            labels[VolumeRepresentationMode.MODEL_LEVELS] = 'model levels'
+        if use_contours:
+            view_mapping[VolumeRepresentationMode.ISO_CONTOURS] = IsocontourSettingsView
+            labels[VolumeRepresentationMode.ISO_CONTOURS] = 'isocontours'
+        super().__init__(view_mapping, defaults, labels, parent)

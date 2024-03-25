@@ -22,15 +22,19 @@ class VolumeData(object):
         self.model_level_key = model_level_key
 
         self._terrain_elevation = self.terrain_data[self.terrain_level_key].values
+        z = self._get_data_for_key(self.model_level_key)
+        self._relative_elevation = z - self._terrain_elevation
+
+    def _get_data_for_key(self, key: str):
         z = None
         try:
-            z = self.field_data[self.model_level_key].values
+            z = self.field_data[key].values
         except KeyError:
             pass
         if z is None:
-            z = self.terrain_data[self.model_level_key].values[None, :]
+            z = self.terrain_data[key].values[None, :]
         assert z is not None
-        self._relative_elevation = z - self._terrain_elevation
+        return z
 
     def get_volume_mesh(self, scale_params: ScalingParameters, use_scalar_key: bool = True) -> pv.UnstructuredGrid:
         surface_mesh = TriangleMesh(
@@ -41,7 +45,7 @@ class VolumeData(object):
         mesh = WedgeMesh(surface_mesh, z)
         mesh = mesh.to_wedge_grid()
         if use_scalar_key and self.scalar_key is not None:
-            mesh[self.scalar_key] = self.field_data[self.scalar_key].values.ravel()
+            mesh[self.scalar_key] = self._get_data_for_key(self.scalar_key).ravel()
         return mesh
 
     def get_level_mesh(self, scale_params: ScalingParameters, use_scalar_key: bool = True) -> pv.PolyData:
@@ -60,7 +64,7 @@ class VolumeData(object):
         coords = np.concatenate([coords, np.reshape(z, (-1, 1))], axis=-1)
         mesh = pv.PolyData(coords, faces)
         if use_scalar_key and self.scalar_key is not None:
-            mesh[self.scalar_key] = self.field_data[self.scalar_key].values.ravel()
+            mesh[self.scalar_key] = self._get_data_for_key(self.scalar_key).ravel()
         return mesh
 
     def compute_elevation_coordinate(self, scale_params):
@@ -80,9 +84,9 @@ class VolumeData(object):
         if contour_key is None:
             raise ValueError('Isocontours cannot be computed without specified contour key.')
         if contour_key != self.scalar_key:
-            mesh[self.scalar_key] = self.field_data[self.scalar_key].values.ravel()
+            mesh[self.scalar_key] = self._get_data_for_key(self.scalar_key).ravel()
         if contour_key != self.model_level_key:
-            mesh[contour_key] = self.field_data[contour_key].values.ravel()
+            mesh[contour_key] = self._get_data_for_key(contour_key).ravel()
         else:
             mesh[contour_key] = self.compute_elevation_coordinate(scale_params).ravel()
         iso_mesh = mesh.contour(

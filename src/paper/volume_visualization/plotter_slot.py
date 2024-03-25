@@ -1,23 +1,11 @@
-import math
 import uuid
 from collections import namedtuple
 from dataclasses import dataclass, fields
 from enum import Enum
-from typing import Any, Dict, Union
-
-import numpy as np
-import xarray as xr
+from typing import Any, Union
 import pyvista as pv
-from PyQt5.QtCore import pyqtSignal, QObject, Qt
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QWidget, QDoubleSpinBox, QCheckBox, QComboBox, QFormLayout, QStackedWidget, QStackedLayout, \
-    QVBoxLayout, QSpinBox, QPushButton, QSlider
-from pyvista.plotting import Plotter, Volume
 
-from src.model.geometry import TriangleMesh, LocationBatch, Coordinates, WedgeMesh
-from src.model.scene_model import SceneModel
-from src.paper.volume_visualization.color_lookup import InteractiveColorLookup
-from src.widgets import SelectColorButton
+from pyvista.plotting import Volume
 
 
 class InterpolationType(Enum):
@@ -78,13 +66,123 @@ class SurfaceProperties(ActorProperties):
 
 
 @dataclass
-class ReferenceGridProperties(SurfaceProperties):
+class SurfaceReferenceProperties(SurfaceProperties):
     color: Any = pv.global_theme.color.int_rgb
 
 
 @dataclass
 class IsocontourProperties(SurfaceProperties):
     contours: ContourParameters = ContourParameters('z_model_levels', 10)
+
+
+@dataclass
+class StationSiteProperties(SurfaceProperties):
+
+    def __init__(
+            self,
+            metallic: float = pv.global_theme.lighting_params.metallic,
+            roughness: float = pv.global_theme.lighting_params.roughness,
+            point_size: float = pv.global_theme.point_size,
+            render_points_as_spheres: bool = pv.global_theme.render_points_as_spheres,
+            opacity: float = pv.global_theme.opacity,
+            ambient: float = pv.global_theme.lighting_params.ambient,
+            diffuse: float = pv.global_theme.lighting_params.diffuse,
+            specular: float = pv.global_theme.lighting_params.specular,
+            specular_power: float = pv.global_theme.lighting_params.specular_power,
+            lighting: bool = pv.global_theme.lighting,
+    ):
+        super().__init__(
+            style=SurfaceStyle.POINTS,
+            metallic=metallic,
+            roughness=roughness,
+            point_size=point_size,
+            render_points_as_spheres=render_points_as_spheres,
+            opacity=opacity,
+            ambient=ambient,
+            diffuse=diffuse,
+            specular=specular,
+            specular_power=specular_power,
+            lighting=lighting,
+        )
+
+
+@dataclass(init=False)
+class StationSiteReferenceProperties(StationSiteProperties):
+    color: Any = pv.global_theme.color
+
+    def __init__(
+            self,
+            color: Any = pv.global_theme.color,
+            metallic: float = pv.global_theme.lighting_params.metallic,
+            roughness: float = pv.global_theme.lighting_params.roughness,
+            point_size: float = pv.global_theme.point_size,
+            render_points_as_spheres: bool = pv.global_theme.render_points_as_spheres,
+            opacity: float = pv.global_theme.opacity,
+            ambient: float = pv.global_theme.lighting_params.ambient,
+            diffuse: float = pv.global_theme.lighting_params.diffuse,
+            specular: float = pv.global_theme.lighting_params.specular,
+            specular_power: float = pv.global_theme.lighting_params.specular_power,
+            lighting: bool = pv.global_theme.lighting,
+    ):
+        super().__init__(metallic, roughness, point_size, render_points_as_spheres, opacity, ambient, diffuse, specular, specular_power, lighting)
+        self.color = color
+
+
+@dataclass(init=False)
+class StationOnTerrainProperties(SurfaceProperties):
+    preference: str = 'cell'
+
+    def __init__(
+            self,
+            line_width: float = pv.global_theme.line_width,
+            render_lines_as_tubes: bool = pv.global_theme.render_lines_as_tubes,
+            metallic: float = pv.global_theme.lighting_params.metallic,
+            roughness: float = pv.global_theme.lighting_params.roughness,
+            opacity: float = pv.global_theme.opacity,
+            ambient: float = pv.global_theme.lighting_params.ambient,
+            diffuse: float = pv.global_theme.lighting_params.diffuse,
+            specular: float = pv.global_theme.lighting_params.specular,
+            specular_power: float = pv.global_theme.lighting_params.specular_power,
+            lighting: bool = pv.global_theme.lighting,
+    ):
+        super().__init__(
+            style=SurfaceStyle.WIREFRAME,
+            line_width=line_width,
+            render_lines_as_tubes=render_lines_as_tubes,
+            metallic=metallic,
+            roughness=roughness,
+            opacity=opacity,
+            ambient=ambient,
+            diffuse=diffuse,
+            specular=specular,
+            specular_power=specular_power,
+            show_edges=True,
+            lighting=lighting,
+        )
+
+
+@dataclass(init=False)
+class StationOnTerrainReferenceProperties(StationOnTerrainProperties):
+    color: Any = pv.global_theme.color
+
+    def __init__(
+            self,
+            color: Any = pv.global_theme.color,
+            line_width: float = pv.global_theme.line_width,
+            render_lines_as_tubes: bool = pv.global_theme.render_lines_as_tubes,
+            metallic: float = pv.global_theme.lighting_params.metallic,
+            roughness: float = pv.global_theme.lighting_params.roughness,
+            opacity: float = pv.global_theme.opacity,
+            ambient: float = pv.global_theme.lighting_params.ambient,
+            diffuse: float = pv.global_theme.lighting_params.diffuse,
+            specular: float = pv.global_theme.lighting_params.specular,
+            specular_power: float = pv.global_theme.lighting_params.specular_power,
+            edge_opacity: float = pv.global_theme.edge_opacity,
+            edge_color: Any = pv.global_theme.edge_color.int_rgb,
+            lighting: bool = pv.global_theme.lighting,
+    ):
+        super().__init__(line_width, render_lines_as_tubes, metallic, roughness, opacity, ambient, diffuse, specular, specular_power, edge_opacity, edge_color, lighting)
+        self.color = color
 
 
 class PlotterSlot(object):
@@ -127,12 +225,14 @@ class PlotterSlot(object):
         return kws
 
     def draw_scalar_bar(self, mapper, render: bool = True, interactive=False):
+        if self.scalar_bar_id in self.plotter.scalar_bars.keys():
+            self.plotter.remove_scalar_bar(self.scalar_bar_id)
         self.scalar_bar_actor = self.plotter.add_scalar_bar(
             title=self.scalar_bar_id, mapper=mapper, render=render, interactive=interactive,
         )
         return self
 
-    def show_volume_mesh(self, mesh: pv.UnstructuredGrid, lookup_table: pv.LookupTable, properties: VolumeProperties, render: bool = True):
+    def show_scalar_volume(self, mesh: pv.UnstructuredGrid, lookup_table: pv.LookupTable, properties: VolumeProperties, render: bool = True):
         plotter_kws = self._actor_props_to_plotter_kws(properties)
         clim = lookup_table.scalar_range
         actor = self.plotter.add_volume(
@@ -143,7 +243,15 @@ class PlotterSlot(object):
         self.draw_scalar_bar(actor.mapper, render=render)
         return actor
 
-    def show_surface_mesh(self, mesh: pv.PolyData, lookup_table: pv.LookupTable, properties: SurfaceProperties, render: bool = True):
+    def show_scalar_mesh(
+            self, mesh: pv.PolyData, lookup_table: pv.LookupTable,
+            properties: Union[
+                SurfaceProperties,
+                StationSiteProperties,
+                StationOnTerrainProperties
+            ],
+            render: bool = True
+    ):
         plotter_kws = self._actor_props_to_plotter_kws(properties)
         clim = lookup_table.scalar_range
         actor = self.plotter.add_mesh(
@@ -154,7 +262,15 @@ class PlotterSlot(object):
         self.draw_scalar_bar(actor.mapper, render=render)
         return actor
 
-    def show_reference_mesh(self, mesh: pv.PolyData, properties: SurfaceProperties, render: bool = True):
+    def show_reference_mesh(
+            self, mesh: pv.PolyData,
+            properties: Union[
+                SurfaceReferenceProperties,
+                StationSiteReferenceProperties,
+                StationOnTerrainReferenceProperties
+            ],
+            render: bool = True
+    ):
         plotter_kws = self._actor_props_to_plotter_kws(properties)
         mesh.set_active_scalars(None)
         actor = self.plotter.add_mesh(
@@ -168,7 +284,7 @@ class PlotterSlot(object):
             actor_props = self.actor.prop
             for field in fields(properties):
                 prop_name = field.name
-                if prop_name in ['contours']:
+                if prop_name in ['contours', 'preference']:
                     continue
                 value = getattr(properties, prop_name)
                 if value is None:

@@ -2,7 +2,7 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QWidget, QFormLayout, QCheckBox, QVBoxLayout
 
-from src.paper.volume_visualization.plotter_slot import ReferenceGridProperties, PlotterSlot
+from src.paper.volume_visualization.plotter_slot import SurfaceReferenceProperties, PlotterSlot
 from src.paper.volume_visualization.scaling import ScalingParameters
 from src.paper.volume_visualization.volume import SurfaceSettingsView
 from src.paper.volume_visualization.volume_data import VolumeData
@@ -12,13 +12,13 @@ from src.widgets import SelectColorButton
 
 class ReferenceGridVisualization(MeshDataRepresentation):
 
-    def __init__(self, slot: PlotterSlot, volume_data: VolumeData, properties: ReferenceGridProperties = None, scaling: ScalingParameters = None, parent=None):
+    def __init__(self, slot: PlotterSlot, volume_data: VolumeData, properties: SurfaceReferenceProperties = None, scaling: ScalingParameters = None, parent=None):
         if properties is None:
-            properties = ReferenceGridProperties()
+            properties = SurfaceReferenceProperties()
         super().__init__(slot, volume_data, properties, scaling, parent)
         self.mesh = None
 
-    def set_properties(self, properties: ReferenceGridProperties, render=True):
+    def set_properties(self, properties: SurfaceReferenceProperties, render=True):
         return super().set_properties(properties)
 
     def show(self, render: bool = True):
@@ -72,7 +72,7 @@ class ReferenceGridSettingsView(SurfaceSettingsView):
         return outer_layout
 
     def get_settings(self):
-        return ReferenceGridProperties(
+        return SurfaceReferenceProperties(
             self.combo_surface_style.currentData(),
             self.spinner_line_width.value(),
             self.checkbox_lines_as_tubes.isChecked(),
@@ -91,7 +91,7 @@ class ReferenceGridSettingsView(SurfaceSettingsView):
             self.button_surface_color.current_color.getRgb(),
         )
 
-    def apply_settings(self, settings: ReferenceGridProperties):
+    def apply_settings(self, settings: SurfaceReferenceProperties):
         self.button_surface_color.set_current_color(QColor(*settings.color))
         return super().apply_settings(settings)
 
