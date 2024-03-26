@@ -1,3 +1,4 @@
+import pandas as pd
 import pyvista as pv
 from PyQt5.QtCore import QObject
 
@@ -30,6 +31,9 @@ class StationDataVisualization(VolumeVisual):
         self.properties = properties
         self.slot.update_actor(properties, render=render)
         return self
+
+    def update_data(self, new_data: pd.DataFrame):
+        raise NotImplementedError()
 
 
 class StationDataRepresentation(StationDataVisualization):

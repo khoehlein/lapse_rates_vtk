@@ -21,9 +21,19 @@ class VolumeData(object):
         self.terrain_level_key = terrain_level_key
         self.model_level_key = model_level_key
 
+        self._compute_elevation_metrics()
+
+    def _compute_elevation_metrics(self):
         self._terrain_elevation = self.terrain_data[self.terrain_level_key].values
         z = self._get_data_for_key(self.model_level_key)
+        if len(z.shape) == 1:
+            z = z[None, :]
         self._relative_elevation = z - self._terrain_elevation
+
+    def update_field_data(self, field_data: xr.Dataset):
+        self.field_data = field_data
+        self._compute_elevation_metrics()
+        return self
 
     def _get_data_for_key(self, key: str):
         z = None
@@ -76,8 +86,14 @@ class VolumeData(object):
         z *= inv_scale
         return z
 
+    def is_volume_field(self):
+        return self._relative_elevation.shape[0] > 1
+
     def get_contour_mesh(self, contour_params: ContourParameters, scale_params: ScalingParameters) -> pv.PolyData:
-        mesh = self.get_volume_mesh(scale_params)
+        if self.is_volume_field():
+            mesh = self.get_volume_mesh(scale_params)
+        else:
+            mesh = self.get_level_mesh(scale_params)
         contour_key = contour_params.contour_key
         if contour_key is None:
             contour_key = self.scalar_key
@@ -85,10 +101,11 @@ class VolumeData(object):
             raise ValueError('Isocontours cannot be computed without specified contour key.')
         if contour_key != self.scalar_key:
             mesh[self.scalar_key] = self._get_data_for_key(self.scalar_key).ravel()
-        if contour_key != self.model_level_key:
-            mesh[contour_key] = self._get_data_for_key(contour_key).ravel()
-        else:
-            mesh[contour_key] = self.compute_elevation_coordinate(scale_params).ravel()
+        # if contour_key != self.model_level_key:
+        #     mesh[contour_key] = self._get_data_for_key(contour_key).ravel()
+        # else:
+        #     mesh[contour_key] = self.compute_elevation_coordinate(scale_params).ravel()
+        mesh[contour_key] = self._get_data_for_key(contour_key).ravel()
         iso_mesh = mesh.contour(
             scalars=contour_key, isosurfaces=contour_params.num_levels, method='contour', compute_scalars=True,
         )
@@ -96,7 +113,7 @@ class VolumeData(object):
         return iso_mesh
 
     def get_reference_mesh(self, scale_params: ScalingParameters):
-        if self._relative_elevation.shape[0] == 1:
-            return self.get_level_mesh(scale_params, use_scalar_key=False)
-        else:
+        if self.is_volume_field():
             return self.get_volume_mesh(scale_params, use_scalar_key=False)
+        else:
+            return self.get_level_mesh(scale_params, use_scalar_key=False)

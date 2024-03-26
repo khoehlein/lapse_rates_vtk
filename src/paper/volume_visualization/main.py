@@ -6,12 +6,16 @@ from typing import List, Union
 
 import numpy as np
 from PyQt5 import QtCore
-from matplotlib import pyplot as plt
 
 from src.interaction.plotter_controls.controller import PlotterController
-from src.model.geometry import Coordinates, WedgeMesh, TriangleMesh, LocationBatch
-from src.paper.volume_visualization.color_lookup import AsymmetricDivergentColorLookup, ADCLController, \
-    CustomOpacityProperties, ECMWFColors
+from src.model.geometry import Coordinates
+from src.paper.volume_visualization.camera_settings import CameraController
+from src.paper.volume_visualization.color_lookup import (
+    make_temperature_lookup, make_lapse_rate_lookup, make_elevation_offset_lookup,
+    make_elevation_lookup, make_lsm_lookup, make_temperature_difference_lookup
+)
+from src.paper.volume_visualization.elevation_summary import ElevationSummary, ElevationSummaryProperties, \
+    ElevationSummaryController
 from src.paper.volume_visualization.left_side_menu import RightDockMenu
 from src.paper.volume_visualization.multi_method_visualization import MultiMethodVisualizationController
 from src.paper.volume_visualization.plotter_slot import SurfaceProperties, \
@@ -91,6 +95,7 @@ class MyMainWindow(MainWindow):
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.right_dock_menu)
 
         self.plotter_controls = PlotterController(self.right_dock_menu.plotter_settings, self.plotter, self)
+        self.camera_controls = CameraController(self.right_dock_menu.camera_settings, self.plotter, self)
 
         self.plotter_scene = SceneScalingModel(parent=self)
         self.scaling_controls = SceneScalingController(self.right_dock_menu.scaling_settings, self.plotter_scene)
@@ -101,6 +106,16 @@ class MyMainWindow(MainWindow):
         self._build_reference_visuals()
         self._build_station_visuals()
         self._build_station_references()
+
+        self.elevation_summary = ElevationSummary(
+            terrain_data_o1280, terrain_data_o8000, self.plotter,
+            ElevationSummaryProperties(), self.plotter_scene.scaling
+        )
+        self.plotter_scene.add_visual(self.elevation_summary)
+        self.elevation_summary_controls = ElevationSummaryController(
+            self.right_dock_menu.summary_settings, self.elevation_summary,
+            parent=self
+        )
 
         if show:
             self.show()
@@ -164,38 +179,28 @@ class MyMainWindow(MainWindow):
             PlotterSlot(self.plotter, 'Observation (K)'),
             StationData(station_data, terrain_data_o1280, scalar_key='observation'),
             StationSiteProperties(),
-            ECMWFColors()
+            make_temperature_lookup()
         )
         self._build_station_visual(
             'station_t_pred',
             PlotterSlot(self.plotter, 'Prediction (K)'),
             StationData(station_data, terrain_data_o1280, scalar_key='prediction'),
             StationSiteProperties(),
-            ECMWFColors()
+            make_temperature_lookup()
         )
         self._build_station_visual(
             'station_t_diff',
             PlotterSlot(self.plotter, 'T diff. (K)'),
             StationData(station_data, terrain_data_o1280, scalar_key='difference'),
             StationSiteProperties(),
-            AsymmetricDivergentColorLookup(
-                AsymmetricDivergentColorLookup.Properties(
-                    'coolwarm', 0.5, -30, 30, 0., 29, 'blue', 'red',
-                    CustomOpacityProperties()
-                )
-            ),
+            make_temperature_difference_lookup(),
         )
         self._build_station_visual(
             'station_grad_t',
             PlotterSlot(self.plotter, 'Obs. gradient (K/km)'),
             StationData(station_data, terrain_data_o1280, scalar_key='grad_t'),
             StationSiteProperties(),
-            AsymmetricDivergentColorLookup(
-                AsymmetricDivergentColorLookup.Properties(
-                    'coolwarm', 0.5, -12, 50, -6.5, 256, 'blue', 'red',
-                    CustomOpacityProperties()
-                )
-            ),
+            make_lapse_rate_lookup(),
         )
 
     def _build_reference_visuals(self):
@@ -220,60 +225,35 @@ class MyMainWindow(MainWindow):
             PlotterSlot(self.plotter, 'LSM (O1280)'),
             VolumeData(model_data, terrain_data_o1280, scalar_key='lsm', model_level_key='z_surf'),
             SurfaceProperties(),
-            AsymmetricDivergentColorLookup(
-                AsymmetricDivergentColorLookup.Properties(
-                    'gist_earth', 0.5, 0., 1., 0.5, 7, 'black', 'white',
-                    CustomOpacityProperties()
-                )
-            ),
+            make_lsm_lookup(),
         )
         self._build_grid_visual(
             'lsm_o8000',
             PlotterSlot(self.plotter, 'LSM (O8000)'),
             VolumeData(model_data, terrain_data_o8000, scalar_key='lsm', model_level_key='z_surf'),
             SurfaceProperties(),
-            AsymmetricDivergentColorLookup(
-                AsymmetricDivergentColorLookup.Properties(
-                    'gist_earth', 0.5, 0., 1., 0.5, 7, 'black', 'white',
-                    CustomOpacityProperties()
-                )
-            ),
+            make_lsm_lookup(),
         )
         self._build_grid_visual(
             'z_o1280',
             PlotterSlot(self.plotter, 'Z (O1280)'),
             VolumeData(model_data, terrain_data_o1280, scalar_key='z_surf', model_level_key='z_surf'),
             SurfaceProperties(),
-            AsymmetricDivergentColorLookup(
-                AsymmetricDivergentColorLookup.Properties(
-                    'gist_earth', 0.3, -100., 3000., 0., 58, 'black', 'white',
-                    CustomOpacityProperties(opacity_center=1.)
-                )
-            ),
+            make_elevation_lookup(),
         )
         self._build_grid_visual(
             'z_o8000',
             PlotterSlot(self.plotter, 'Z (O8000)'),
             VolumeData(model_data, terrain_data_o8000, scalar_key='z_surf', model_level_key='z_surf'),
             SurfaceProperties(),
-            AsymmetricDivergentColorLookup(
-                AsymmetricDivergentColorLookup.Properties(
-                    'gist_earth', 0.3, -100., 3000., 0., 58, 'black', 'white',
-                    CustomOpacityProperties(opacity_center=1.)
-                )
-            ),
+            make_elevation_lookup(),
         )
         self._build_station_visual(
             'station_offset',
             PlotterSlot(self.plotter, 'Offset (m)'),
             StationData(station_data, terrain_data_o1280, scalar_key='elevation_difference'),
             StationSiteProperties(),
-            AsymmetricDivergentColorLookup(
-                AsymmetricDivergentColorLookup.Properties(
-                    'BrBG_r', 0.5, -1500, 1500, 0., 29, 'green', 'orange',
-                    CustomOpacityProperties()
-                )
-            ),
+            make_elevation_offset_lookup(),
         )
 
     def _build_model_scalar_visuals(self):
@@ -282,26 +262,21 @@ class MyMainWindow(MainWindow):
             PlotterSlot(self.plotter, 'T gradient (K/km)'),
             VolumeData(model_data, terrain_data_o1280, scalar_key='grad_t'),
             VolumeProperties(),
-            AsymmetricDivergentColorLookup(
-                AsymmetricDivergentColorLookup.Properties(
-                    'coolwarm', 0.5, -12, 50, -6.5, 256, 'blue', 'red',
-                    CustomOpacityProperties()
-                )
-            ),
+            make_lapse_rate_lookup(),
         )
         self._build_grid_visual(
             'model_t',
             PlotterSlot(self.plotter, 'T (K)'),
             VolumeData(model_data, terrain_data_o1280, scalar_key='t'),
             VolumeProperties(),
-            ECMWFColors(),
+            make_temperature_lookup(),
         )
         self._build_grid_visual(
             'model_t2m',
             PlotterSlot(self.plotter, 'T2m (K)'),
             VolumeData(model_data, terrain_data_o1280, scalar_key='t2m', model_level_key='z_surf'),
             SurfaceProperties(),
-            ECMWFColors(),
+            make_temperature_lookup(),
         )
 
     def clear_scalar_bars(self):

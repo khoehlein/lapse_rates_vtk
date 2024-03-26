@@ -43,6 +43,25 @@ class VolumeDataRepresentation(VolumeVisual):
     def get_plotter(self) -> pv.Plotter:
         return self.slot.plotter
 
+    def update_data(self, new_data: VolumeData, render: bool = True):
+        self.blockSignals(True)
+        was_visible = self.is_visible()
+        if was_visible:
+            self.clear(render=False)
+        self.volume_data.update_field_data(new_data)
+        if was_visible:
+            self.show(render=render)
+        self.blockSignals(False)
+        return self
+
+    def update(self, render: bool = True):
+        self.blockSignals(True)
+        if self.is_visible():
+            self.clear(render=False)
+            self.show(render=render)
+        self.blockSignals(False)
+        return self
+
 
 class MeshDataRepresentation(VolumeDataRepresentation):
 

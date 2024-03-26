@@ -2,13 +2,15 @@ from PyQt5.QtCore import QObject
 from PyQt5.QtWidgets import QDockWidget, QScrollArea, QWidget, QVBoxLayout, QLabel, QTabWidget
 
 from src.interaction.plotter_controls.view import PlotterSettingsView
+from src.paper.volume_visualization.camera_settings import CameraControlsSettingsView
 from src.paper.volume_visualization.color_lookup import ADCLSettingsView
+from src.paper.volume_visualization.elevation_summary import ElevationSummaryRepresentationSettings
 from src.paper.volume_visualization.scaling import SceneScalingSettingsView
 from src.paper.volume_visualization.station import StationScalarSettingsView
 from src.paper.volume_visualization.station_reference import StationSiteReferenceSettingsView, \
     StationOnTerrainReferenceSettingsView
 from src.paper.volume_visualization.volume_reference_grid import ReferenceGridSettingsView
-from src.paper.volume_visualization.volume import VolumeScalarSettingsView
+from src.paper.volume_visualization.volume import VolumeScalarSettingsView, VolumeRepresentationMode
 
 
 class RightDockMenu(QDockWidget):
@@ -30,6 +32,7 @@ class RightDockMenu(QDockWidget):
     def _populate_scroll_area(self):
         self._build_vis_settings_tab()
         self._build_plotter_settings_tab()
+        self._build_camera_settings_tab()
 
     def _build_vis_settings_tab(self):
         self.vis_settings_tabs = QTabWidget(self.scroll_area_contents)
@@ -39,12 +42,22 @@ class RightDockMenu(QDockWidget):
         self._build_station_data_tabs()
         self._build_terrain_data_tabs()
         self._build_reference_data_tabs()
+        self._build_summary_tabs()
         container = QWidget(self.scroll_area_contents)
         layout = QVBoxLayout()
         layout.addWidget(self.vis_settings_tabs)
         layout.addStretch(2)
         container.setLayout(layout)
         self.scroll_area_contents.addTab(container, 'Visualization settings')
+
+    def _build_camera_settings_tab(self):
+        self.camera_settings = CameraControlsSettingsView(self)
+        container = QWidget(self.scroll_area_contents)
+        layout = QVBoxLayout()
+        layout.addWidget(self.camera_settings)
+        layout.addStretch(2)
+        container.setLayout(layout)
+        self.scroll_area_contents.addTab(container, 'Camera settings')
 
     def _build_plotter_settings_tab(self):
         container = QWidget(self.scroll_area_contents)
@@ -70,6 +83,15 @@ class RightDockMenu(QDockWidget):
         layout.addStretch()
         container.setLayout(layout)
         self.vis_settings_tabs.addTab(container, 'Model')
+
+    def _build_summary_tabs(self):
+        container = QWidget(self.vis_settings_tabs)
+        self.summary_settings = ElevationSummaryRepresentationSettings(container)
+        layout = QVBoxLayout()
+        layout.addLayout(self.summary_settings.get_layout())
+        layout.addStretch()
+        container.setLayout(layout)
+        self.vis_settings_tabs.addTab(container, 'Summary')
 
     def _build_station_data_tabs(self):
         container = QWidget(self.vis_settings_tabs)
@@ -242,7 +264,8 @@ class RightDockMenu(QDockWidget):
 
     def _build_t2m_volume_tab(self):
         key = 'model_t2m'
-        volume_settings = VolumeScalarSettingsView(parent=self.scroll_area_contents, use_dvr=False, use_contours=False)
+        volume_settings = VolumeScalarSettingsView(parent=self.scroll_area_contents, use_dvr=False, use_contours=True)
+        volume_settings.representation_views[VolumeRepresentationMode.ISO_CONTOURS].set_contour_keys(['lsm', 'z_surf', 't2m', 'latitude', 'longitude'])
         self._make_tab_without_color_lookup(
             key, volume_settings,
             'Surface properties',
@@ -279,7 +302,8 @@ class RightDockMenu(QDockWidget):
     def _build_lsm_o1280_tab(self):
         key = 'lsm_o1280'
         color_settings = ADCLSettingsView(self.scroll_area_contents)
-        volume_settings = VolumeScalarSettingsView(parent=self.scroll_area_contents, use_dvr=False, use_contours=False)
+        volume_settings = VolumeScalarSettingsView(parent=self.scroll_area_contents, use_dvr=False, use_contours=True)
+        volume_settings.representation_views[VolumeRepresentationMode.ISO_CONTOURS].set_contour_keys(['lsm', 'z_surf', 't2m', 'latitude', 'longitude'])
         self._make_tab_with_color_lookup(
             key, volume_settings, color_settings,
             'Surface properties',
@@ -289,7 +313,8 @@ class RightDockMenu(QDockWidget):
     def _build_lsm_o8000_tab(self):
         key = 'lsm_o8000'
         color_settings = ADCLSettingsView(self.scroll_area_contents)
-        volume_settings = VolumeScalarSettingsView(parent=self.scroll_area_contents, use_dvr=False, use_contours=False)
+        volume_settings = VolumeScalarSettingsView(parent=self.scroll_area_contents, use_dvr=False, use_contours=True)
+        volume_settings.representation_views[VolumeRepresentationMode.ISO_CONTOURS].set_contour_keys(['lsm', 'z_surf', 'latitude', 'longitude'])
         self._make_tab_with_color_lookup(
             key, volume_settings, color_settings,
             'Surface properties',
@@ -299,7 +324,8 @@ class RightDockMenu(QDockWidget):
     def _build_z_o1280_tab(self):
         key = 'z_o1280'
         color_settings = ADCLSettingsView(self.scroll_area_contents)
-        volume_settings = VolumeScalarSettingsView(parent=self.scroll_area_contents, use_dvr=False, use_contours=False)
+        volume_settings = VolumeScalarSettingsView(parent=self.scroll_area_contents, use_dvr=False, use_contours=True)
+        volume_settings.representation_views[VolumeRepresentationMode.ISO_CONTOURS].set_contour_keys(['lsm', 'z_surf', 't2m', 'latitude', 'longitude'])
         self._make_tab_with_color_lookup(
             key, volume_settings, color_settings,
             'Surface properties',
@@ -309,7 +335,8 @@ class RightDockMenu(QDockWidget):
     def _build_z_o8000_tab(self):
         key = 'z_o8000'
         color_settings = ADCLSettingsView(self.scroll_area_contents)
-        volume_settings = VolumeScalarSettingsView(parent=self.scroll_area_contents, use_dvr=False, use_contours=False)
+        volume_settings = VolumeScalarSettingsView(parent=self.scroll_area_contents, use_dvr=False, use_contours=True)
+        volume_settings.representation_views[VolumeRepresentationMode.ISO_CONTOURS].set_contour_keys(['lsm', 'z_surf', 'latitude', 'longitude'])
         self._make_tab_with_color_lookup(
             key, volume_settings, color_settings,
             'Surface properties',

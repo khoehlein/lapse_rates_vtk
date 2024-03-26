@@ -15,6 +15,8 @@ from src.paper.volume_visualization.volume_data import VolumeData
 from src.paper.volume_visualization.volume_data_representation import VolumeDataRepresentation, MeshDataRepresentation
 from src.widgets import SelectColorButton
 
+import xarray as xr
+
 
 class VolumeRepresentationMode(Enum):
     MODEL_LEVELS = 'model_levels'
@@ -174,6 +176,13 @@ class VolumeScalarVisualization(MultiMethodScalarVisualization):
             IsocontourProperties: VolumeRepresentationMode.ISO_CONTOURS,
         }.get(type(self.properties))
 
+    def update_data(self, new_data: xr.Dataset, render: bool = True):
+        self.blockSignals(True)
+        self.volume_data.update_field_data(new_data)
+        if self.is_visible():
+            self.representation.update(render=render)
+        self.blockSignals(False)
+        return self
 
 class DVRSettingsView(QWidget):
 
@@ -390,9 +399,14 @@ class IsocontourSettingsView(SurfaceSettingsView):
     def build_handles(self):
         super().build_handles()
         self.combo_contour_key = QComboBox(self)
-        self.combo_contour_key.addItems(['z_model_levels', 't', 'grad_t', 'latitude_3d', 'longitude_3d'])
+        self.set_contour_keys(['z_model_levels', 't', 'grad_t', 'latitude_3d', 'longitude_3d'])
         self.spinner_num_contours = QSpinBox(self)
         self.spinner_num_contours.setRange(4, 128)
+
+    def set_contour_keys(self, keys):
+        self.combo_contour_key.clear()
+        self.combo_contour_key.addItems(keys)
+        return self
 
     def _connect_signals(self):
         super()._connect_signals()

@@ -127,7 +127,7 @@ class StationSiteReferenceSettingsView(QWidget):
 
     def get_settings(self):
         return StationSiteReferenceProperties(
-            self.button_point_color.get_current_color().getRgb(),
+            self.button_point_color.current_color.getRgb(),
             self.spinner_metallic.value(),
             self.spinner_roughness.value(),
             self.spinner_point_size.value(),

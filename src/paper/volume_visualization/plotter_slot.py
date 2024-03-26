@@ -186,7 +186,7 @@ class StationOnTerrainReferenceProperties(StationOnTerrainProperties):
 class PlotterSlot(object):
 
     def __init__(self, plotter: pv.Plotter, scalar_bar_id: str = None):
-        assert scalar_bar_id not in plotter.scalar_bars.keys() or scalar_bar_id is None
+        # assert scalar_bar_id not in plotter.scalar_bars.keys() or scalar_bar_id is None
         self.plotter = plotter
         self.id = str(uuid.uuid4())
         self.scalar_bar_id = scalar_bar_id

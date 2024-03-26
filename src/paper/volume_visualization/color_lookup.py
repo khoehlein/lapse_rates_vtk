@@ -186,7 +186,8 @@ class AsymmetricDivergentColorLookup(InteractiveColorLookup):
 
     def _update_opacity_section(self, mask, vlow, vup, olow, oup, log_exponent):
         if np.any(mask):
-            opacity = olow + ((oup - olow) / (vup - vlow)) * (self.samples[mask] - vlow)
+            diff = (vup - vlow)
+            opacity = olow + ((oup - olow) / diff) * (self.samples[mask] - vlow)
             omin = min(olow, oup)
             omax = max(olow, oup)
             difference = (omax - omin)
@@ -431,3 +432,70 @@ class ADCLController(QObject):
         settings = self.view.get_settings()
 
         self.model.set_properties(settings)
+
+
+def make_lsm_lookup():
+    return AsymmetricDivergentColorLookup(
+        AsymmetricDivergentColorLookup.Properties(
+            'gist_earth', 0.5, 0., 1., 0.5, 7, 'black', 'white',
+            CustomOpacityProperties()
+        )
+    )
+
+
+def make_elevation_offset_lookup():
+    return AsymmetricDivergentColorLookup(
+        AsymmetricDivergentColorLookup.Properties(
+            'BrBG_r', 0.5, -1500, 1500, 0., 29, 'green', 'orange',
+            CustomOpacityProperties()
+        )
+    )
+
+
+def make_elevation_lookup():
+    return AsymmetricDivergentColorLookup(
+        AsymmetricDivergentColorLookup.Properties(
+            'gist_earth', 0.3, -100., 3000., 0., 58, 'black', 'white',
+            CustomOpacityProperties(opacity_center=1.)
+        )
+    )
+
+
+def make_temperature_lookup():
+    return ECMWFColors()
+
+
+def make_lapse_rate_lookup():
+    return AsymmetricDivergentColorLookup(
+        AsymmetricDivergentColorLookup.Properties(
+            'coolwarm', 0.5, -12, 50, -6.5, 256, 'blue', 'red',
+            CustomOpacityProperties()
+        )
+    )
+
+
+def make_temperature_difference_lookup():
+    return AsymmetricDivergentColorLookup(
+        AsymmetricDivergentColorLookup.Properties(
+            'coolwarm', 0.5, -30, 30, 0., 29, 'blue', 'red',
+            CustomOpacityProperties()
+        )
+    )
+
+
+def make_quantile_lookup():
+    return AsymmetricDivergentColorLookup(
+        AsymmetricDivergentColorLookup.Properties(
+            'gist_gray', 0.5, 0., 1., 0.5, 7, 'black', 'white',
+            CustomOpacityProperties(opacity_center=1.)
+        )
+    )
+
+
+def make_quantile_difference_lookup():
+    return AsymmetricDivergentColorLookup(
+        AsymmetricDivergentColorLookup.Properties(
+            'coolwarm', 0.5, -0.5, 0.5, 0., 7, 'blue', 'red',
+            CustomOpacityProperties()
+        )
+    )

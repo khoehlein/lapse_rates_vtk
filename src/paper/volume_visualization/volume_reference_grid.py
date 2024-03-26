@@ -31,6 +31,27 @@ class ReferenceGridVisualization(MeshDataRepresentation):
         return self
 
 
+class ReferenceLevelVisualization(MeshDataRepresentation):
+
+    def __init__(self, slot: PlotterSlot, volume_data: VolumeData, properties: SurfaceReferenceProperties = None, scaling: ScalingParameters = None, parent=None):
+        if properties is None:
+            properties = SurfaceReferenceProperties()
+        super().__init__(slot, volume_data, properties, scaling, parent)
+        self.mesh = None
+
+    def set_properties(self, properties: SurfaceReferenceProperties, render=True):
+        return super().set_properties(properties)
+
+    def show(self, render: bool = True):
+        if self.is_visible():
+            return self
+        self.mesh = self.volume_data.get_level_mesh(self.scaling, use_scalar_key=False)
+        self.slot.show_reference_mesh(self.mesh, self.properties, render=False)
+        self.slot.update_actor(self.properties, render=render)
+        self.visibility_changed.emit(True)
+        return self
+
+
 class ReferenceGridSettingsView(SurfaceSettingsView):
 
     visibility_changed = pyqtSignal()
@@ -119,7 +140,6 @@ class ReferenceGridController(QObject):
         self.view.apply_visibility(self.model.is_visible())
 
     def on_visibility_changed(self):
-
         self.model.set_visible(self.view.get_visibility())
 
     def on_settings_changed(self):
