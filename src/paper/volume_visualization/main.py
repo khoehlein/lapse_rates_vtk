@@ -121,7 +121,7 @@ class MyMainWindow(MainWindow):
 
         lapse_rate_data = LapseRateData(model_data, terrain_data_o1280)
         self.lapse_rates = LapseRateVisualization(
-            lapse_rate_data, terrain_data_o1280, SiteMode.SURFACE,
+            lapse_rate_data, terrain_data_o1280, station_data,
             self.plotter, LapseRateProperties(), self.plotter_scene.scaling
         )
         self.plotter_scene.add_visual(self.lapse_rates)

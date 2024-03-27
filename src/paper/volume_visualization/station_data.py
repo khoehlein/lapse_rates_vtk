@@ -14,17 +14,20 @@ class StationData(object):
     def __init__(
             self,
             station_data: pd.DataFrame, terrain_data: xr.Dataset,
-            scalar_key=None
+            scalar_key=None, compute_gradient=True
     ):
         self.scalar_key = scalar_key
         self.station_data = station_data
         self.terrain_data = terrain_data
 
+        self.compute_gradient = compute_gradient
+
         self._points = np.zeros((len(self.station_data), 3))
         self._points[:, 0] = self.station_data['longitude'].values
         self._points[:, 1] = self.station_data['latitude'].values
         self._compute_terrain_altitude()
-        self._compute_effective_gradients()
+        if self.compute_gradient:
+            self._compute_effective_gradients()
 
     def update_station_data(self, field_data: Union[xr.Dataset, pd.DataFrame]):
         self.station_data = field_data
@@ -32,7 +35,8 @@ class StationData(object):
         self._points[:, 0] = self.station_data['longitude'].values
         self._points[:, 1] = self.station_data['latitude'].values
         self._compute_terrain_altitude()
-        self._compute_effective_gradients()
+        if self.compute_gradient:
+            self._compute_effective_gradients()
         return self
 
     def _compute_terrain_altitude(self):

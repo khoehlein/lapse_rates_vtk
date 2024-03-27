@@ -222,6 +222,7 @@ CMAP_NAMES = CMAP_NAMES + [cmap_name + '_r' for cmap_name in CMAP_NAMES]
 class CustomOpacitySettingsView(QWidget):
 
     settings_changed = pyqtSignal()
+    preset_selected = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -252,7 +253,9 @@ class CustomOpacitySettingsView(QWidget):
         self.button_uniform = QPushButton(self)
         self.button_uniform.setText('uniform')
         self.button_vshape = QPushButton(self)
-        self.button_vshape.setText('v-shape')
+        self.button_vshape.setText('V-shape')
+        self.button_ashape = QPushButton(self)
+        self.button_ashape.setText('A-shape')
         self.button_opaque = QPushButton(self)
         self.button_opaque.setText('opaque')
         self._connect_signals()
@@ -272,6 +275,7 @@ class CustomOpacitySettingsView(QWidget):
         preset_layout = QHBoxLayout()
         preset_layout.addWidget(self.button_uniform)
         preset_layout.addWidget(self.button_vshape)
+        preset_layout.addWidget(self.button_ashape)
         preset_layout.addWidget(self.button_opaque)
         layout.addRow('Preset: ', preset_layout)
         return layout
@@ -282,6 +286,7 @@ class CustomOpacitySettingsView(QWidget):
         ocenter = self.spinner_opacity_center.value()
         self.spinner_opacity_lower.setValue(ocenter)
         self.spinner_opacity_upper.setValue(ocenter)
+        self.preset_selected.emit()
 
     def on_button_vshape(self):
         self.spinner_log_n_lower.setValue(0.)
@@ -289,6 +294,15 @@ class CustomOpacitySettingsView(QWidget):
         self.spinner_opacity_center.setValue(0.)
         self.spinner_opacity_lower.setValue(1.)
         self.spinner_opacity_upper.setValue(1.)
+        self.preset_selected.emit()
+
+    def on_button_ashape(self):
+        self.spinner_log_n_lower.setValue(0.)
+        self.spinner_log_n_upper.setValue(0.)
+        self.spinner_opacity_center.setValue(1.)
+        self.spinner_opacity_lower.setValue(0.)
+        self.spinner_opacity_upper.setValue(0.)
+        self.preset_selected.emit()
 
     def on_button_opaque(self):
         self.spinner_opacity_center.setValue(1.)
@@ -301,6 +315,7 @@ class CustomOpacitySettingsView(QWidget):
         # self.spinner_opacity_upper.valueChanged.connect(self.settings_changed.emit)
         self.button_uniform.clicked.connect(self.on_button_uniform)
         self.button_vshape.clicked.connect(self.on_button_vshape)
+        self.button_ashape.clicked.connect(self.on_button_ashape)
         self.button_opaque.clicked.connect(self.on_button_opaque)
 
     def get_settings(self):
@@ -379,6 +394,7 @@ class ADCLSettingsView(QWidget):
         # self.combo_cmap_name.currentIndexChanged.connect(self.settings_changed.emit)
         self.scalar_range.range_changed.connect(self.on_range_changed)
         self.button_apply.clicked.connect(self.settings_changed)
+        self.custom_opacity_view.preset_selected.connect(self.settings_changed)
         # self.spinner_vcenter.valueChanged.connect(self.settings_changed.emit)
         # self.scalar_range.range_changed.connect(self.settings_changed.emit)
         # self.spinner_num_samples.valueChanged.connect(self.settings_changed.emit)
