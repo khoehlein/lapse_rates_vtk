@@ -1,3 +1,5 @@
+from typing import Union
+
 import pandas as pd
 import numpy as np
 import xarray as xr
@@ -23,6 +25,15 @@ class StationData(object):
         self._points[:, 1] = self.station_data['latitude'].values
         self._compute_terrain_altitude()
         self._compute_effective_gradients()
+
+    def update_station_data(self, field_data: Union[xr.Dataset, pd.DataFrame]):
+        self.station_data = field_data
+        self._points = np.zeros((len(self.station_data), 3))
+        self._points[:, 0] = self.station_data['longitude'].values
+        self._points[:, 1] = self.station_data['latitude'].values
+        self._compute_terrain_altitude()
+        self._compute_effective_gradients()
+        return self
 
     def _compute_terrain_altitude(self):
         terrain_mesh = TriangleMesh(LocationBatch(Coordinates.from_xarray(self.terrain_data)), self.terrain_data['triangles'].values).to_polydata()

@@ -186,6 +186,7 @@ class VolumeScalarVisualization(MultiMethodScalarVisualization):
         self.blockSignals(False)
         return self
 
+
 class DVRSettingsView(QWidget):
 
     settings_changed = pyqtSignal()

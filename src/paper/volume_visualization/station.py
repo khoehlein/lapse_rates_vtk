@@ -1,9 +1,11 @@
 from enum import Enum
+from typing import Union
 
+import pandas as pd
 from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QWidget, QCheckBox, QDoubleSpinBox, QFormLayout
-
+import xarray as xr
 from src.paper.volume_visualization.color_lookup import InteractiveColorLookup
 from src.paper.volume_visualization.multi_method_visualization import MultiMethodScalarVisualization, \
     MultiMethodSettingsView
@@ -113,6 +115,14 @@ class StationScalarVisualization(MultiMethodScalarVisualization):
             )
         else:
             raise NotImplementedError()
+
+    def update_data(self, new_data: Union[xr.Dataset, pd.DataFrame], render: bool = True):
+        self.blockSignals(True)
+        self.station_data.update_station_data(new_data)
+        if self.is_visible():
+            self.representation.update(render=render)
+        self.blockSignals(False)
+        return self
 
 
 class StationSiteSettingsView(QWidget):

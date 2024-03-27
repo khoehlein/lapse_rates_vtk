@@ -32,8 +32,24 @@ class StationDataVisualization(VolumeVisual):
         self.slot.update_actor(properties, render=render)
         return self
 
-    def update_data(self, new_data: pd.DataFrame):
-        raise NotImplementedError()
+    def update_data(self, new_data: pd.DataFrame, render: bool = True):
+        self.blockSignals(True)
+        was_visible = self.is_visible()
+        if was_visible:
+            self.clear(render=False)
+        self.station_data.update_station_data(new_data)
+        if was_visible:
+            self.show(render=render)
+        self.blockSignals(False)
+        return self
+
+    def update(self, render: bool = True):
+        self.blockSignals(True)
+        if self.is_visible():
+            self.clear(render=False)
+            self.show(render=render)
+        self.blockSignals(False)
+        return self
 
 
 class StationDataRepresentation(StationDataVisualization):

@@ -1,4 +1,5 @@
 import pyvista as pv
+import xarray as xr
 from PyQt5.QtCore import pyqtSignal
 
 from src.paper.volume_visualization.plotter_slot import ActorProperties, PlotterSlot
@@ -43,7 +44,7 @@ class VolumeDataRepresentation(VolumeVisual):
     def get_plotter(self) -> pv.Plotter:
         return self.slot.plotter
 
-    def update_data(self, new_data: VolumeData, render: bool = True):
+    def update_data(self, new_data: xr.Dataset, render: bool = True):
         self.blockSignals(True)
         was_visible = self.is_visible()
         if was_visible:
