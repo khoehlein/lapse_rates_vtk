@@ -90,7 +90,7 @@ class ECMWFColors(InteractiveColorLookup):
         self.cmap = mpl.colors.ListedColormap(
             ECMWF_COLORS[1:-1]
         ).with_extremes(over=ECMWF_COLORS[-1], under=ECMWF_COLORS[0])
-        self.samples = bounds = 273 + 28 - 2 * np.arange(len(ECMWF_COLORS) - 1)
+        self.samples = bounds = 40 - 2 * np.arange(len(ECMWF_COLORS) - 1)
         self.clim = (bounds.min(), bounds.max())
         self.lookup_table = pv.LookupTable(
             cmap=self.cmap, scalar_range=self.clim,
@@ -486,7 +486,7 @@ def make_temperature_difference_lookup():
 def make_quantile_lookup():
     return AsymmetricDivergentColorLookup(
         AsymmetricDivergentColorLookup.Properties(
-            'gist_gray', 0.5, 0., 1., 0.5, 7, 'black', 'white',
+            'gist_gray_r', 0.5, 0., 1., 0.5, 7, 'white', 'black',
             CustomOpacityProperties(opacity_center=1.)
         )
     )
@@ -497,5 +497,23 @@ def make_quantile_difference_lookup():
         AsymmetricDivergentColorLookup.Properties(
             'coolwarm', 0.5, -0.5, 0.5, 0., 7, 'blue', 'red',
             CustomOpacityProperties()
+        )
+    )
+
+
+def make_count_lookup():
+    return AsymmetricDivergentColorLookup(
+        AsymmetricDivergentColorLookup.Properties(
+            'gist_gray', 0., 0., 1000., 0., 7, 'black', 'white',
+            CustomOpacityProperties(opacity_center=1.)
+        )
+    )
+
+
+def make_score_lookup():
+    return AsymmetricDivergentColorLookup(
+        AsymmetricDivergentColorLookup.Properties(
+            'gist_gray', 0., 0., 1., 0., 7, 'black', 'white',
+            CustomOpacityProperties(opacity_center=1.)
         )
     )

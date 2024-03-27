@@ -1,4 +1,7 @@
+from typing import Union
+
 import numpy as np
+import pandas as pd
 import xarray as xr
 import pyvista as pv
 
@@ -11,7 +14,7 @@ class VolumeData(object):
 
     def __init__(
             self,
-            field_data: xr.Dataset, terrain_data: xr.Dataset,
+            field_data: Union[xr.Dataset, pd.DataFrame], terrain_data: xr.Dataset,
             scalar_key: str = None, terrain_level_key: str = 'z_surf_o1280', model_level_key: str = 'z_model_levels'
     ):
         self.field_data = field_data
@@ -30,7 +33,7 @@ class VolumeData(object):
             z = z[None, :]
         self._relative_elevation = z - self._terrain_elevation
 
-    def update_field_data(self, field_data: xr.Dataset):
+    def update_field_data(self, field_data: Union[xr.Dataset, pd.DataFrame]):
         self.field_data = field_data
         self._compute_elevation_metrics()
         return self

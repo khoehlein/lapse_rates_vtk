@@ -112,7 +112,7 @@ class ElevationSummary(VolumeVisual):
         site_id = np.zeros_like(indices)
         site_id[distances.indptr[1:-1]] = 1
         site_id = np.cumsum(site_id)
-        z_sel = self.terrain_data_hr[self.terrain_level_key].values[indices]
+        z_sel = self.terrain_data_hr['z_surf'].values[indices]
 
         groups = pd.DataFrame({'site_id': site_id, 'z': z_sel}).groupby('site_id')['z']
 

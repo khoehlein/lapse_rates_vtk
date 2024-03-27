@@ -5,11 +5,8 @@ import pyvista as pv
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QFileDialog, QWidget, QPushButton, QVBoxLayout, QHBoxLayout
 
-DEFAULT_PLOTTING_DIR = '/mnt/ssd4tb/ECMWF/screenshots'
-os.makedirs(DEFAULT_PLOTTING_DIR, exist_ok=True)
 
-
-DEFAULT_CAMERA_DIR = '/mnt/ssd4tb/ECMWF/cameras'
+DEFAULT_CAMERA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cameras')
 os.makedirs(DEFAULT_CAMERA_DIR, exist_ok=True)
 
 
@@ -19,11 +16,14 @@ class CameraControlsSettingsView(QWidget):
     save_camera_request = pyqtSignal(str)
     save_screenshot_request = pyqtSignal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, default_plotting_dir: str, parent=None):
         super().__init__(parent)
+        self.default_plotting_dir = os.path.abspath(default_plotting_dir)
+        os.makedirs(default_plotting_dir, exist_ok=True)
         self.button_save_screenshot = QPushButton('Save screenshot')
         self.button_save_camera = QPushButton('Save camera')
         self.button_load_camera = QPushButton('Load camera')
+        self.button_load_default_camera = QPushButton('Load default camera')
         self._connect_signals()
         self._set_layout()
 
@@ -31,6 +31,7 @@ class CameraControlsSettingsView(QWidget):
         self.button_save_screenshot.clicked.connect(self.on_save_screenshot)
         self.button_save_camera.clicked.connect(self.on_save_camera)
         self.button_load_camera.clicked.connect(self.on_load_camera)
+        self.button_load_default_camera.clicked.connect(self.on_load_default_camera)
 
     def _set_layout(self):
         layout = QVBoxLayout()
@@ -38,11 +39,12 @@ class CameraControlsSettingsView(QWidget):
         hlayout.addWidget(self.button_load_camera)
         hlayout.addWidget(self.button_save_camera)
         layout.addLayout(hlayout)
+        layout.addWidget(self.button_load_default_camera)
         layout.addWidget(self.button_save_screenshot)
         self.setLayout(layout)
 
     def on_save_screenshot(self):
-        fname = QFileDialog.getSaveFileName(self, 'Save screenshot', DEFAULT_PLOTTING_DIR, '*.png')
+        fname = QFileDialog.getSaveFileName(self, 'Save screenshot', self.default_plotting_dir, '*.png')
         if fname[0]:
             self.save_screenshot_request.emit(fname[0])
 
@@ -55,6 +57,9 @@ class CameraControlsSettingsView(QWidget):
         fname = QFileDialog.getOpenFileName(self, 'Load camera', DEFAULT_CAMERA_DIR, '*.json')
         if fname[0]:
             self.load_camera_request.emit(fname[0])
+
+    def on_load_default_camera(self):
+        self.load_camera_request.emit(os.path.join(DEFAULT_CAMERA_DIR, 'default.json'))
 
 
 class CameraController(QWidget):

@@ -36,17 +36,19 @@ def compute_gradients(z_surf, z_model_levels, t2m, t):
     return grad
 
 
-def extract_station_data(bbox: DomainBoundingBox):
+def extract_station_data(bbox: DomainBoundingBox, timestamp):
     station_data = pd.read_parquet('/mnt/ssd4tb/ECMWF/Vis/station_data_europe_hres-const-lapse.parquet')
     station_metadata = pd.read_csv('/mnt/ssd4tb/ECMWF/Obs/station_locations_nearest.csv', index_col=0)
     station_metadata = station_metadata.set_index('stnid')
     locations = LocationBatch(Coordinates.from_xarray(station_metadata))
     valid_stnids = station_metadata.index.values[bbox.contains(locations)]
     mask = np.logical_and(
-        station_data['timestamp'].values == np.datetime64('2021-12-19T06:00'),
+        station_data['timestamp'].values == timestamp,
         station_data['stnid'].isin(valid_stnids)
     )
     station_data = station_data.loc[mask]
+    for field in ['prediction', 'observation']:
+        station_data[field] = station_data[field].values - 273.15
     stnids = station_data['stnid'].values
     station_data['latitude'] = station_metadata['latitude'].loc[stnids].values
     station_data['longitude'] = station_metadata['longitude'].loc[stnids].values
@@ -104,12 +106,13 @@ def extract_terrain_data(node_ids, triangles, paths):
     return terrain_data
 
 
-def extract_model_data(node_ids):
-    t2m = xr.open_dataset("/mnt/ssd4tb/ECMWF/HRES_2m_temp_20211219.grib").t2m.isel(time=0, step=6, values=node_ids)
+def extract_model_data(node_ids, date, time, step):
+    path_to_t2m = "/mnt/ssd4tb/ECMWF/HRES_2m_temp_{}.grib".format(date.replace('-', ''))
+    path_to_t = "/mnt/ssd4tb/ECMWF/HRES_Model_Level_temp_{}.grib".format(date.replace('-', ''))
+    t2m = xr.open_dataset(path_to_t2m).t2m.isel(time=time, step=step, values=node_ids)
     z_surf = xr.open_dataset("/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib").z.isel(values=node_ids)
     z_model_levels = compute_level_heights(z_surf, t2m)
-    model_data = xr.open_dataset("/mnt/ssd4tb/ECMWF/HRES_Model_Level_temp_20211219.grib").isel(time=0, step=6,
-                                                                                                values=node_ids)
+    model_data = xr.open_dataset(path_to_t).isel(time=time, step=step, values=node_ids)
     model_data = model_data.assign({
         'z_model_levels': (['hybrid', 'values'], z_model_levels),
         'latitude_3d': (['hybrid', 'values'], np.tile(model_data['latitude'].values[None, :], (20, 1))),
@@ -120,13 +123,15 @@ def extract_model_data(node_ids):
     grad_t = compute_gradients(z_surf, z_model_levels, t2m, t)
     model_data = model_data.assign({
         'grad_t': (['hybrid', 'values'], grad_t * 1000),
-        't2m': ('values', t2m.values),
+        't2m': ('values', t2m.values - 273.15),
     })
+    model_data['t'] = model_data['t'] - 273.15
     return model_data
 
 
-def main():
-    output_path = '/mnt/ssd4tb/ECMWF/Vis/detailed_alps'
+def export(name, date, time, step):
+
+    output_path = '/mnt/ssd4tb/ECMWF/Vis/{}'.format(name)
     os.makedirs(output_path, exist_ok=True)
 
     paths_o1280 = {
@@ -140,9 +145,9 @@ def main():
     }
 
     bbox = DomainBoundingBox(DEFAULT_DOMAIN)
-    #
-    # station_data = extract_station_data(bbox)
-    # station_data.to_parquet(os.path.join(output_path, 'station_data_2021121906.parquet'))
+    timestamp = np.datetime64('{}T{:02d}:00'.format(date, 12 * time + step))
+    station_data = extract_station_data(bbox, timestamp)
+    station_data.to_parquet(os.path.join(output_path, 'station_data.parquet'))
 
     mesh = OctahedralGrid(1280).get_mesh_for_subdomain(bbox)
     node_ids = mesh.nodes.source_reference
@@ -151,8 +156,8 @@ def main():
     surface_data = extract_terrain_data(node_ids, triangles, paths_o1280)
     surface_data.to_netcdf(os.path.join(output_path, 'terrain_data_o1280.nc'))
 
-    model_data = extract_model_data(node_ids)
-    model_data.to_netcdf(os.path.join(output_path, 'model_data_2021121906_o1280.nc'))
+    model_data = extract_model_data(node_ids, date, time, step)
+    model_data.to_netcdf(os.path.join(output_path, 'model_data_o1280.nc'))
 
     mesh = OctahedralGrid(8000).get_mesh_for_subdomain(bbox)
     node_ids = mesh.nodes.source_reference
@@ -162,6 +167,19 @@ def main():
     surface_data.to_netcdf(os.path.join(output_path, 'terrain_data_o8000.nc'))
 
     print('Done')
+
+
+def export_winter():
+    export('detailed_alps_winter','2021-12-19', 0, 6)
+
+
+def export_summer():
+    export('detailed_alps_summer', '2021-07-12', 1, 3)
+
+
+def main():
+    export_summer()
+    export_winter()
 
 
 if __name__ == "__main__":

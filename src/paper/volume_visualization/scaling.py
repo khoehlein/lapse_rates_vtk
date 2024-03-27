@@ -136,8 +136,8 @@ class SceneScalingSettingsView(QWidget):
         self.slider_log_offset_exaggeration = QSlider(Qt.Orientation.Horizontal, self)
         self.slider_log_offset_exaggeration.setRange(-32, 32)
         self.slider_log_offset_exaggeration.setValue(0)
-        self.button_clear = QPushButton(self)
-        self.button_clear.setText("Clear scene")
+        # self.button_clear = QPushButton(self)
+        # self.button_clear.setText("Clear scene")
         self.button_reset = QPushButton(self)
         self.button_reset.setText("Reset exaggeration")
         self.button_apply = QPushButton(self)
@@ -148,7 +148,7 @@ class SceneScalingSettingsView(QWidget):
     def _connect_signals(self):
         self.button_apply.clicked.connect(self.scaling_changed)
         self.button_reset.clicked.connect(self.on_reset)
-        self.button_clear.clicked.connect(self.clear_request)
+        # self.button_clear.clicked.connect(self.clear_request)
 
     def on_reset(self):
         self.slider_log_offset_exaggeration.setValue(0)
@@ -164,7 +164,7 @@ class SceneScalingSettingsView(QWidget):
         hlayout.addWidget(self.button_reset)
         hlayout.addWidget(self.button_apply)
         outer_layout.addLayout(hlayout)
-        outer_layout.addWidget(self.button_clear)
+        # outer_layout.addWidget(self.button_clear)
         self.setLayout(outer_layout)
 
     def get_settings(self):

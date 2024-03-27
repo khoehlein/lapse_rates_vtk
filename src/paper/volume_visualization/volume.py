@@ -1,6 +1,8 @@
 import math
 from enum import Enum
-from typing import Dict
+from typing import Dict, Union
+
+import pandas as pd
 from PyQt5.QtCore import pyqtSignal, QObject, Qt
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QWidget, QDoubleSpinBox, QCheckBox, QComboBox, QFormLayout, QStackedLayout, \
@@ -176,7 +178,7 @@ class VolumeScalarVisualization(MultiMethodScalarVisualization):
             IsocontourProperties: VolumeRepresentationMode.ISO_CONTOURS,
         }.get(type(self.properties))
 
-    def update_data(self, new_data: xr.Dataset, render: bool = True):
+    def update_data(self, new_data: Union[xr.Dataset, pd.DataFrame], render: bool = True):
         self.blockSignals(True)
         self.volume_data.update_field_data(new_data)
         if self.is_visible():

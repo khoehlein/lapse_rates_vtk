@@ -1,3 +1,5 @@
+import os
+
 from PyQt5.QtCore import QObject
 from PyQt5.QtWidgets import QDockWidget, QScrollArea, QWidget, QVBoxLayout, QLabel, QTabWidget
 
@@ -5,6 +7,7 @@ from src.interaction.plotter_controls.view import PlotterSettingsView
 from src.paper.volume_visualization.camera_settings import CameraControlsSettingsView
 from src.paper.volume_visualization.color_lookup import ADCLSettingsView
 from src.paper.volume_visualization.elevation_summary import ElevationSummaryRepresentationSettings
+from src.paper.volume_visualization.lapse_rates.lapse_rate_visualization import LapseRateRepresentationSettings
 from src.paper.volume_visualization.scaling import SceneScalingSettingsView
 from src.paper.volume_visualization.station import StationScalarSettingsView
 from src.paper.volume_visualization.station_reference import StationSiteReferenceSettingsView, \
@@ -15,12 +18,12 @@ from src.paper.volume_visualization.volume import VolumeScalarSettingsView, Volu
 
 class RightDockMenu(QDockWidget):
 
-    def __init__(self, parent: QObject = None):
+    def __init__(self, args, parent: QObject = None):
         super().__init__(parent)
         self.setWindowTitle('Settings')
         self.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self._build_scroll_area()
-        self._populate_scroll_area()
+        self._populate_scroll_area(args)
 
     def _build_scroll_area(self):
         self.scroll_area = QScrollArea(self)
@@ -29,10 +32,10 @@ class RightDockMenu(QDockWidget):
         self.scroll_area.setWidget(self.scroll_area_contents)
         self.setWidget(self.scroll_area)
 
-    def _populate_scroll_area(self):
+    def _populate_scroll_area(self, args):
         self._build_vis_settings_tab()
         self._build_plotter_settings_tab()
-        self._build_camera_settings_tab()
+        self._build_camera_settings_tab(args)
 
     def _build_vis_settings_tab(self):
         self.vis_settings_tabs = QTabWidget(self.scroll_area_contents)
@@ -40,9 +43,10 @@ class RightDockMenu(QDockWidget):
         self.vis_settings_views = {}
         self._build_model_data_tabs()
         self._build_station_data_tabs()
+        self._build_lapse_rate_tabs()
         self._build_terrain_data_tabs()
-        self._build_reference_data_tabs()
         self._build_summary_tabs()
+        self._build_reference_data_tabs()
         container = QWidget(self.scroll_area_contents)
         layout = QVBoxLayout()
         layout.addWidget(self.vis_settings_tabs)
@@ -50,8 +54,9 @@ class RightDockMenu(QDockWidget):
         container.setLayout(layout)
         self.scroll_area_contents.addTab(container, 'Visualization settings')
 
-    def _build_camera_settings_tab(self):
-        self.camera_settings = CameraControlsSettingsView(self)
+    def _build_camera_settings_tab(self, args):
+        camera_dir = os.path.join(args['data_dir'])
+        self.camera_settings = CameraControlsSettingsView(camera_dir, parent=self)
         container = QWidget(self.scroll_area_contents)
         layout = QVBoxLayout()
         layout.addWidget(self.camera_settings)
@@ -93,6 +98,15 @@ class RightDockMenu(QDockWidget):
         container.setLayout(layout)
         self.vis_settings_tabs.addTab(container, 'Summary')
 
+    def _build_lapse_rate_tabs(self):
+        container = QWidget(self.vis_settings_tabs)
+        self.lapse_rate_settings = LapseRateRepresentationSettings(container)
+        layout = QVBoxLayout()
+        layout.addLayout(self.lapse_rate_settings.get_layout())
+        layout.addStretch()
+        container.setLayout(layout)
+        self.vis_settings_tabs.addTab(container, 'Lapse rates')
+
     def _build_station_data_tabs(self):
         container = QWidget(self.vis_settings_tabs)
         self.station_data_tabs = QTabWidget(container)
@@ -104,7 +118,7 @@ class RightDockMenu(QDockWidget):
         layout.addWidget(self.station_data_tabs)
         layout.addStretch()
         container.setLayout(layout)
-        self.vis_settings_tabs.addTab(container, 'Station')
+        self.vis_settings_tabs.addTab(container, 'Stations')
 
     def _build_terrain_data_tabs(self):
         container = QWidget(self.vis_settings_tabs)

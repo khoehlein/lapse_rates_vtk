@@ -16,6 +16,9 @@ from src.paper.volume_visualization.color_lookup import (
 )
 from src.paper.volume_visualization.elevation_summary import ElevationSummary, ElevationSummaryProperties, \
     ElevationSummaryController
+from src.paper.volume_visualization.lapse_rates.algorithm import LapseRateData
+from src.paper.volume_visualization.lapse_rates.lapse_rate_visualization import LapseRateVisualization, SiteMode, \
+    LapseRateProperties, LapseRateController
 from src.paper.volume_visualization.left_side_menu import RightDockMenu
 from src.paper.volume_visualization.multi_method_visualization import MultiMethodVisualizationController
 from src.paper.volume_visualization.plotter_slot import SurfaceProperties, \
@@ -54,8 +57,8 @@ VERTICAL_SCALE = 4000.
 
 terrain_data_o1280 = xr.open_dataset(os.path.join(DATA_DIR, 'terrain_data_o1280.nc'))
 coords_o1280 = Coordinates.from_xarray(terrain_data_o1280)
-model_data = xr.open_dataset(os.path.join(DATA_DIR, 'model_data_2021121906_o1280.nc'))
-station_data = pd.read_parquet(os.path.join(DATA_DIR, 'station_data_2021121906.parquet'))
+model_data = xr.open_dataset(os.path.join(DATA_DIR, 'model_data_o1280.nc'))
+station_data = pd.read_parquet(os.path.join(DATA_DIR, 'station_data.parquet'))
 
 terrain_data_o8000 = xr.open_dataset(os.path.join(DATA_DIR, 'terrain_data_o8000.nc'))
 coords_o8000 = Coordinates.from_xarray(terrain_data_o8000)
@@ -72,7 +75,6 @@ class MyMainWindow(MainWindow):
 
         # add the pyvista interactor object
         self.plotter: pv.Plotter = QtInteractor(self.frame)
-        self.plotter.enable_anti_aliasing('fxaa')
         self.plotter.enable_depth_peeling(32)
         vlayout.addWidget(self.plotter.interactor)
         self.signal_close.connect(self.plotter.close)
@@ -83,19 +85,20 @@ class MyMainWindow(MainWindow):
         # simple menu to demo functions
         mainMenu = self.menuBar()
         fileMenu = mainMenu.addMenu('File')
-        clear_scalar_bars_button = QtWidgets.QAction('Clear scalar bars', self)
-        clear_scalar_bars_button.triggered.connect(self.clear_scalar_bars)
-        fileMenu.addAction(clear_scalar_bars_button)
+        clear_scene_action = QtWidgets.QAction('Clear scene', self)
+        clear_scene_action.triggered.connect(self.clear_scene)
+        # clear_scene_action.setShortcut('Ctrl+Del')
+        fileMenu.addAction(clear_scene_action)
         exitButton = QtWidgets.QAction('Exit', self)
         exitButton.setShortcut('Ctrl+Q')
         exitButton.triggered.connect(self.close)
         fileMenu.addAction(exitButton)
 
-        self.right_dock_menu = RightDockMenu(self)
+        self.right_dock_menu = RightDockMenu(args, self)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.right_dock_menu)
 
-        self.plotter_controls = PlotterController(self.right_dock_menu.plotter_settings, self.plotter, self)
-        self.camera_controls = CameraController(self.right_dock_menu.camera_settings, self.plotter, self)
+        self.plotter_controls = PlotterController(self.right_dock_menu.plotter_settings, self.plotter)
+        self.camera_controls = CameraController(self.right_dock_menu.camera_settings, self.plotter)
 
         self.plotter_scene = SceneScalingModel(parent=self)
         self.scaling_controls = SceneScalingController(self.right_dock_menu.scaling_settings, self.plotter_scene)
@@ -114,7 +117,16 @@ class MyMainWindow(MainWindow):
         self.plotter_scene.add_visual(self.elevation_summary)
         self.elevation_summary_controls = ElevationSummaryController(
             self.right_dock_menu.summary_settings, self.elevation_summary,
-            parent=self
+        )
+
+        lapse_rate_data = LapseRateData(model_data, terrain_data_o1280)
+        self.lapse_rates = LapseRateVisualization(
+            lapse_rate_data, terrain_data_o1280, SiteMode.SURFACE,
+            self.plotter, LapseRateProperties(), self.plotter_scene.scaling
+        )
+        self.plotter_scene.add_visual(self.lapse_rates)
+        self.lapse_rate_controls = LapseRateController(
+            self.right_dock_menu.lapse_rate_settings, self.lapse_rates
         )
 
         if show:
@@ -176,21 +188,21 @@ class MyMainWindow(MainWindow):
     def _build_station_visuals(self):
         self._build_station_visual(
             'station_t_obs',
-            PlotterSlot(self.plotter, 'Observation (K)'),
+            PlotterSlot(self.plotter, 'Observation (°C)'),
             StationData(station_data, terrain_data_o1280, scalar_key='observation'),
             StationSiteProperties(),
             make_temperature_lookup()
         )
         self._build_station_visual(
             'station_t_pred',
-            PlotterSlot(self.plotter, 'Prediction (K)'),
+            PlotterSlot(self.plotter, 'Prediction (°C)'),
             StationData(station_data, terrain_data_o1280, scalar_key='prediction'),
             StationSiteProperties(),
             make_temperature_lookup()
         )
         self._build_station_visual(
             'station_t_diff',
-            PlotterSlot(self.plotter, 'T diff. (K)'),
+            PlotterSlot(self.plotter, 'Prediction error (K)'),
             StationData(station_data, terrain_data_o1280, scalar_key='difference'),
             StationSiteProperties(),
             make_temperature_difference_lookup(),
@@ -266,21 +278,21 @@ class MyMainWindow(MainWindow):
         )
         self._build_grid_visual(
             'model_t',
-            PlotterSlot(self.plotter, 'T (K)'),
+            PlotterSlot(self.plotter, 'T (°C)'),
             VolumeData(model_data, terrain_data_o1280, scalar_key='t'),
             VolumeProperties(),
             make_temperature_lookup(),
         )
         self._build_grid_visual(
             'model_t2m',
-            PlotterSlot(self.plotter, 'T2m (K)'),
+            PlotterSlot(self.plotter, 'T2m (°C)'),
             VolumeData(model_data, terrain_data_o1280, scalar_key='t2m', model_level_key='z_surf'),
             SurfaceProperties(),
             make_temperature_lookup(),
         )
 
-    def clear_scalar_bars(self):
-        self.plotter.scalar_bars.clear()
+    def clear_scene(self):
+        self.plotter_scene.clear_all()
 
 
 if __name__ == '__main__':
