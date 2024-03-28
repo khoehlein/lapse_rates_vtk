@@ -10,8 +10,11 @@ from src.model.level_heights import compute_standard_surface_pressure, compute_f
 import networkx as nx
 
 
-DOMAIN_NAME = 'central_europe'
-DEFAULT_DOMAIN = DomainLimits(43., 47., 6., 12.)
+# DOMAIN_NAME = 'detailed_alps'
+# DEFAULT_DOMAIN = DomainLimits(43., 47., 6., 12.)
+
+DOMAIN_NAME = 'alps'
+DEFAULT_DOMAIN = DomainLimits(43., 49., 4., 18.)
 
 
 def compute_level_heights(z_surf, t2m):
