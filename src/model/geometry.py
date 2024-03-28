@@ -262,6 +262,7 @@ class DomainLimits(object):
 class DomainBoundingBox(object):
 
     def __init__(self, bounds: DomainLimits):
+        self.bounds = bounds
         self.latitude = AngularInterval(bounds.min_latitude, bounds.max_latitude)
         self.longitude = AngularInterval(bounds.min_longitude, bounds.max_longitude, period=360.)
 

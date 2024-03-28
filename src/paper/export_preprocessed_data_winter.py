@@ -10,6 +10,7 @@ from src.model.level_heights import compute_standard_surface_pressure, compute_f
 import networkx as nx
 
 
+DOMAIN_NAME = 'central_europe'
 DEFAULT_DOMAIN = DomainLimits(43., 47., 6., 12.)
 
 
@@ -56,7 +57,9 @@ def extract_station_data(bbox: DomainBoundingBox, timestamp):
     return station_data
 
 
-def extract_terrain_data(node_ids, triangles, paths):
+def extract_terrain_data(bbox, mesh, paths):
+    node_ids = mesh.source_reference
+    triangles = mesh.vertices
     terrain_data = xr.open_dataset(paths['lsm']).isel(values=node_ids)
     lsm = terrain_data.lsm
     watermass_id = - np.ones((len(lsm.values),), dtype=int)
@@ -83,8 +86,8 @@ def extract_terrain_data(node_ids, triangles, paths):
     z_wm_med = df.groupby('id')['z'].median()
     z_watermass = z_wm_med.loc[watermass_id].values
 
-    safe_bbox = DomainBoundingBox(DEFAULT_DOMAIN.plus_safety_margin())
-    mesh_o1280 = OctahedralGrid(1280).get_mesh_for_subdomain(safe_bbox)
+    bbox_safe = DomainBoundingBox(bbox.bounds.plus_safety_margin())
+    mesh_o1280 = OctahedralGrid(1280).get_mesh_for_subdomain(bbox_safe)
     nodes_o1280 = mesh_o1280.source_reference
     z_surf_o1280 = xr.open_dataset("/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib").z.isel(values=nodes_o1280)
     mesh_o1280 = mesh_o1280.to_polydata()
@@ -106,7 +109,8 @@ def extract_terrain_data(node_ids, triangles, paths):
     return terrain_data
 
 
-def extract_model_data(node_ids, date, time, step):
+def extract_model_data(mesh, date, time, step):
+    node_ids = mesh.source_reference
     path_to_t2m = "/mnt/ssd4tb/ECMWF/HRES_2m_temp_{}.grib".format(date.replace('-', ''))
     path_to_t = "/mnt/ssd4tb/ECMWF/HRES_Model_Level_temp_{}.grib".format(date.replace('-', ''))
     t2m = xr.open_dataset(path_to_t2m).t2m.isel(time=time, step=step, values=node_ids)
@@ -129,57 +133,67 @@ def extract_model_data(node_ids, date, time, step):
     return model_data
 
 
-def export(name, date, time, step):
+def export(name, bbox, date, time, step):
 
     output_path = '/mnt/ssd4tb/ECMWF/Vis/{}'.format(name)
     os.makedirs(output_path, exist_ok=True)
 
-    paths_o1280 = {
-        'lsm': "/mnt/ssd4tb/ECMWF/LSM_HRES_Sep2022.grib",
-        'z': "/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib"
-    }
+    print('Exporting regular lowres')
+    model_data, surface_data = _extract_from_lowres(bbox, date, step, time)
+    surface_data.to_netcdf(os.path.join(output_path, 'terrain_data_o1280.nc'))
+    model_data.to_netcdf(os.path.join(output_path, 'model_data_o1280.nc'))
 
-    paths_o8000 = {
-        'lsm': "/mnt/ssd4tb/ECMWF/lsm_from_watermask.nc",
-        'z': "/mnt/ssd4tb/ECMWF/orog_reduced_gaussian_grid_1km.grib"
-    }
+    print('Exporting safe lowres')
+    bbox_safe = DomainBoundingBox(bbox.bounds.plus_safety_margin())
+    model_data, surface_data = _extract_from_lowres(bbox_safe, date, step, time)
+    surface_data.to_netcdf(os.path.join(output_path, 'terrain_data_o1280_safe.nc'))
+    model_data.to_netcdf(os.path.join(output_path, 'model_data_o1280_safe.nc'))
 
-    bbox = DomainBoundingBox(DEFAULT_DOMAIN)
+    print('Exporting highres')
+    surface_data = _extract_from_highres(bbox)
+    surface_data.to_netcdf(os.path.join(output_path, 'terrain_data_o8000.nc'))
+
+    print('Exporting stations')
     timestamp = np.datetime64('{}T{:02d}:00'.format(date, 12 * time + step))
     station_data = extract_station_data(bbox, timestamp)
     station_data.to_parquet(os.path.join(output_path, 'station_data.parquet'))
 
-    mesh = OctahedralGrid(1280).get_mesh_for_subdomain(bbox)
-    node_ids = mesh.nodes.source_reference
-    triangles = mesh.vertices
-
-    surface_data = extract_terrain_data(node_ids, triangles, paths_o1280)
-    surface_data.to_netcdf(os.path.join(output_path, 'terrain_data_o1280.nc'))
-
-    model_data = extract_model_data(node_ids, date, time, step)
-    model_data.to_netcdf(os.path.join(output_path, 'model_data_o1280.nc'))
-
-    mesh = OctahedralGrid(8000).get_mesh_for_subdomain(bbox)
-    node_ids = mesh.nodes.source_reference
-    triangles = mesh.vertices
-
-    surface_data = extract_terrain_data(node_ids, triangles, paths_o8000)
-    surface_data.to_netcdf(os.path.join(output_path, 'terrain_data_o8000.nc'))
-
     print('Done')
 
 
-def export_winter():
-    export('detailed_alps_winter','2021-12-19', 0, 6)
+def _extract_from_highres(bbox):
+    paths_o8000 = {
+        'lsm': "/mnt/ssd4tb/ECMWF/lsm_from_watermask.nc",
+        'z': "/mnt/ssd4tb/ECMWF/orog_reduced_gaussian_grid_1km.grib"
+    }
+    mesh = OctahedralGrid(8000).get_mesh_for_subdomain(bbox)
+    surface_data = extract_terrain_data(bbox, mesh, paths_o8000)
+    return surface_data
 
 
-def export_summer():
-    export('detailed_alps_summer', '2021-07-12', 1, 3)
+def _extract_from_lowres(bbox, date, step, time):
+    paths_o1280 = {
+        'lsm': "/mnt/ssd4tb/ECMWF/LSM_HRES_Sep2022.grib",
+        'z': "/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib"
+    }
+    mesh = OctahedralGrid(1280).get_mesh_for_subdomain(bbox)
+    surface_data = extract_terrain_data(bbox, mesh, paths_o1280)
+    model_data = extract_model_data(mesh, date, time, step)
+    return model_data, surface_data
+
+
+def export_winter(bbox):
+    export(f'{DOMAIN_NAME}_winter', bbox, '2021-12-19', 0, 6)
+
+
+def export_summer(bbox):
+    export(f'{DOMAIN_NAME}_summer', bbox, '2021-07-12', 1, 3)
 
 
 def main():
-    export_summer()
-    export_winter()
+    bbox = DomainBoundingBox(DEFAULT_DOMAIN)
+    export_summer(bbox)
+    export_winter(bbox)
 
 
 if __name__ == "__main__":
