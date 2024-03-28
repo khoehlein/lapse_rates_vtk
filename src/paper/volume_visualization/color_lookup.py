@@ -453,8 +453,8 @@ class ADCLController(QObject):
 def make_lsm_lookup():
     return AsymmetricDivergentColorLookup(
         AsymmetricDivergentColorLookup.Properties(
-            'gist_earth', 0.5, 0., 1., 0.5, 7, 'black', 'white',
-            CustomOpacityProperties()
+            'gist_earth', 0.5, 0.25, 0.75, 0.5, 7, 'black', 'white',
+            CustomOpacityProperties(opacity_center=1.)
         )
     )
 
@@ -493,8 +493,8 @@ def make_lapse_rate_lookup():
 def make_temperature_difference_lookup():
     return AsymmetricDivergentColorLookup(
         AsymmetricDivergentColorLookup.Properties(
-            'coolwarm', 0.5, -30, 30, 0., 29, 'blue', 'red',
-            CustomOpacityProperties()
+            'coolwarm', 0.5, -15, 15, 0., 29, 'blue', 'red',
+            CustomOpacityProperties(opacity_center=1.)
         )
     )
 

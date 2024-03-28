@@ -116,8 +116,7 @@ class PlotterController(QObject):
             logging.info('Creating grid actor')
             self._grid_actor = self.plotter.show_bounds(
                 xtitle='Longitude', ytitle='Latitude', ztitle='Elevation',
-                show_zlabels=False,
-                grid='front', location='outer',
+                show_zlabels=False, grid='back', location='outer', font_size=12,
                 all_edges=True
             )
         if not show_grid and self._grid_actor is not None:

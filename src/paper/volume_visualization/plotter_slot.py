@@ -226,7 +226,8 @@ class PlotterSlot(object):
         if self.scalar_bar_id in self.plotter.scalar_bars.keys():
             self.plotter.remove_scalar_bar(self.scalar_bar_id)
         self.scalar_bar_actor = self.plotter.add_scalar_bar(
-            title=self.scalar_bar_id, mapper=mapper, render=render, interactive=interactive, height=0.05
+            title=self.scalar_bar_id, mapper=mapper, render=render, interactive=interactive, height=0.05,
+            position_x=0.02
         )
         return self
 

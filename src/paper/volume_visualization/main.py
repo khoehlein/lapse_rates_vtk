@@ -23,7 +23,7 @@ from src.paper.volume_visualization.left_side_menu import RightDockMenu
 from src.paper.volume_visualization.multi_method_visualization import MultiMethodVisualizationController
 from src.paper.volume_visualization.plotter_slot import SurfaceProperties, \
     PlotterSlot, VolumeProperties, StationSiteProperties, StationSiteReferenceProperties, \
-    StationOnTerrainReferenceProperties
+    StationOnTerrainReferenceProperties, IsocontourProperties, ContourParameters
 from src.paper.volume_visualization.station import StationScalarVisualization
 from src.paper.volume_visualization.volume import VolumeScalarVisualization
 from src.paper.volume_visualization.volume_data import VolumeData
@@ -258,6 +258,13 @@ class MyMainWindow(MainWindow):
             PlotterSlot(self.plotter, 'Z (O8000)'),
             VolumeData(model_data, terrain_data_o8000, scalar_key='z_surf', model_level_key='z_surf'),
             SurfaceProperties(),
+            make_elevation_lookup(),
+        )
+        self._build_grid_visual(
+            'z_model_level',
+            PlotterSlot(self.plotter, 'Z (model level)'),
+            VolumeData(model_data, terrain_data_o1280, scalar_key='z_model_levels'),
+            IsocontourProperties(),
             make_elevation_lookup(),
         )
         self._build_station_visual(

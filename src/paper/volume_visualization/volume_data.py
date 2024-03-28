@@ -19,6 +19,7 @@ class VolumeData(object):
     ):
         self.field_data = field_data
         self.terrain_data = terrain_data
+        self.terrain_data['lsm_bin'] = ('values', np.round(terrain_data['lsm'].values))
 
         self.scalar_key = scalar_key
         self.terrain_level_key = terrain_level_key
