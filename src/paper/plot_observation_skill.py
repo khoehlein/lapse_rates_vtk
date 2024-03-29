@@ -111,31 +111,40 @@ def plot_scores(input_file: str, train=False):
     groups = metrics.groupby('dz_bin')
     print()
 
-    fig, ax = plt.subplots(2, 1, sharex='all', gridspec_kw={'hspace': 0, 'height_ratios': [1, 3]})
+    fig, ax = plt.subplots(2, 1, sharex='all', gridspec_kw={'hspace': 0, 'height_ratios': [1, 3]}, figsize=(10, 6))
     labels = {
         1: 'valley stations',
         2: 'neutral stations',
         3: 'mountain stations',
     }
+
+    for x in np.arange(0, 100, 20):
+        rectangle = Rectangle((x, -10), 10, 50, facecolor='gray', alpha=0.1)
+        ax[1].add_patch(rectangle)
+
+    bins = np.linspace(0, 100, 11)
+    entries = np.arange(5, 100, 10)
+    ax[0].hist([entries] * 3, bins=bins, weights=[group['score_count'].values for _, group in groups])
+
     for key, group in groups:
         group_label = labels[key]
         group = group.set_index('score_bin').sort_index()
-        mse_score = 1. - group['adaptive_mse'].values / group['default_mse'].values
+        mse_score = 1. - np.sqrt(group['adaptive_mse'].values / group['default_mse'].values)
         max_score = 1. - group['adaptive_max'].values / group['default_max'].values
-        bins = np.linspace(0, 100, 11)
-        entries = np.arange(5, 100, 10)
-        ax[0].hist(entries, bins=bins, weights=group['count'].values)
-        lines = ax[1].plot((group.index.values - 0.5) * 10, mse_score * 100, label=f'{group_label} (MSE)')
+        lines = ax[1].plot((group.index.values - 0.5) * 10, mse_score * 100, label=f'{group_label} (RMSE)')
         ax[1].plot((group.index.values - 0.5) * 10, max_score * 100, label=f'{group_label} (MAX)', linestyle='--', color=lines[0].get_color())
 
-    for x in np.arange(0, 100, 10):
-        rectangle = Rectangle((x, -10), 10, 50, facecolor='gray', alpha=0.1)
-        ax[1].add_patch(rectangle, zorder=0)
 
-    ax.legend()
-    ax.set(xlabel='R2 score (%)', ylabel='Skill improvement (%)')
+    ax[1].legend()
+    ax[1].set(xlabel='R2 score (%)', ylabel='Skill improvement (%)', ylim=(-8, 22), xlim=(0, 100))
+    ax[0].set(ylabel='observations', yscale='log')
     plt.tight_layout()
+    label = 'train' if train else 'eval'
+    plt.savefig(os.path.join(os.path.dirname(input_file), f'scores_final_{label}.pdf'))
     plt.show()
+    plt.close()
+
+
 
 
 if __name__ == '__main__':
