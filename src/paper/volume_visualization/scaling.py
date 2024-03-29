@@ -4,7 +4,7 @@ from enum import Enum
 
 import pyvista as pv
 from PyQt5.QtCore import pyqtSignal, QObject, Qt
-from PyQt5.QtWidgets import QWidget, QFormLayout, QVBoxLayout, QPushButton, QSlider, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QFormLayout, QVBoxLayout, QPushButton, QSlider, QHBoxLayout, QCheckBox
 
 
 class SceneGeometry(Enum):
@@ -37,7 +37,7 @@ class StationSlot(Enum):
     STATION_ON_TERRAIN = 'station_on_terrain'
 
 
-ScalingParameters = namedtuple('ScaleParameters', ['scale', 'offset_scale'])
+ScalingParameters = namedtuple('ScaleParameters', ['scale', 'offset_scale', 'negate_offset', 'flat_offset', 'all_zero'])
 VisualizationSlot = namedtuple('VisualizationSlot', ['geometry', 'slot'])
 VisualizationSlotRequest = namedtuple('VisualizationSlotRequest', ['uid', 'slot'])
 
@@ -81,7 +81,7 @@ class SceneScalingModel(QObject):
     def __init__(self, scaling: ScalingParameters = None, parent=None):
         super().__init__(parent)
         if scaling is None:
-            scaling = ScalingParameters(2. ** 12, 1.)
+            scaling = ScalingParameters(2. ** 12, 1., False, False, False)
         self.scaling = scaling
         self.visuals = []
         self.plotters = []
@@ -138,8 +138,16 @@ class SceneScalingSettingsView(QWidget):
         self.slider_log_offset_exaggeration.setValue(0)
         # self.button_clear = QPushButton(self)
         # self.button_clear.setText("Clear scene")
-        self.button_reset = QPushButton(self)
-        self.button_reset.setText("Reset exaggeration")
+        self.button_reset_exaggeration = QPushButton(self)
+        self.button_reset_exaggeration.setText("Reset exaggeration")
+        self.button_reset_scale = QPushButton(self)
+        self.button_reset_scale.setText("Reset scale")
+        self.checkbox_invert_offset = QCheckBox(self)
+        # self.checkbox_invert_offset.setText("inverse offset")
+        self.checkbox_flat_baseline = QCheckBox(self)
+        # self.checkbox_flat_baseline.setText("flat baseline")
+        self.checkbox_all_flat = QCheckBox(self)
+        # self.checkbox_all_flat.setText("all flat")
         self.button_apply = QPushButton(self)
         self.button_apply.setText("Apply")
         self._connect_signals()
@@ -147,11 +155,19 @@ class SceneScalingSettingsView(QWidget):
 
     def _connect_signals(self):
         self.button_apply.clicked.connect(self.scaling_changed)
-        self.button_reset.clicked.connect(self.on_reset)
+        self.button_reset_exaggeration.clicked.connect(self.on_reset_exaggeration)
+        self.button_reset_scale.clicked.connect(self.on_reset_scale)
+        self.checkbox_invert_offset.stateChanged.connect(self.scaling_changed)
+        self.checkbox_flat_baseline.stateChanged.connect(self.scaling_changed)
+        self.checkbox_all_flat.stateChanged.connect(self.scaling_changed)
         # self.button_clear.clicked.connect(self.clear_request)
 
-    def on_reset(self):
+    def on_reset_exaggeration(self):
         self.slider_log_offset_exaggeration.setValue(0)
+        self.scaling_changed.emit()
+
+    def on_reset_scale(self):
+        self.slider_log_vertical_scale.setValue(int(round(-12 / self.scale_step)))
         self.scaling_changed.emit()
 
     def _set_layout(self):
@@ -159,10 +175,14 @@ class SceneScalingSettingsView(QWidget):
         layout = QFormLayout()
         layout.addRow("Vertical scale:", self.slider_log_vertical_scale)
         layout.addRow("Offset exaggeration:", self.slider_log_offset_exaggeration)
+        layout.addRow("Inverse offset:", self.checkbox_invert_offset)
+        layout.addRow("Flatten baseline:", self.checkbox_flat_baseline)
+        layout.addRow("Flatten all:", self.checkbox_all_flat)
         outer_layout.addLayout(layout)
+        outer_layout.addWidget(self.button_apply)
         hlayout = QHBoxLayout()
-        hlayout.addWidget(self.button_reset)
-        hlayout.addWidget(self.button_apply)
+        hlayout.addWidget(self.button_reset_scale)
+        hlayout.addWidget(self.button_reset_exaggeration)
         outer_layout.addLayout(hlayout)
         # outer_layout.addWidget(self.button_clear)
         self.setLayout(outer_layout)
@@ -171,6 +191,9 @@ class SceneScalingSettingsView(QWidget):
         return ScalingParameters(
             2. ** (- self.scale_step * self.slider_log_vertical_scale.value()),
             2. ** (self.scale_step * self.slider_log_offset_exaggeration.value()),
+            self.checkbox_invert_offset.isChecked(),
+            self.checkbox_flat_baseline.isChecked(),
+            self.checkbox_all_flat.isChecked()
         )
 
     def apply_settings(self, scaling: ScalingParameters):

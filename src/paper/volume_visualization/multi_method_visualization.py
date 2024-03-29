@@ -20,7 +20,7 @@ class MultiMethodScalarVisualization(VolumeVisual):
         super().__init__(parent)
         self.slot = slot
         if scaling is None:
-            scaling = ScalingParameters(1., 1.)
+            scaling = ScalingParameters(1., 1., False, False, False)
         self.scaling = scaling
         self.properties = properties
         self.color_lookup = color_lookup

@@ -12,12 +12,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input-file', type=str, required=True)
     args = vars(parser.parse_args())
-    export_scores(args['input_file'])
+    export_scores(args['input_file'], train=True)
+    export_scores(args['input_file'], train=False)
 
 
-def export_scores(input_file: str):
+def export_scores(input_file: str, train=False):
     print('Loading')
-    obs, pred = load_predictions(input_file)
+    obs, pred = load_predictions(input_file, train)
 
     print('Computing')
     scores = pred['score'].values
@@ -26,7 +27,7 @@ def export_scores(input_file: str):
     score_bin = np.digitize(np.fmax(scores, 0.), np.linspace(0, 1, 11))
 
     dz = pred['elevation_difference'].values
-    dz_bin = np.digitize(dz, np.array([np.min(dz) - 1, -100., 100., np.max(dz) + 1]))
+    dz_bin = np.digitize(dz, np.array([np.min(dz) - 1, -50., 50., np.max(dz) + 1]))
 
     res_default = np.abs(obs['value_0'].values - (pred['hres'].values - 0.0065 * dz))
 
@@ -45,13 +46,25 @@ def export_scores(input_file: str):
     for cutoff_min, cutoff_max in tqdm(product(cutoffs_lower, cutoffs_upper)):
         pred_adaptive = pred['hres'].values + np.clip(pred['lapse_rate'].values, cutoff_min, cutoff_max) / 1000 * dz
         res_adaptive = np.abs(obs['value_0'].values - pred_adaptive)
-        df = pd.DataFrame({
+        df_mse = pd.DataFrame({
             'score_bin': score_bin,
             'dz_bin': dz_bin,
             'adaptive': res_adaptive**2,
             'default': res_default**2,
         })
-        metrics = pd.concat([df.groupby(['score_bin', 'dz_bin']).mean(), scores_per_bin], axis='columns')
+        df_mse.columns = [f'{x}_mse' for x in df_mse.columns]
+        df_max = pd.DataFrame({
+            'score_bin': score_bin,
+            'dz_bin': dz_bin,
+            'adaptive': res_adaptive,
+            'default': res_default,
+        })
+        df_max.columns = [f'{x}_max' for x in df_mse.columns]
+        metrics = pd.concat([
+            df_mse.groupby(['score_bin', 'dz_bin']).mean(),
+            df_max.groupby(['score_bin', 'dz_bin']).max(),
+            scores_per_bin
+        ], axis='columns')
         metrics = metrics.reset_index()
         metrics['min_cutoff'] = [cutoff_min] * len(metrics)
         metrics['max_cutoff'] = [cutoff_max] * len(metrics)
@@ -59,16 +72,20 @@ def export_scores(input_file: str):
         all.append(metrics)
 
     all = pd.concat(all, axis=0, ignore_index=True)
+    label = 'train' if train else 'eval'
     all.to_csv(os.path.join(os.path.dirname(input_file), 'score_analysis.csv'))
 
 
-def load_predictions(input_file):
+def load_predictions(input_file, train=False):
     train_split = pd.read_csv('/mnt/data2/ECMWF/Obs/train_stations.csv')
     obs = pd.read_parquet('/mnt/data2/ECMWF/Obs/observations_masked.parquet',
                           columns=['value_0', 'valid', 'elevation', 'stnid'])
     pred = pd.read_parquet(input_file)
+    split_mask = obs['stnid'].isin(train_split['stnid'].values)
+    if not train:
+        split_mask = ~split_mask
     mask = np.all(np.stack([
-        ~obs['stnid'].isin(train_split['stnid'].values),
+        split_mask,
         obs['valid'].values,
         obs['elevation'].values <= pred['elevation_max'].values,
         ~np.isnan(pred['score'].values)

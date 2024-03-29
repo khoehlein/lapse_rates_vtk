@@ -16,12 +16,12 @@ def main():
     export_histograms(args['input_file'])
 
 
-def export_histograms(input_file):
+def export_histograms(input_file, train=False):
     print('Loading')
-    obs, pred = load_predictions(input_file)
+    label = 'train' if train else 'eval'
+    obs, pred = load_predictions(input_file, train=train)
 
     scores = pred['score'].values
-    score_rank = rankdata(scores)
     score_bin = np.digitize(np.fmax(scores, 0.), np.linspace(0, 1, 11))
 
     dz = pred['elevation_difference'].values
@@ -33,7 +33,7 @@ def export_histograms(input_file):
         'lapse_rate': pred['lapse_rate'].values
     }).groupby(['score_bin', 'dz_bin'])
 
-    plot_path = os.path.join(os.path.dirname(input_file), 'score_histograms')
+    plot_path = os.path.join(os.path.dirname(input_file), f'score_histograms_{label}')
     os.makedirs(plot_path, exist_ok=True)
 
     for bin, group in lr_per_bin:

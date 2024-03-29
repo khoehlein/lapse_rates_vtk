@@ -282,7 +282,7 @@ class SurfaceSettingsView(QWidget):
         self.spinner_line_width.setSingleStep(0.25)
         self.checkbox_lines_as_tubes = QCheckBox('')
         self.spinner_point_size = QDoubleSpinBox(self)
-        self.spinner_point_size.setRange(0.25, 20)
+        self.spinner_point_size.setRange(0.25, 100)
         self.spinner_point_size.setSingleStep(0.25)
         self.checkbox_points_as_spheres = QCheckBox(self)
         self.spinner_metallic = QDoubleSpinBox(self)

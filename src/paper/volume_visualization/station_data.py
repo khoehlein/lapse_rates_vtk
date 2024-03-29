@@ -53,15 +53,22 @@ class StationData(object):
         self.station_data['grad_t'] = 1000. * self.station_data['difference'] / z_diff
 
     def compute_station_elevation(self, scale_params: ScalingParameters):
+        if scale_params.all_zero:
+            return np.zeros_like(self._relative_elevation)
         inv_scale = 1.0 / scale_params.scale
         z = self._relative_elevation.copy()
         if scale_params.offset_scale != 1.:
             z *= scale_params.offset_scale
-        z += self._terrain_elevation
+        if scale_params.negate_offset:
+            z = -z
+        if not scale_params.flat_offset:
+            z += self._terrain_elevation
         z *= inv_scale
         return z
 
     def compute_terrain_elevation(self, scale_params: ScalingParameters):
+        if scale_params.all_zero or scale_params.flat_offset:
+            return np.zeros_like(self._terrain_elevation)
         inv_scale = 1.0 / scale_params.scale
         return self._terrain_elevation * inv_scale
 

@@ -19,6 +19,7 @@ class VolumeData(object):
     ):
         self.field_data = field_data
         self.terrain_data = terrain_data
+        self.terrain_data['t2m_default'] = ('values', np.round(terrain_data['lsm'].values))
         self.terrain_data['lsm_bin'] = ('values', np.round(terrain_data['lsm'].values))
 
         self.scalar_key = scalar_key
@@ -82,11 +83,16 @@ class VolumeData(object):
         return mesh
 
     def compute_elevation_coordinate(self, scale_params):
+        if scale_params.all_zero:
+            return np.zeros_like(self._relative_elevation)
         inv_scale = 1.0 / scale_params.scale
         z = self._relative_elevation.copy()
         if scale_params.offset_scale != 1.:
             z *= scale_params.offset_scale
-        z += self._terrain_elevation
+        if scale_params.negate_offset:
+            z = -z
+        if not scale_params.flat_offset:
+            z += self._terrain_elevation
         z *= inv_scale
         return z
 

@@ -119,15 +119,15 @@ class MyMainWindow(MainWindow):
             self.right_dock_menu.summary_settings, self.elevation_summary,
         )
 
-        lapse_rate_data = LapseRateData(model_data, terrain_data_o1280)
-        self.lapse_rates = LapseRateVisualization(
-            lapse_rate_data, terrain_data_o1280, station_data,
-            self.plotter, LapseRateProperties(), self.plotter_scene.scaling
-        )
-        self.plotter_scene.add_visual(self.lapse_rates)
-        self.lapse_rate_controls = LapseRateController(
-            self.right_dock_menu.lapse_rate_settings, self.lapse_rates
-        )
+        # lapse_rate_data = LapseRateData(model_data, terrain_data_o1280)
+        # self.lapse_rates = LapseRateVisualization(
+        #     lapse_rate_data, terrain_data_o1280, station_data,
+        #     self.plotter, LapseRateProperties(), self.plotter_scene.scaling
+        # )
+        # self.plotter_scene.add_visual(self.lapse_rates)
+        # self.lapse_rate_controls = LapseRateController(
+        #     self.right_dock_menu.lapse_rate_settings, self.lapse_rates
+        # )
 
         if show:
             self.show()

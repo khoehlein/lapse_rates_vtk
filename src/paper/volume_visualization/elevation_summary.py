@@ -126,6 +126,8 @@ class ElevationSummary(VolumeVisual):
         q_med = groups.median().values
 
         iqr_bounds = q_iqr[[0, -1]]
+        iqr_bounds[0] = np.minimum(iqr_bounds[0] - q_med, 1.) + q_med
+        iqr_bounds[-1] = np.maximum(iqr_bounds[-1] - q_med, 1.) + q_med
 
         num_sites = len(q_med)
         num_quantiles = len(q_all)

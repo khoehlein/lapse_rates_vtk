@@ -18,7 +18,7 @@ class VolumeDataRepresentation(VolumeVisual):
     ):
         super(VolumeDataRepresentation, self).__init__(parent)
         if scaling is None:
-            scaling = ScalingParameters(1., 1.)
+            scaling = ScalingParameters(1., 1., False, False, False)
         self.slot = slot
         self.volume_data = volume_data
         self.scaling = scaling

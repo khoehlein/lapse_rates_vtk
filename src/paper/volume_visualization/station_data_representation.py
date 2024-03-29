@@ -18,7 +18,7 @@ class StationDataVisualization(VolumeVisual):
     ):
         super().__init__(parent)
         if scaling is None:
-            scaling = ScalingParameters(1., 1.)
+            scaling = ScalingParameters(1., 1., False, False, False)
         self.slot = slot
         self.station_data = station_data
         self.scaling = scaling

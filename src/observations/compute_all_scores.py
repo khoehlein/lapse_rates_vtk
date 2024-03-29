@@ -10,8 +10,10 @@ folders = [f for f in os.listdir(root_path) if os.path.isdir(os.path.join(root_p
 
 for folder in folders:
     pred_file = os.path.join(root_path, folder, 'predictions.parquet')
-    export_scores(pred_file)
-    export_histograms(pred_file)
-    score_file = os.path.join(root_path, folder, 'score_analysis.csv')
-    export_plots(score_file)
-    gc.collect()
+    for train in [True, False]:
+        export_scores(pred_file, train)
+        export_histograms(pred_file, train)
+        label = 'train' if train else 'eval'
+        score_file = os.path.join(root_path, folder, f'score_analysis_{label}.csv')
+        export_plots(score_file, train)
+        gc.collect()
