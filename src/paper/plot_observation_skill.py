@@ -4,6 +4,7 @@ import os.path
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from matplotlib.patches import Rectangle
 from scipy.stats import rankdata
 from itertools import product
 from tqdm import tqdm
@@ -110,7 +111,7 @@ def plot_scores(input_file: str, train=False):
     groups = metrics.groupby('dz_bin')
     print()
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(2, 1, sharex='all', gridspec_kw={'hspace': 0, 'height_ratios': [1, 3]})
     labels = {
         1: 'valley stations',
         2: 'neutral stations',
@@ -121,8 +122,15 @@ def plot_scores(input_file: str, train=False):
         group = group.set_index('score_bin').sort_index()
         mse_score = 1. - group['adaptive_mse'].values / group['default_mse'].values
         max_score = 1. - group['adaptive_max'].values / group['default_max'].values
-        lines = ax.plot((group.index.values - 0.5) * 10, mse_score * 100, label=f'{group_label} (MSE)')
-        ax.plot((group.index.values - 0.5) * 10, max_score * 100, label=f'{group_label} (MAX)', linestyle='--', color=lines[0].get_color())
+        bins = np.linspace(0, 100, 11)
+        entries = np.arange(5, 100, 10)
+        ax[0].hist(entries, bins=bins, weights=group['count'].values)
+        lines = ax[1].plot((group.index.values - 0.5) * 10, mse_score * 100, label=f'{group_label} (MSE)')
+        ax[1].plot((group.index.values - 0.5) * 10, max_score * 100, label=f'{group_label} (MAX)', linestyle='--', color=lines[0].get_color())
+
+    for x in np.arange(0, 100, 10):
+        rectangle = Rectangle((x, -10), 10, 50, facecolor='gray', alpha=0.1)
+        ax[1].add_patch(rectangle, zorder=0)
 
     ax.legend()
     ax.set(xlabel='R2 score (%)', ylabel='Skill improvement (%)')
