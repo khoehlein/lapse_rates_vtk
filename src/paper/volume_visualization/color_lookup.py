@@ -91,10 +91,11 @@ class ECMWFColors(InteractiveColorLookup):
             ECMWF_COLORS[1:-1]
         ).with_extremes(over=ECMWF_COLORS[-1], under=ECMWF_COLORS[0])
         bounds = 40 - 2 * np.arange(len(ECMWF_COLORS) - 1)
-        self.samples = bounds[::-1]
+        self.samples = np.linspace(bounds.min(), bounds.max(), 256)
         self.clim = (bounds.min(), bounds.max())
+        colors = [self.cmap(x) for x in np.linspace(0, 1, 256)]
         self.lookup_table = pv.LookupTable(
-            cmap=self.cmap, scalar_range=self.clim,
+            cmap=mpl.colors.ListedColormap(colors), scalar_range=self.clim,
             below_range_color=ECMWF_COLORS[0],
             above_range_color=ECMWF_COLORS[-1],
         )

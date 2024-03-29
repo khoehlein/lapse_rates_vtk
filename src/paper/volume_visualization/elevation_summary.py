@@ -114,7 +114,9 @@ class ElevationSummary(VolumeVisual):
         site_id = np.cumsum(site_id)
         z_sel = self.terrain_data_hr['z_surf'].values[indices]
 
-        groups = pd.DataFrame({'site_id': site_id, 'z': z_sel}).groupby('site_id')['z']
+        data = pd.DataFrame({'site_id': site_id, 'z': z_sel})
+
+        groups = data.groupby('site_id')['z']
 
         p_all = np.linspace(0., 1., self.properties.num_quantiles + 1)
         q_all_ = groups.quantile(p_all)
@@ -128,6 +130,17 @@ class ElevationSummary(VolumeVisual):
         iqr_bounds = q_iqr[[0, -1]]
         iqr_bounds[0] = np.minimum(iqr_bounds[0] - q_med, 1.) + q_med
         iqr_bounds[-1] = np.maximum(iqr_bounds[-1] - q_med, 1.) + q_med
+
+        iqr = iqr_bounds[-1] - iqr_bounds[0]
+        upper_whisker_max = iqr_bounds[-1] + self.properties.flier_factor * iqr
+        lower_whisker_max = iqr_bounds[0] - self.properties.flier_factor * iqr
+
+        data_whiskers = data.loc[np.logical_and(z_sel <= upper_whisker_max[site_id], z_sel >= lower_whisker_max[site_id])]
+        groups_whiskers = data_whiskers.groupby('site_id')
+        upper_whisker = groups_whiskers['z'].max().sort_index().values
+        lower_whisker = groups_whiskers['z'].min().sort_index().values
+
+        fliers = np.stack([lower_whisker, upper_whisker], axis=0)
 
         num_sites = len(q_med)
         num_quantiles = len(q_all)
@@ -152,6 +165,7 @@ class ElevationSummary(VolumeVisual):
                 ElevationSummaryComponent.Z_IQR_BOUNDS.value: (('lower_upper', 'values'), iqr_bounds),
                 ElevationSummaryComponent.Z_MEDIAN.value: (('values',), q_med),
                 ElevationSummaryComponent.IQR.value: (('values',), iqr_bounds[-1] - iqr_bounds[0]),
+                ElevationSummaryComponent.Z_FLIERS.value: (('lower_upper', 'values'), fliers),
                 'longitude_3d': (('quantiles', 'values'), np.tile(longitude[None, :], (num_quantiles, 1))),
                 'latitude_3d': (('quantiles', 'values'), np.tile(latitude[None, :], (num_quantiles, 1))),
             },
@@ -162,8 +176,6 @@ class ElevationSummary(VolumeVisual):
                 'p_iqr': (('quantiles',), p_iqr),
             }
         )
-
-        self._compute_fliers()
 
     def _build_representations(self):
         self._build_overview_representations()
@@ -376,14 +388,13 @@ class ElevationSummary(VolumeVisual):
             )
         )
 
-    def _compute_fliers(self):
-        iqr_bounds = self.terrain_summary['z_iqr_bounds'].values
-        iqr = iqr_bounds[-1] - iqr_bounds[0]
-        fliers = iqr_bounds.copy()
-        flier_offset = self.properties.flier_factor * iqr
-        fliers[0] -= flier_offset
-        fliers[1] += flier_offset
-        self.terrain_summary[ElevationSummaryComponent.Z_FLIERS.value] = (('lower_upper', 'values'), fliers)
+    # def _compute_fliers(self):
+    #     iqr_bounds = self.terrain_summary['z_iqr_bounds'].values
+    #     iqr = iqr_bounds[-1] - iqr_bounds[0]
+    #     fliers = iqr_bounds.copy()
+    #     flier_offset = self.properties.flier_factor * iqr
+    #     fliers[0] -= flier_offset
+    #     fliers[1] += flier_offset
 
     def is_visible(self):
         for visual in self.representations.values():
@@ -417,11 +428,11 @@ class ElevationSummary(VolumeVisual):
         for visual in self.representations.values():
             visual.update_data(self.terrain_summary, render=False)
 
-    def update_fliers(self, properties: ElevationSummaryProperties, render: bool = True):
-        self.properties = properties
-        self._compute_fliers()
-        self.representations[ElevationSummaryComponent.Z_FLIERS].update_data(self.terrain_summary, render=render)
-        return self
+    # def update_fliers(self, properties: ElevationSummaryProperties, render: bool = True):
+    #     self.properties = properties
+    #     self._compute_fliers()
+    #     self.representations[ElevationSummaryComponent.Z_FLIERS].update_data(self.terrain_summary, render=render)
+    #     return self
 
     def update_lookup(self, properties: ElevationSummaryProperties, render: bool = True):
         self.properties = properties
@@ -737,16 +748,16 @@ class ElevationSummaryController(QWidget):
     def _connect_summary_settings(self):
         summary_settings = self.view.summary_settings
         summary_settings.settings_changed.connect(self.on_settings_changed)
-        summary_settings.fliers_changed.connect(self.on_fliers_changed)
+        summary_settings.fliers_changed.connect(self.on_settings_changed)
         summary_settings.lookup_changed.connect(self.on_lookup_changed)
 
     def on_settings_changed(self):
         settings = self.view.summary_settings.get_settings()
         self.model.set_properties(settings)
 
-    def on_fliers_changed(self):
-        settings = self.view.summary_settings.get_settings()
-        self.model.update_fliers(settings)
+    # def on_fliers_changed(self):
+    #     settings = self.view.summary_settings.get_settings()
+    #     self.model.update_fliers(settings)
 
     def on_lookup_changed(self):
         settings = self.view.summary_settings.get_settings()

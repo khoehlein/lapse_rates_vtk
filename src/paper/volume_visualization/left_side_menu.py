@@ -252,7 +252,7 @@ class RightDockMenu(QDockWidget):
     def _build_temperature_volume_tab(self):
         key = 'model_t'
         volume_settings = VolumeScalarSettingsView(parent=self.scroll_area_contents)
-        self._make_tab_with_color_lookup(
+        self._make_tab_without_color_lookup(
             key, volume_settings,
             'Volume properties',
             self.model_data_tabs, 'T'
