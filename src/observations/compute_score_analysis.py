@@ -59,7 +59,7 @@ def export_scores(input_file: str, train=False):
             'adaptive': res_adaptive,
             'default': res_default,
         }).groupby(['score_bin', 'dz_bin']).max()
-        df_max.columns = [f'{x}_max' for x in df_mse.columns]
+        df_max.columns = [f'{x}_max' for x in df_max.columns]
         metrics = pd.concat([df_mse, df_max, scores_per_bin], axis='columns')
         metrics = metrics.reset_index()
         metrics['min_cutoff'] = [cutoff_min] * len(metrics)
