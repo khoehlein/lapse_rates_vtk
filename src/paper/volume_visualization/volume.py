@@ -74,7 +74,7 @@ class ModelLevelRepresentation(MeshDataRepresentation):
     def show(self, render: bool = True):
         if self.is_visible():
             return self
-        self.mesh = self.volume_data.get_level_mesh(self.scaling)
+        self.mesh = self.volume_data.get_volume_mesh(self.scaling)
         lookup_table = self.color_lookup.lookup_table
         self.slot.show_scalar_mesh(self.mesh, lookup_table, self.properties, render=render)
         self.visibility_changed.emit(True)
