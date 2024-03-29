@@ -45,7 +45,7 @@ class VolumeProperties(ActorProperties):
 
 
 @dataclass
-class SurfaceProperties(ActorProperties):
+class MeshProperties(ActorProperties):
     style: SurfaceStyle = SurfaceStyle.SURFACE
     line_width: float = pv.global_theme.line_width
     render_lines_as_tubes: bool = pv.global_theme.render_lines_as_tubes
@@ -66,17 +66,17 @@ class SurfaceProperties(ActorProperties):
 
 
 @dataclass
-class SurfaceReferenceProperties(SurfaceProperties):
+class SurfaceReferenceProperties(MeshProperties):
     color: Any = pv.global_theme.color.int_rgb
 
 
 @dataclass
-class IsocontourProperties(SurfaceProperties):
+class IsocontourProperties(MeshProperties):
     contours: ContourParameters = ContourParameters('z_model_levels', 10)
 
 
 @dataclass
-class StationSiteProperties(SurfaceProperties):
+class StationSiteProperties(MeshProperties):
 
     def __init__(
             self,
@@ -129,7 +129,7 @@ class StationSiteReferenceProperties(StationSiteProperties):
 
 
 @dataclass(init=False)
-class StationOnTerrainProperties(SurfaceProperties):
+class StationOnTerrainProperties(MeshProperties):
     preference: str = 'cell'
 
     def __init__(
@@ -243,9 +243,9 @@ class PlotterSlot(object):
         return actor
 
     def show_scalar_mesh(
-            self, mesh: pv.PolyData, lookup_table: pv.LookupTable,
+            self, mesh: Union[pv.PolyData, pv.UnstructuredGrid], lookup_table: pv.LookupTable,
             properties: Union[
-                SurfaceProperties,
+                MeshProperties,
                 StationSiteProperties,
                 StationOnTerrainProperties
             ],

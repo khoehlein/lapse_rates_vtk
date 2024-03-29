@@ -18,8 +18,10 @@ class VolumeData(object):
             scalar_key: str = None, terrain_level_key: str = 'z_surf_o1280', model_level_key: str = 'z_model_levels'
     ):
         self.field_data = field_data
+        if isinstance(field_data, xr.Dataset) and 'hybrid' in field_data.dims.keys():
+            self.field_data['model_level_3d'] = (('hybrid', 'values'), np.tile(np.arange(118, 138)[:, None], (1, len(self.field_data['longitude'].values))))
         self.terrain_data = terrain_data
-        self.terrain_data['t2m_default'] = ('values', np.round(terrain_data['lsm'].values))
+        # self.terrain_data['t2m_default'] = ('values', np.round(terrain_data['lsm'].values))
         self.terrain_data['lsm_bin'] = ('values', np.round(terrain_data['lsm'].values))
 
         self.scalar_key = scalar_key
@@ -60,7 +62,7 @@ class VolumeData(object):
         mesh = WedgeMesh(surface_mesh, z)
         mesh = mesh.to_wedge_grid()
         if use_scalar_key and self.scalar_key is not None:
-            mesh[self.scalar_key] = self._get_data_for_key(self.scalar_key).ravel()
+            mesh[self.scalar_key] = self._get_data_for_key(self.scalar_key).copy().ravel()
         return mesh
 
     def get_level_mesh(self, scale_params: ScalingParameters, use_scalar_key: bool = True) -> pv.PolyData:

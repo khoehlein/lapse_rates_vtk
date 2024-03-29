@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QWidget, QFormLayout, QCheckBox, QVBoxLayout
 
 from src.paper.volume_visualization.plotter_slot import SurfaceReferenceProperties, PlotterSlot
 from src.paper.volume_visualization.scaling import ScalingParameters
-from src.paper.volume_visualization.volume import SurfaceSettingsView
+from src.paper.volume_visualization.volume import MeshSettingsView
 from src.paper.volume_visualization.volume_data import VolumeData
 from src.paper.volume_visualization.volume_data_representation import MeshDataRepresentation
 from src.widgets import SelectColorButton
@@ -52,7 +52,7 @@ class ReferenceLevelVisualization(MeshDataRepresentation):
         return self
 
 
-class ReferenceGridSettingsView(SurfaceSettingsView):
+class ReferenceGridSettingsView(MeshSettingsView):
 
     visibility_changed = pyqtSignal()
 

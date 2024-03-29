@@ -90,13 +90,19 @@ class ECMWFColors(InteractiveColorLookup):
         self.cmap = mpl.colors.ListedColormap(
             ECMWF_COLORS[1:-1]
         ).with_extremes(over=ECMWF_COLORS[-1], under=ECMWF_COLORS[0])
-        self.samples = bounds = 40 - 2 * np.arange(len(ECMWF_COLORS) - 1)
+        bounds = 40 - 2 * np.arange(len(ECMWF_COLORS) - 1)
+        self.samples = bounds[::-1]
         self.clim = (bounds.min(), bounds.max())
         self.lookup_table = pv.LookupTable(
             cmap=self.cmap, scalar_range=self.clim,
             below_range_color=ECMWF_COLORS[0],
             above_range_color=ECMWF_COLORS[-1],
         )
+        # self.lookup_table = pv.LookupTable(
+        #     cmap='hsv', scalar_range=self.clim,
+        #     # below_range_color=ECMWF_COLORS[0],
+        #     # above_range_color=ECMWF_COLORS[-1],
+        # )
 
     def update_lookup_table(self):
         pass
@@ -211,7 +217,7 @@ class AsymmetricDivergentColorLookup(InteractiveColorLookup):
 
 
 CMAP_NAMES = [
-    'viridis', 'plasma', 'inferno', 'magma', 'cividis'
+    'viridis', 'plasma', 'inferno', 'magma', 'cividis', 'hsv',
     'PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu',
     'RdYlBu', 'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic',
     'ocean', 'gist_earth', 'terrain', 'gist_heat', 'gist_gray', 'gist_rainbow'
@@ -481,10 +487,27 @@ def make_temperature_lookup():
     return ECMWFColors()
 
 
+def make_diverging_temp_lookup():
+    return AsymmetricDivergentColorLookup(
+        AsymmetricDivergentColorLookup.Properties(
+            'coolwarm', 0.5, -20, 40, 0., 29, 'blue', 'red',
+            CustomOpacityProperties(opacity_center=1.)
+        )
+    )
+
+
 def make_lapse_rate_lookup():
     return AsymmetricDivergentColorLookup(
         AsymmetricDivergentColorLookup.Properties(
             'PuOr_r', 0.5, -12, 50, -6.5, 256, '#55007f', '#713900',
+            CustomOpacityProperties()
+        )
+    )
+
+def make_model_level_lookup():
+    return AsymmetricDivergentColorLookup(
+        AsymmetricDivergentColorLookup.Properties(
+            'magma_r', 0.5, 118, 137, 127, 8, 'white', 'black',
             CustomOpacityProperties()
         )
     )

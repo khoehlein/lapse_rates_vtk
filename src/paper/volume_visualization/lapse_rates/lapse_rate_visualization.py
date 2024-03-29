@@ -20,7 +20,7 @@ from src.paper.volume_visualization.lapse_rates.clipping import RampClipProperti
     RampMaxClip, DEFAULT_CLIP_MIN, DEFAULT_CLIP_MAX
 from src.paper.volume_visualization.multi_method_visualization import MultiMethodScalarVisualization, \
     MultiMethodVisualizationController
-from src.paper.volume_visualization.plotter_slot import PlotterSlot, SurfaceProperties, StationSiteProperties
+from src.paper.volume_visualization.plotter_slot import PlotterSlot, MeshProperties, StationSiteProperties
 from src.paper.volume_visualization.scaling import VolumeVisual, ScalingParameters
 from src.paper.volume_visualization.station import StationScalarVisualization, StationScalarSettingsView
 from src.paper.volume_visualization.station_data import StationData
@@ -193,7 +193,7 @@ class LapseRateVisualization(VolumeVisual):
                         model_level_key=(key.value if key != LapseRateComponent.Z_RANGE else 'z_surf_o1280')
                     ),
                     make_elevation_lookup(),
-                    SurfaceProperties(),
+                    MeshProperties(),
                     self.scaling,
                 )
             )
@@ -213,7 +213,7 @@ class LapseRateVisualization(VolumeVisual):
                         scalar_key=key.value, model_level_key='z_surf_o1280'
                     ),
                     make_temperature_lookup(),
-                    SurfaceProperties(),
+                    MeshProperties(),
                     self.scaling,
                 )
             )
@@ -233,7 +233,7 @@ class LapseRateVisualization(VolumeVisual):
                         model_level_key='z_surf_o1280'
                     ),
                     make_lapse_rate_lookup(),
-                    SurfaceProperties(),
+                    MeshProperties(),
                     self.scaling,
                 )
             )
@@ -247,7 +247,7 @@ class LapseRateVisualization(VolumeVisual):
                     model_level_key='z_surf_o1280'
                 ),
                 make_count_lookup(),
-                SurfaceProperties(),
+                MeshProperties(),
                 self.scaling,
             )
         )
@@ -261,7 +261,7 @@ class LapseRateVisualization(VolumeVisual):
                     model_level_key='z_surf_o1280'
                 ),
                 make_score_lookup(),
-                SurfaceProperties(),
+                MeshProperties(),
                 self.scaling,
             )
         )

@@ -12,7 +12,8 @@ from src.model.geometry import Coordinates
 from src.paper.volume_visualization.camera_settings import CameraController
 from src.paper.volume_visualization.color_lookup import (
     make_temperature_lookup, make_lapse_rate_lookup, make_elevation_offset_lookup,
-    make_elevation_lookup, make_lsm_lookup, make_temperature_difference_lookup
+    make_elevation_lookup, make_lsm_lookup, make_temperature_difference_lookup, make_model_level_lookup,
+    make_diverging_temp_lookup
 )
 from src.paper.volume_visualization.elevation_summary import ElevationSummary, ElevationSummaryProperties, \
     ElevationSummaryController
@@ -21,7 +22,7 @@ from src.paper.volume_visualization.lapse_rates.lapse_rate_visualization import 
     LapseRateProperties, LapseRateController
 from src.paper.volume_visualization.left_side_menu import RightDockMenu
 from src.paper.volume_visualization.multi_method_visualization import MultiMethodVisualizationController
-from src.paper.volume_visualization.plotter_slot import SurfaceProperties, \
+from src.paper.volume_visualization.plotter_slot import MeshProperties, \
     PlotterSlot, VolumeProperties, StationSiteProperties, StationSiteReferenceProperties, \
     StationOnTerrainReferenceProperties, IsocontourProperties, ContourParameters
 from src.paper.volume_visualization.station import StationScalarVisualization
@@ -30,7 +31,8 @@ from src.paper.volume_visualization.volume_data import VolumeData
 from src.paper.volume_visualization.volume_reference_grid import ReferenceGridVisualization, ReferenceGridController
 from src.paper.volume_visualization.scaling import SceneScalingModel, SceneScalingController
 from src.paper.volume_visualization.station_data import StationData
-from src.paper.volume_visualization.station_reference import StationSiteReferenceVisualization, StationOnTerrainReferenceVisualization
+from src.paper.volume_visualization.station_reference import StationSiteReferenceVisualization, \
+    StationTerrainLinkReferenceVisualization, StationOnTerrainReferenceVisualization
 
 os.environ["QT_API"] = "pyqt5"
 
@@ -184,10 +186,20 @@ class MyMainWindow(MainWindow):
         self.visualization_controls[key] = controller
         self.plotter_scene.add_visual(visual)
 
+        key = 'station_terrain_link'
+        visual = StationTerrainLinkReferenceVisualization(
+            PlotterSlot(self.plotter), StationData(station_data, terrain_data_o1280),
+            StationOnTerrainReferenceProperties()
+        )
+        settings_view = self.right_dock_menu.vis_settings_views[key]
+        controller = ReferenceGridController(settings_view, visual)
+        self.visualization_controls[key] = controller
+        self.plotter_scene.add_visual(visual)
+
         key = 'station_on_terrain'
         visual = StationOnTerrainReferenceVisualization(
             PlotterSlot(self.plotter), StationData(station_data, terrain_data_o1280),
-            StationOnTerrainReferenceProperties()
+            StationSiteReferenceProperties()
         )
         settings_view = self.right_dock_menu.vis_settings_views[key]
         controller = ReferenceGridController(settings_view, visual)
@@ -245,28 +257,28 @@ class MyMainWindow(MainWindow):
             'lsm_o1280',
             PlotterSlot(self.plotter, 'LSM (O1280)'),
             VolumeData(model_data, terrain_data_o1280, scalar_key='lsm', model_level_key='z_surf'),
-            SurfaceProperties(),
+            MeshProperties(),
             make_lsm_lookup(),
         )
         self._build_grid_visual(
             'lsm_o8000',
             PlotterSlot(self.plotter, 'LSM (O8000)'),
             VolumeData(model_data, terrain_data_o8000, scalar_key='lsm', model_level_key='z_surf'),
-            SurfaceProperties(),
+            MeshProperties(),
             make_lsm_lookup(),
         )
         self._build_grid_visual(
             'z_o1280',
             PlotterSlot(self.plotter, 'Z (O1280)'),
             VolumeData(model_data, terrain_data_o1280, scalar_key='z_surf', model_level_key='z_surf'),
-            SurfaceProperties(),
+            MeshProperties(),
             make_elevation_lookup(),
         )
         self._build_grid_visual(
             'z_o8000',
             PlotterSlot(self.plotter, 'Z (O8000)'),
             VolumeData(model_data, terrain_data_o8000, scalar_key='z_surf', model_level_key='z_surf'),
-            SurfaceProperties(),
+            MeshProperties(),
             make_elevation_lookup(),
         )
         self._build_grid_visual(
@@ -303,8 +315,15 @@ class MyMainWindow(MainWindow):
             'model_t2m',
             PlotterSlot(self.plotter, 'T2m (°C)'),
             VolumeData(model_data, terrain_data_o1280, scalar_key='t2m', model_level_key='z_surf'),
-            SurfaceProperties(),
+            MeshProperties(),
             make_temperature_lookup(),
+        )
+        self._build_grid_visual(
+            'model_levels',
+            PlotterSlot(self.plotter, 'Model level'),
+            VolumeData(model_data, terrain_data_o1280, scalar_key='model_level_3d'),
+            MeshProperties(),
+            make_model_level_lookup(),
         )
 
     def clear_scene(self):

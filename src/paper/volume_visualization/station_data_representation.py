@@ -4,7 +4,7 @@ from PyQt5.QtCore import QObject
 
 from src.paper.volume_visualization.scaling import ScalingParameters, VolumeVisual
 from src.paper.volume_visualization.station_data import StationData
-from src.paper.volume_visualization.plotter_slot import PlotterSlot, SurfaceProperties
+from src.paper.volume_visualization.plotter_slot import PlotterSlot, MeshProperties
 
 
 class StationDataVisualization(VolumeVisual):
@@ -12,7 +12,7 @@ class StationDataVisualization(VolumeVisual):
     def __init__(
             self,
             slot: PlotterSlot, station_data: StationData,
-            properties: SurfaceProperties,
+            properties: MeshProperties,
             scaling: ScalingParameters = None,
             parent: QObject = None
     ):
@@ -27,7 +27,7 @@ class StationDataVisualization(VolumeVisual):
     def get_plotter(self) -> pv.Plotter:
         return self.slot.plotter
 
-    def set_properties(self, properties: SurfaceProperties, render: bool = True):
+    def set_properties(self, properties: MeshProperties, render: bool = True):
         self.properties = properties
         self.slot.update_actor(properties, render=render)
         return self
@@ -57,7 +57,7 @@ class StationDataRepresentation(StationDataVisualization):
     def __init__(
             self,
             slot: PlotterSlot, station_data: StationData,
-            properties: SurfaceProperties,
+            properties: MeshProperties,
             scaling: ScalingParameters = None,
             parent: QObject = None
     ):
