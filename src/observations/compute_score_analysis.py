@@ -43,7 +43,7 @@ def export_scores(input_file: str, train=False):
     cutoffs_upper = np.arange(-7, 51, 3)
 
     all = []
-    for cutoff_min, cutoff_max in tqdm(product(cutoffs_lower, cutoffs_upper)):
+    for cutoff_min, cutoff_max in tqdm(list(product(cutoffs_lower, cutoffs_upper))):
         pred_adaptive = pred['hres'].values + np.clip(pred['lapse_rate'].values, cutoff_min, cutoff_max) / 1000 * dz
         res_adaptive = np.abs(obs['value_0'].values - pred_adaptive)
         df_mse = pd.DataFrame({
@@ -51,20 +51,16 @@ def export_scores(input_file: str, train=False):
             'dz_bin': dz_bin,
             'adaptive': res_adaptive**2,
             'default': res_default**2,
-        })
+        }).groupby(['score_bin', 'dz_bin']).mean()
         df_mse.columns = [f'{x}_mse' for x in df_mse.columns]
         df_max = pd.DataFrame({
             'score_bin': score_bin,
             'dz_bin': dz_bin,
             'adaptive': res_adaptive,
             'default': res_default,
-        })
+        }).groupby(['score_bin', 'dz_bin']).max()
         df_max.columns = [f'{x}_max' for x in df_mse.columns]
-        metrics = pd.concat([
-            df_mse.groupby(['score_bin', 'dz_bin']).mean(),
-            df_max.groupby(['score_bin', 'dz_bin']).max(),
-            scores_per_bin
-        ], axis='columns')
+        metrics = pd.concat([df_mse, df_max, scores_per_bin], axis='columns')
         metrics = metrics.reset_index()
         metrics['min_cutoff'] = [cutoff_min] * len(metrics)
         metrics['max_cutoff'] = [cutoff_max] * len(metrics)
@@ -73,7 +69,7 @@ def export_scores(input_file: str, train=False):
 
     all = pd.concat(all, axis=0, ignore_index=True)
     label = 'train' if train else 'eval'
-    all.to_csv(os.path.join(os.path.dirname(input_file), 'score_analysis.csv'))
+    all.to_csv(os.path.join(os.path.dirname(input_file), f'score_analysis_{label}.csv'))
 
 
 def load_predictions(input_file, train=False):
