@@ -19,7 +19,7 @@ class StationSiteReferenceVisualization(StationDataRepresentation):
         self.slot.show_reference_mesh(self.mesh, self.properties, render=False)
 
 
-class StationOnTerrainReferenceVisualization(StationDataRepresentation):
+class StationTerrainLinkReferenceVisualization(StationDataRepresentation):
 
     def _update_mesh_scaling(self):
         z_site = self.station_data.compute_station_elevation(self.scaling).ravel()
@@ -30,6 +30,17 @@ class StationOnTerrainReferenceVisualization(StationDataRepresentation):
 
     def _build_and_show_mesh(self):
         self.mesh = self.station_data.get_station_reference(self.scaling)
+        self.slot.show_reference_mesh(self.mesh, self.properties, render=False)
+
+
+class StationOnTerrainReferenceVisualization(StationDataRepresentation):
+
+    def _update_mesh_scaling(self):
+        self.mesh.points[:, -1] = self.station_data.compute_terrain_elevation(self.scaling).ravel()
+
+    def _build_and_show_mesh(self):
+        self.mesh = self.station_data.get_station_sites(self.scaling)
+        self._update_mesh_scaling()
         self.slot.show_reference_mesh(self.mesh, self.properties, render=False)
 
 
@@ -148,7 +159,7 @@ class StationSiteReferenceSettingsView(QWidget):
         return self.checkbox_visibility.isChecked()
 
 
-class StationOnTerrainReferenceSettingsView(QWidget):
+class StationTerrainLinkReferenceSettingsView(QWidget):
 
     settings_changed = pyqtSignal()
     visibility_changed = pyqtSignal()

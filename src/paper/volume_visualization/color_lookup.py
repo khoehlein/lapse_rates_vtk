@@ -533,3 +533,11 @@ def make_score_lookup():
             CustomOpacityProperties(opacity_center=1.)
         )
     )
+
+def make_model_level_lookup():
+    return AsymmetricDivergentColorLookup(
+        AsymmetricDivergentColorLookup.Properties(
+            'magma_r', 0.5, 118, 137, 127, 8, 'white', 'black',
+            CustomOpacityProperties()
+        )
+    )

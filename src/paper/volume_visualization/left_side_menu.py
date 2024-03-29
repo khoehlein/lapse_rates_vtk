@@ -11,7 +11,7 @@ from src.paper.volume_visualization.lapse_rates.lapse_rate_visualization import 
 from src.paper.volume_visualization.scaling import SceneScalingSettingsView
 from src.paper.volume_visualization.station import StationScalarSettingsView
 from src.paper.volume_visualization.station_reference import StationSiteReferenceSettingsView, \
-    StationOnTerrainReferenceSettingsView
+    StationTerrainLinkReferenceSettingsView
 from src.paper.volume_visualization.volume_reference_grid import ReferenceGridSettingsView
 from src.paper.volume_visualization.volume import VolumeScalarSettingsView, VolumeRepresentationMode
 
@@ -84,6 +84,7 @@ class RightDockMenu(QDockWidget):
         self._build_gradient_volume_tab()
         self._build_temperature_volume_tab()
         self._build_t2m_volume_tab()
+        self._build_model_level_tab()
         layout = QVBoxLayout()
         layout.addWidget(self.model_data_tabs)
         layout.addStretch()
@@ -167,8 +168,15 @@ class RightDockMenu(QDockWidget):
             'Station sites'
         )
         self._make_tab_without_color_lookup(
+            'station_terrain_link',
+            StationTerrainLinkReferenceSettingsView(self),
+            'Mesh properties',
+            self.reference_data_tabs,
+            'Station terrain link'
+        )
+        self._make_tab_without_color_lookup(
             'station_on_terrain',
-            StationOnTerrainReferenceSettingsView(self),
+            StationSiteReferenceSettingsView(self),
             'Mesh properties',
             self.reference_data_tabs,
             'Station on terrain'
@@ -228,6 +236,17 @@ class RightDockMenu(QDockWidget):
             'Volume properties',
             self.model_data_tabs,
             'Gradients'
+        )
+
+    def _build_model_level_tab(self):
+        key = 'model_levels'
+        color_settings = ADCLSettingsView(self.scroll_area_contents)
+        vis_settings = VolumeScalarSettingsView(parent=self.scroll_area_contents)
+        self._make_tab_with_color_lookup(
+            key, vis_settings, color_settings,
+            'Volume properties',
+            self.model_data_tabs,
+            'Model levels'
         )
 
     def _build_temperature_volume_tab(self):
