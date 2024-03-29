@@ -25,7 +25,7 @@ def export_histograms(input_file, train=False):
     score_bin = np.digitize(np.fmax(scores, 0.), np.linspace(0, 1, 11))
 
     dz = pred['elevation_difference'].values
-    dz_bin = np.digitize(dz, np.array([np.min(dz) - 1, -100, 100, np.max(dz) + 1]))
+    dz_bin = np.digitize(dz, np.array([np.min(dz) - 1, -50, 50, np.max(dz) + 1]))
 
     lr_per_bin = pd.DataFrame({
         'score_bin': score_bin,
