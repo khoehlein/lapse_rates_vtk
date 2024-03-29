@@ -62,7 +62,7 @@ class VolumeData(object):
         mesh = WedgeMesh(surface_mesh, z)
         mesh = mesh.to_wedge_grid()
         if use_scalar_key and self.scalar_key is not None:
-            mesh[self.scalar_key] = self._get_data_for_key(self.scalar_key).copy().ravel()
+            mesh[self.scalar_key] = self._get_data_for_key(self.scalar_key).ravel()
         return mesh
 
     def get_level_mesh(self, scale_params: ScalingParameters, use_scalar_key: bool = True) -> pv.PolyData:

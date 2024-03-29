@@ -22,7 +22,7 @@ from src.paper.volume_visualization.lapse_rates.lapse_rate_visualization import 
     LapseRateProperties, LapseRateController
 from src.paper.volume_visualization.left_side_menu import RightDockMenu
 from src.paper.volume_visualization.multi_method_visualization import MultiMethodVisualizationController
-from src.paper.volume_visualization.plotter_slot import MeshProperties, \
+from src.paper.volume_visualization.plotter_slot import MyMeshProperties, \
     PlotterSlot, VolumeProperties, StationSiteProperties, StationSiteReferenceProperties, \
     StationOnTerrainReferenceProperties, IsocontourProperties, ContourParameters
 from src.paper.volume_visualization.station import StationScalarVisualization
@@ -257,28 +257,28 @@ class MyMainWindow(MainWindow):
             'lsm_o1280',
             PlotterSlot(self.plotter, 'LSM (O1280)'),
             VolumeData(model_data, terrain_data_o1280, scalar_key='lsm', model_level_key='z_surf'),
-            MeshProperties(),
+            MyMeshProperties(),
             make_lsm_lookup(),
         )
         self._build_grid_visual(
             'lsm_o8000',
             PlotterSlot(self.plotter, 'LSM (O8000)'),
             VolumeData(model_data, terrain_data_o8000, scalar_key='lsm', model_level_key='z_surf'),
-            MeshProperties(),
+            MyMeshProperties(),
             make_lsm_lookup(),
         )
         self._build_grid_visual(
             'z_o1280',
             PlotterSlot(self.plotter, 'Z (O1280)'),
             VolumeData(model_data, terrain_data_o1280, scalar_key='z_surf', model_level_key='z_surf'),
-            MeshProperties(),
+            MyMeshProperties(),
             make_elevation_lookup(),
         )
         self._build_grid_visual(
             'z_o8000',
             PlotterSlot(self.plotter, 'Z (O8000)'),
             VolumeData(model_data, terrain_data_o8000, scalar_key='z_surf', model_level_key='z_surf'),
-            MeshProperties(),
+            MyMeshProperties(),
             make_elevation_lookup(),
         )
         self._build_grid_visual(
@@ -315,14 +315,14 @@ class MyMainWindow(MainWindow):
             'model_t2m',
             PlotterSlot(self.plotter, 'T2m (°C)'),
             VolumeData(model_data, terrain_data_o1280, scalar_key='t2m', model_level_key='z_surf'),
-            MeshProperties(),
+            MyMeshProperties(),
             make_temperature_lookup(),
         )
         self._build_grid_visual(
             'model_levels',
             PlotterSlot(self.plotter, 'Model level'),
             VolumeData(model_data, terrain_data_o1280, scalar_key='model_level_3d'),
-            MeshProperties(),
+            MyMeshProperties(),
             make_model_level_lookup(),
         )
 

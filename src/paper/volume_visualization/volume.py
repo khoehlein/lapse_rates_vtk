@@ -12,7 +12,8 @@ from src.paper.volume_visualization.color_lookup import InteractiveColorLookup
 from src.paper.volume_visualization.multi_method_visualization import MultiMethodScalarVisualization, \
     MultiMethodSettingsView
 from src.paper.volume_visualization.plotter_slot import ActorProperties, ContourParameters, PlotterSlot, \
-    VolumeProperties, IsocontourProperties, MeshProperties, InterpolationType, SurfaceStyle, CullingMethod
+    VolumeProperties, IsocontourProperties, MyMeshProperties, InterpolationType, SurfaceStyle, CullingMethod, \
+    LevelProperties
 from src.paper.volume_visualization.scaling import ScalingParameters
 from src.paper.volume_visualization.volume_data import VolumeData
 from src.paper.volume_visualization.volume_data_representation import VolumeDataRepresentation, MeshDataRepresentation
@@ -26,11 +27,6 @@ class VolumeRepresentationMode(Enum):
     MODEL_MESH = 'model_mesh'
     DVR = 'dvr'
     ISO_CONTOURS = 'iso_levels'
-
-
-@dataclass
-class LevelProperties(MeshProperties):
-    pass
 
 
 class DVRRepresentation(MeshDataRepresentation):
@@ -97,14 +93,14 @@ class ModelMeshRepresentation(MeshDataRepresentation):
     def __init__(
             self,
             slot: PlotterSlot, volume_data: VolumeData, color_lookup: InteractiveColorLookup,
-            properties: MeshProperties = None, scaling: ScalingParameters = None, parent=None
+            properties: MyMeshProperties = None, scaling: ScalingParameters = None, parent=None
     ):
         if properties is None:
-            properties = MeshProperties()
+            properties = MyMeshProperties()
         super().__init__(slot, volume_data, properties, scaling, parent)
         self.color_lookup = color_lookup
 
-    def set_properties(self, properties: MeshProperties, render: bool = True):
+    def set_properties(self, properties: MyMeshProperties, render: bool = True):
         return super().set_properties(properties)
 
     def show(self, render: bool = True):
@@ -195,7 +191,7 @@ class VolumeScalarVisualization(MultiMethodScalarVisualization):
             self.representation = DVRRepresentation(
                 self.slot, self.volume_data, self.color_lookup, self.properties, self.scaling
             )
-        elif properties_type == MeshProperties:
+        elif properties_type == MyMeshProperties:
             self.representation = ModelMeshRepresentation(
                 self.slot, self.volume_data, self.color_lookup, self.properties, self.scaling
             )
@@ -215,7 +211,7 @@ class VolumeScalarVisualization(MultiMethodScalarVisualization):
         return {
             VolumeProperties: VolumeRepresentationMode.DVR,
             LevelProperties: VolumeRepresentationMode.MODEL_LEVELS,
-            MeshProperties: VolumeRepresentationMode.MODEL_MESH,
+            MyMeshProperties: VolumeRepresentationMode.MODEL_MESH,
             IsocontourProperties: VolumeRepresentationMode.ISO_CONTOURS,
         }.get(type(self.properties))
 
@@ -398,7 +394,7 @@ class MeshSettingsView(QWidget):
         layout.addRow("Lighting:", self.checkbox_lighting)
         return layout
 
-    def apply_settings(self, settings: MeshProperties):
+    def apply_settings(self, settings: MyMeshProperties):
         self.combo_surface_style.setCurrentText(settings.style.value)
         self.combo_culling.setCurrentText(settings.culling.value)
         self.spinner_line_width.setValue(settings.line_width)
@@ -419,7 +415,7 @@ class MeshSettingsView(QWidget):
         return self
 
     def get_settings(self):
-        return MeshProperties(
+        return MyMeshProperties(
             self.combo_surface_style.currentData(),
             self.spinner_line_width.value(),
             self.checkbox_lines_as_tubes.isChecked(),
@@ -521,11 +517,11 @@ class IsocontourSettingsView(MeshSettingsView):
 
 class VolumeScalarSettingsView(MultiMethodSettingsView):
 
-    def __init__(self, use_dvr=True, use_model_levels=True, use_contours=True, use_mesh=True, parent=None):
+    def __init__(self, use_dvr=True, use_model_levels=True, use_contours=True, use_mesh=True,  parent=None):
         defaults = {
             VolumeRepresentationMode.DVR: VolumeProperties(),
             VolumeRepresentationMode.MODEL_LEVELS: LevelProperties(),
-            VolumeRepresentationMode.MODEL_MESH: MeshProperties(),
+            VolumeRepresentationMode.MODEL_MESH: MyMeshProperties(),
             VolumeRepresentationMode.ISO_CONTOURS: IsocontourProperties()
         }
         view_mapping = {}

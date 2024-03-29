@@ -14,7 +14,7 @@ from src.paper.volume_visualization.color_lookup import make_elevation_lookup, m
     make_quantile_lookup, make_quantile_difference_lookup, ADCLSettingsView
 from src.paper.volume_visualization.multi_method_visualization import MultiMethodScalarVisualization, \
     MultiMethodVisualizationController
-from src.paper.volume_visualization.plotter_slot import PlotterSlot, VolumeProperties, MeshProperties, \
+from src.paper.volume_visualization.plotter_slot import PlotterSlot, VolumeProperties, MyMeshProperties, \
     SurfaceReferenceProperties
 from src.paper.volume_visualization.scaling import VolumeVisual, ScalingParameters
 from src.paper.volume_visualization.volume import VolumeScalarVisualization, VolumeScalarSettingsView, \
@@ -369,7 +369,7 @@ class ElevationSummary(VolumeVisual):
                     model_level_key='z_surf_o1280',
                 ),
                 make_elevation_lookup(),
-                MeshProperties(),
+                MyMeshProperties(),
                 self.scaling
             )
         )

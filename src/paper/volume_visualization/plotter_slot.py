@@ -45,7 +45,7 @@ class VolumeProperties(ActorProperties):
 
 
 @dataclass
-class MeshProperties(ActorProperties):
+class MyMeshProperties(ActorProperties):
     style: SurfaceStyle = SurfaceStyle.SURFACE
     line_width: float = pv.global_theme.line_width
     render_lines_as_tubes: bool = pv.global_theme.render_lines_as_tubes
@@ -66,17 +66,37 @@ class MeshProperties(ActorProperties):
 
 
 @dataclass
-class SurfaceReferenceProperties(MeshProperties):
+class LevelProperties(ActorProperties):
+    style: SurfaceStyle = SurfaceStyle.SURFACE
+    line_width: float = pv.global_theme.line_width
+    render_lines_as_tubes: bool = pv.global_theme.render_lines_as_tubes
+    metallic: float = pv.global_theme.lighting_params.metallic
+    roughness: float = pv.global_theme.lighting_params.roughness
+    point_size: float = pv.global_theme.point_size
+    render_points_as_spheres: bool = pv.global_theme.render_points_as_spheres
+    opacity: float = pv.global_theme.opacity
+    ambient: float = pv.global_theme.lighting_params.ambient
+    diffuse: float = pv.global_theme.lighting_params.diffuse
+    specular: float = pv.global_theme.lighting_params.specular
+    specular_power: float = pv.global_theme.lighting_params.specular_power
+    show_edges: bool = pv.global_theme.show_edges
+    edge_opacity: float = pv.global_theme.edge_opacity
+    edge_color: Any = pv.global_theme.edge_color.int_rgb
+    lighting: bool = pv.global_theme.lighting
+    culling: CullingMethod = CullingMethod.NONE
+
+@dataclass
+class SurfaceReferenceProperties(MyMeshProperties):
     color: Any = pv.global_theme.color.int_rgb
 
 
 @dataclass
-class IsocontourProperties(MeshProperties):
+class IsocontourProperties(MyMeshProperties):
     contours: ContourParameters = ContourParameters('z_model_levels', 10)
 
 
 @dataclass
-class StationSiteProperties(MeshProperties):
+class StationSiteProperties(MyMeshProperties):
 
     def __init__(
             self,
@@ -129,7 +149,7 @@ class StationSiteReferenceProperties(StationSiteProperties):
 
 
 @dataclass(init=False)
-class StationOnTerrainProperties(MeshProperties):
+class StationOnTerrainProperties(MyMeshProperties):
     preference: str = 'cell'
 
     def __init__(
@@ -245,7 +265,7 @@ class PlotterSlot(object):
     def show_scalar_mesh(
             self, mesh: Union[pv.PolyData, pv.UnstructuredGrid], lookup_table: pv.LookupTable,
             properties: Union[
-                MeshProperties,
+                MyMeshProperties,
                 StationSiteProperties,
                 StationOnTerrainProperties
             ],

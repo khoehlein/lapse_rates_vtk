@@ -9,7 +9,7 @@ import xarray as xr
 from src.paper.volume_visualization.color_lookup import InteractiveColorLookup
 from src.paper.volume_visualization.multi_method_visualization import MultiMethodScalarVisualization, \
     MultiMethodSettingsView
-from src.paper.volume_visualization.plotter_slot import PlotterSlot, MeshProperties, StationSiteProperties, \
+from src.paper.volume_visualization.plotter_slot import PlotterSlot, MyMeshProperties, StationSiteProperties, \
     StationOnTerrainProperties
 from src.paper.volume_visualization.scaling import ScalingParameters
 from src.paper.volume_visualization.station_data import StationData
@@ -27,7 +27,7 @@ class _StationScalarRepresentation(StationDataRepresentation):
     def __init__(
             self,
             slot: PlotterSlot, station_data: StationData, color_lookup: InteractiveColorLookup,
-            properties: MeshProperties, scaling: ScalingParameters = None, parent: QObject = None
+            properties: MyMeshProperties, scaling: ScalingParameters = None, parent: QObject = None
     ):
         super().__init__(slot, station_data, properties, scaling, parent)
         self.color_lookup = color_lookup
@@ -88,7 +88,7 @@ class StationScalarVisualization(MultiMethodScalarVisualization):
     def __init__(
             self,
             slot: PlotterSlot, station_data: StationData, color_lookup: InteractiveColorLookup,
-            properties: MeshProperties, scaling: ScalingParameters = None, parent: QObject = None
+            properties: MyMeshProperties, scaling: ScalingParameters = None, parent: QObject = None
     ):
         super().__init__(slot, color_lookup, properties, scaling, parent)
         self.station_data = station_data
@@ -100,7 +100,7 @@ class StationScalarVisualization(MultiMethodScalarVisualization):
             StationOnTerrainProperties: StationRepresentationMode.STATION_ON_TERRAIN
         }.get(type(self.properties))
 
-    def set_properties(self, properties: MeshProperties, render: bool = True):
+    def set_properties(self, properties: MyMeshProperties, render: bool = True):
         return super().set_properties(properties)
 
     def _build_representation(self):
@@ -193,7 +193,7 @@ class StationSiteSettingsView(QWidget):
         layout.addRow("Lighting:", self.checkbox_lighting)
         return layout
 
-    def apply_settings(self, settings: MeshProperties):
+    def apply_settings(self, settings: MyMeshProperties):
         self.spinner_point_size.setValue(settings.point_size)
         self.checkbox_points_as_spheres.setChecked(settings.render_points_as_spheres)
         self.spinner_metallic.setValue(settings.metallic)
@@ -289,7 +289,7 @@ class StationOnTerrainSettingsView(QWidget):
         layout.addRow("Lighting:", self.checkbox_lighting)
         return layout
 
-    def apply_settings(self, settings: MeshProperties):
+    def apply_settings(self, settings: MyMeshProperties):
         self.spinner_line_width.setValue(settings.line_width)
         self.checkbox_lines_as_tubes.setChecked(settings.render_lines_as_tubes)
         self.spinner_metallic.setValue(settings.metallic)
