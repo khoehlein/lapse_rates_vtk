@@ -63,7 +63,7 @@ CONTOUR_KEYS_IN_IQR = [
 @dataclass
 class ElevationSummaryProperties(object):
     radius_km: float = 30.
-    num_quantiles: int = 32
+    num_quantiles: int = 8
     flier_factor: float = 1.5
     lookup_leaf_size: int = 100
 

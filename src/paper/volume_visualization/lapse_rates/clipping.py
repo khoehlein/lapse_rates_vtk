@@ -15,6 +15,10 @@ class RampClipProperties(object):
     value_upper: float
 
 
+DEFAULT_CLIP_MIN = RampClipProperties(-6.5, -11, 0.75, 0.95)
+DEFAULT_CLIP_MAX = RampClipProperties(20., 50., 0., 1.)
+
+
 class InteractiveRampClip(QObject):
 
     cutoff_changed = pyqtSignal()

@@ -45,7 +45,8 @@ class RightDockMenu(QDockWidget):
         self._build_station_data_tabs()
         self._build_lapse_rate_tabs()
         self._build_terrain_data_tabs()
-        self._build_summary_tabs()
+        self._build_summary_o1280_tabs()
+        self._build_summary_o8000_tabs()
         self._build_reference_data_tabs()
         container = QWidget(self.scroll_area_contents)
         layout = QVBoxLayout()
@@ -89,14 +90,23 @@ class RightDockMenu(QDockWidget):
         container.setLayout(layout)
         self.vis_settings_tabs.addTab(container, 'Model')
 
-    def _build_summary_tabs(self):
+    def _build_summary_o1280_tabs(self):
         container = QWidget(self.vis_settings_tabs)
-        self.summary_settings = ElevationSummaryRepresentationSettings(container)
+        self.summary_settings_o1280 = ElevationSummaryRepresentationSettings(container)
         layout = QVBoxLayout()
-        layout.addLayout(self.summary_settings.get_layout())
+        layout.addLayout(self.summary_settings_o1280.get_layout())
         layout.addStretch()
         container.setLayout(layout)
-        self.vis_settings_tabs.addTab(container, 'Summary')
+        self.vis_settings_tabs.addTab(container, 'Summary (O1280)')
+
+    def _build_summary_o8000_tabs(self):
+        container = QWidget(self.vis_settings_tabs)
+        self.summary_settings_o8000 = ElevationSummaryRepresentationSettings(container)
+        layout = QVBoxLayout()
+        layout.addLayout(self.summary_settings_o8000.get_layout())
+        layout.addStretch()
+        container.setLayout(layout)
+        self.vis_settings_tabs.addTab(container, 'Summary (O8000)')
 
     def _build_lapse_rate_tabs(self):
         container = QWidget(self.vis_settings_tabs)

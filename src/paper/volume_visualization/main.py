@@ -110,24 +110,33 @@ class MyMainWindow(MainWindow):
         self._build_station_visuals()
         self._build_station_references()
 
-        self.elevation_summary = ElevationSummary(
+        self.elevation_summary_o8000 = ElevationSummary(
             terrain_data_o1280, terrain_data_o8000, self.plotter,
             ElevationSummaryProperties(), self.plotter_scene.scaling
         )
-        self.plotter_scene.add_visual(self.elevation_summary)
-        self.elevation_summary_controls = ElevationSummaryController(
-            self.right_dock_menu.summary_settings, self.elevation_summary,
+        self.plotter_scene.add_visual(self.elevation_summary_o8000)
+        self.elevation_summary_o8000_controls = ElevationSummaryController(
+            self.right_dock_menu.summary_settings_o8000, self.elevation_summary_o8000,
         )
 
-        # lapse_rate_data = LapseRateData(model_data, terrain_data_o1280)
-        # self.lapse_rates = LapseRateVisualization(
-        #     lapse_rate_data, terrain_data_o1280, station_data,
-        #     self.plotter, LapseRateProperties(), self.plotter_scene.scaling
-        # )
-        # self.plotter_scene.add_visual(self.lapse_rates)
-        # self.lapse_rate_controls = LapseRateController(
-        #     self.right_dock_menu.lapse_rate_settings, self.lapse_rates
-        # )
+        self.elevation_summary_o1280 = ElevationSummary(
+            terrain_data_o1280, terrain_data_o1280, self.plotter,
+            ElevationSummaryProperties(), self.plotter_scene.scaling
+        )
+        self.plotter_scene.add_visual(self.elevation_summary_o1280)
+        self.elevation_summary_o1280_controls = ElevationSummaryController(
+            self.right_dock_menu.summary_settings_o1280, self.elevation_summary_o1280,
+        )
+
+        lapse_rate_data = LapseRateData(model_data, terrain_data_o1280)
+        self.lapse_rates = LapseRateVisualization(
+            lapse_rate_data, terrain_data_o1280, station_data,
+            self.plotter, LapseRateProperties(), self.plotter_scene.scaling
+        )
+        self.plotter_scene.add_visual(self.lapse_rates)
+        self.lapse_rate_controls = LapseRateController(
+            self.right_dock_menu.lapse_rate_settings, self.lapse_rates
+        )
 
         if show:
             self.show()

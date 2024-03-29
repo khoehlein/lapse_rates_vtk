@@ -3,6 +3,7 @@ import dataclasses
 from enum import Enum
 from typing import Union
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 from PyQt5.QtCore import QObject, pyqtSignal
@@ -16,7 +17,7 @@ from src.paper.volume_visualization.color_lookup import make_elevation_lookup, m
     make_temperature_difference_lookup
 from src.paper.volume_visualization.lapse_rates.algorithm import LapseRateData
 from src.paper.volume_visualization.lapse_rates.clipping import RampClipProperties, RampMinClip, RampClipSettingsView, \
-    RampMaxClip
+    RampMaxClip, DEFAULT_CLIP_MIN, DEFAULT_CLIP_MAX
 from src.paper.volume_visualization.multi_method_visualization import MultiMethodScalarVisualization, \
     MultiMethodVisualizationController
 from src.paper.volume_visualization.plotter_slot import PlotterSlot, SurfaceProperties, StationSiteProperties
@@ -56,8 +57,9 @@ class LapseRateProperties(object):
     weight_scale_km: float = 30
     default_lapse_rate: float = -6.5
     min_samples: int = 20
-    min_clip: RampClipProperties = RampClipProperties(-6.5, -10, 0.85, 0.95)
-    max_clip: RampClipProperties = RampClipProperties(100., 100., 0., 1.)
+    min_elevation: float = 100
+    min_clip: RampClipProperties = DEFAULT_CLIP_MIN
+    max_clip: RampClipProperties = DEFAULT_CLIP_MAX
     lsm_threshold: float = 0.5
 
 
@@ -139,6 +141,9 @@ class LapseRateVisualization(VolumeVisual):
         scores = data['score'].values
         lapse_rates, lower_clipping = self.min_clip.clip(lapse_rates_raw, scores, return_thresholds=True)
         lapse_rates, upper_clipping = self.max_clip.clip(lapse_rates, scores, return_thresholds=True)
+        num_neighbors = data['neighbor_count']
+        z_range = data['z_range'].values
+        lapse_rates[np.logical_or(num_neighbors < self.properties.min_samples, z_range < self.properties.min_elevation)] = self.properties.default_lapse_rate
         # dz = (self.site_data['z_surf'].values - data['z_nearest'].values) * 0.001
         # predictions = data['t2m_nearest'].values + lapse_rates * dz
         variables = {
@@ -155,6 +160,9 @@ class LapseRateVisualization(VolumeVisual):
         scores = data['score'].values
         lapse_rates = self.min_clip.clip(lapse_rates, scores, return_thresholds=False)
         lapse_rates = self.max_clip.clip(lapse_rates, scores, return_thresholds=False)
+        num_neighbors = data['neighbor_count']
+        z_range = data['z_range'].values
+        lapse_rates[np.logical_or(num_neighbors < self.properties.min_samples, z_range < self.properties.min_elevation)] = self.properties.default_lapse_rate
         dz = (self.station_data['elevation'].values - data['z_nearest'].values) * 0.001
         corrections = lapse_rates * dz
         predictions = data['t2m_nearest'].values + corrections
@@ -181,8 +189,8 @@ class LapseRateVisualization(VolumeVisual):
                 VolumeScalarVisualization(
                     PlotterSlot(self.plotter, label),
                     VolumeData(
-                        self._site_data, self.site_data,
-                        scalar_key=key.value, model_level_key='z_surf_o1280'
+                        self._site_data, self.site_data, scalar_key=key.value,
+                        model_level_key=(key.value if key != LapseRateComponent.Z_RANGE else 'z_surf_o1280')
                     ),
                     make_elevation_lookup(),
                     SurfaceProperties(),
@@ -372,6 +380,9 @@ class LapseRateSettingsView(QWidget):
         self.spinner_min_samples = QSpinBox(self)
         self.spinner_min_samples.setRange(3, 128)
         self.spinner_min_samples.setValue(20)
+        self.spinner_min_range = QSpinBox(self)
+        self.spinner_min_range.setRange(10, 1000)
+        self.spinner_min_range.setValue(100)
         self.min_clip_settings = RampClipSettingsView(self)
         self.max_clip_settings = RampClipSettingsView(self)
         self.button_apply = QPushButton(self)
@@ -392,6 +403,7 @@ class LapseRateSettingsView(QWidget):
         layout.addRow('Weight scale:', self.spinner_weight_scale)
         layout.addRow('Default lapse rate:', self.spinner_default_lapse_rate)
         layout.addRow('Min. neighbors:', self.spinner_min_samples)
+        layout.addRow('Min. vertical range:', self.spinner_min_range)
         outer_layout.addLayout(layout)
         outer_layout.addWidget(self.button_apply)
         outer_layout.addWidget(QLabel('Max clipping:'))
@@ -404,6 +416,7 @@ class LapseRateSettingsView(QWidget):
     def apply_settings(self, settings: LapseRateProperties):
         self.spinner_radius.setValue(settings.radius_km)
         self.spinner_min_samples.setValue(settings.min_samples)
+        self.spinner_min_range.setValue(settings.min_elevation)
         self.spinner_default_lapse_rate.setValue(settings.default_lapse_rate)
         self.min_clip_settings.apply_settings(settings.min_clip)
         self.max_clip_settings.apply_settings(settings.max_clip)
@@ -413,9 +426,10 @@ class LapseRateSettingsView(QWidget):
         return LapseRateProperties(
             radius_km=self.spinner_radius.value(),
             min_samples=self.spinner_min_samples.value(),
+            min_elevation=self.spinner_min_range.value(),
             default_lapse_rate=self.spinner_default_lapse_rate.value(),
             min_clip=self.min_clip_settings.get_settings(),
-            max_clip=self.max_clip_settings.get_settings()
+            max_clip=self.max_clip_settings.get_settings(),
         )
 
 

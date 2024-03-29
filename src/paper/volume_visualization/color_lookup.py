@@ -484,7 +484,7 @@ def make_temperature_lookup():
 def make_lapse_rate_lookup():
     return AsymmetricDivergentColorLookup(
         AsymmetricDivergentColorLookup.Properties(
-            'coolwarm', 0.5, -12, 50, -6.5, 256, 'blue', 'red',
+            'PuOr_r', 0.5, -12, 50, -6.5, 256, '#55007f', '#713900',
             CustomOpacityProperties()
         )
     )

@@ -132,8 +132,8 @@ class PlotterSettingsView(QWidget):
         self.setLayout(outer)
 
     def set_defaults(self):
-        self.combo_anti_aliasing.setCurrentText('MSAA-8x')
-        self.combo_lighting_mode.setCurrentText('LightKit')
+        self.combo_anti_aliasing.setCurrentText('None')
+        self.combo_lighting_mode.setCurrentText('3 lights')
         self.combo_interaction_style.setCurrentText('Trackball')
         self.checkbox_boundary_box.setChecked(False)
         self.checkbox_grid.setChecked(False)
