@@ -43,17 +43,53 @@ def plot_scores(input_file: str, train=False):
     scores_per_bin.columns = ['_'.join(c) for c in scores_per_bin.columns]
 
     lapsrate_settings = LapseRateProperties()
-    min_clip = RampMinClip(lapsrate_settings)
-    max_clip = RampMaxClip(lapsrate_settings)
+    min_clip = RampMinClip(lapsrate_settings.min_clip)
+    max_clip = RampMaxClip(lapsrate_settings.max_clip)
 
-    lapse_rates = min_clip.clip(pred['lapse_rate'].values, scores)
-    lapse_rates = max_clip.clip(lapse_rates, scores)
-    lapse_rates[dz < lapsrate_settings.min_elevation] = lapsrate_settings.default_lapse_rate
+    raw_lapse = pred['lapse_rate'].values
+    lapse_rates = min_clip.clip(raw_lapse, scores, return_thresholds=False)
+    lapse_rates = max_clip.clip(lapse_rates, scores, return_thresholds=False)
+    lapse_rates[np.abs(dz) < lapsrate_settings.min_elevation] = lapsrate_settings.default_lapse_rate
     lapse_rates[pred['neighbor_count'].values < lapsrate_settings.min_samples] = lapsrate_settings.default_lapse_rate
 
     pred_adaptive = pred['hres'].values + lapse_rates / 1000 * dz
 
     res_adaptive = np.abs(obs['value_0'].values - pred_adaptive)
+
+    # for key in [1, 2, 3]:
+    #     fig, ax = plt.subplots(1, 4, figsize=(12, 5))
+    #     ax[0].hist(dz[dz_bin == key])
+    #     ax[0].set(title='dz')
+    #     ax[1].hist(scores[dz_bin == key])
+    #     ax[1].set(title='score')
+    #     ax[2].hist(raw_lapse[dz_bin == key])
+    #     ax[2].hist(lapse_rates[dz_bin == key])
+    #     ax[2].set(title='lapse rate')
+    #     ax[3].hist(pred['neighbor_count'].values[dz_bin == key])
+    #     ax[3].set(title='neighbor count')
+    #     plt.tight_layout()
+    #     plt.show()
+    #     plt.close()
+    #
+    #     fig, ax = plt.subplots(1, 3, figsize=(12, 5))
+    #     mask = dz_bin == key
+    #     ax[0].scatter(raw_lapse[mask], dz[mask], alpha=0.05)
+    #     ax[0].axhline(lapsrate_settings.min_elevation)
+    #     ax[0].axhline(-lapsrate_settings.min_elevation)
+    #     ax[0].set(title='dz')
+    #     ax[1].scatter(raw_lapse[mask], scores[mask], alpha=0.05)
+    #     ax[1].set(title='score')
+    #     ax[2].scatter(raw_lapse[mask], pred['neighbor_count'].values[mask], alpha=0.05)
+    #     ax[2].axhline(lapsrate_settings.min_samples)
+    #     ax[2].set(title='neighbor count')
+    #     plt.tight_layout()
+    #     plt.show()
+    #     plt.close()
+
+
+
+    plt.figure()
+    plt.plot()
     df_mse = pd.DataFrame({
         'score_bin': score_bin,
         'dz_bin': dz_bin,
@@ -76,9 +112,9 @@ def plot_scores(input_file: str, train=False):
 
     fig, ax = plt.subplots()
     labels = {
-        1: 'valley',
-        2: 'neutral',
-        3: 'mountain',
+        1: 'valley stations',
+        2: 'neutral stations',
+        3: 'mountain stations',
     }
     for key, group in groups:
         group_label = labels[key]
@@ -88,7 +124,8 @@ def plot_scores(input_file: str, train=False):
         lines = ax.plot((group.index.values - 0.5) * 10, mse_score * 100, label=f'{group_label} (MSE)')
         ax.plot((group.index.values - 0.5) * 10, max_score * 100, label=f'{group_label} (MAX)', linestyle='--', color=lines[0].get_color())
 
-    ax.set(xlabel='R2 score (%)', ylabel='Relative Skill (%)')
+    ax.legend()
+    ax.set(xlabel='R2 score (%)', ylabel='Skill improvement (%)')
     plt.tight_layout()
     plt.show()
 
