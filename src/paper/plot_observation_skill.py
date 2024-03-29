@@ -66,15 +66,15 @@ def plot_scores(input_file: str, train=False):
     #     ax[2].hist(raw_lapse[dz_bin == key])
     #     ax[2].hist(lapse_rates[dz_bin == key])
     #     ax[2].set(title='lapse rate')
-    #     ax[3].hist(pred['neighbor_count'].values[dz_bin == key])
-    #     ax[3].set(title='neighbor count')
+    #     ax[3].hist(res_adaptive[dz_bin == key], log=True)
+    #     ax[3].set(title='residual')
     #     plt.tight_layout()
     #     plt.show()
     #     plt.close()
     #
     #     fig, ax = plt.subplots(1, 3, figsize=(12, 5))
     #     mask = dz_bin == key
-    #     ax[0].scatter(raw_lapse[mask], dz[mask], alpha=0.05)
+    #     ax[0].scatter(res_adaptive[mask], dz[mask], alpha=0.05)
     #     ax[0].axhline(lapsrate_settings.min_elevation)
     #     ax[0].axhline(-lapsrate_settings.min_elevation)
     #     ax[0].set(title='dz')
@@ -121,6 +121,10 @@ def plot_scores(input_file: str, train=False):
     for x in np.arange(0, 100, 20):
         rectangle = Rectangle((x, -10), 10, 50, facecolor='gray', alpha=0.1)
         ax[1].add_patch(rectangle)
+    #
+    # for x in np.arange(0, 100, 20):
+    #     rectangle = Rectangle((x, 1), 10, 4, facecolor='gray', alpha=0.1)
+    #     ax[2].add_patch(rectangle)
 
     bins = np.linspace(0, 100, 11)
     entries = np.arange(5, 100, 10)
@@ -129,14 +133,19 @@ def plot_scores(input_file: str, train=False):
     for key, group in groups:
         group_label = labels[key]
         group = group.set_index('score_bin').sort_index()
-        mse_score = 1. - np.sqrt(group['adaptive_mse'].values / group['default_mse'].values)
-        max_score = 1. - group['adaptive_max'].values / group['default_max'].values
-        lines = ax[1].plot((group.index.values - 0.5) * 10, mse_score * 100, label=f'{group_label} (RMSE)')
-        ax[1].plot((group.index.values - 0.5) * 10, max_score * 100, label=f'{group_label} (MAX)', linestyle='--', color=lines[0].get_color())
-
+        mse_score = np.sqrt(group['adaptive_mse'].values)
+        max_score = group['adaptive_max'].values
+        lines = ax[1].plot((group.index.values - 0.5) * 10, mse_score, label=f'{group_label} (adaptive)', linestyle='-')
+        # ax[2].plot((group.index.values - 0.5) * 10, max_score, label=f'{group_label} (adaptive)', linestyle='-', color=lines[0].get_color())
+        mse_score = np.sqrt(group['default_mse'].values)
+        max_score = group['default_max'].values
+        ax[1].plot((group.index.values - 0.5) * 10, mse_score, label=f'{group_label} (default)', linestyle='--', color=lines[0].get_color())
+        # ax[2].plot((group.index.values - 0.5) * 10, max_score, label=f'{group_label} (default)', linestyle='--', color=lines[0].get_color())
 
     ax[1].legend()
-    ax[1].set(xlabel='R2 score (%)', ylabel='Skill improvement (%)', ylim=(-8, 22), xlim=(0, 100))
+    ax[1].set(xlabel='R2 score (%)', ylabel='RMSE (K)', xlim=(0, 100), ylim=(1.25, 4.75))
+    # ax[2].legend()
+    # ax[2].set(xlabel='R2 score (%)', ylabel='Max. error (K)')
     ax[0].set(ylabel='observations', yscale='log')
     plt.tight_layout()
     label = 'train' if train else 'eval'
