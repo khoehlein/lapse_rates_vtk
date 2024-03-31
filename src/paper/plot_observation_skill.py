@@ -113,9 +113,9 @@ def plot_scores(input_file: str, train=False):
 
     fig, ax = plt.subplots(2, 1, sharex='all', gridspec_kw={'hspace': 0, 'height_ratios': [1, 3]}, figsize=(8, 5))
     labels = {
-        1: 'valley stations',
+        1: 'concave stations',
         2: 'neutral stations',
-        3: 'mountain stations',
+        3: 'convex stations',
     }
 
     for x in np.arange(0, 100, 20):
