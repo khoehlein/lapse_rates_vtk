@@ -433,7 +433,7 @@ class LapseRateSettingsView(QWidget):
         )
 
 
-CONTOUR_KEYS = ['latitude', 'longitude', 'z_surf', 'lapse_rate', 'lapse_rate_raw', 'score']
+CONTOUR_KEYS = ['latitude', 'longitude', 'z_surf', 'lapse_rate', 'lapse_rate_raw', 'score', 'z_range']
 
 
 class LapseRateRepresentationSettings(QWidget):

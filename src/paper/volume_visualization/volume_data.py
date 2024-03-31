@@ -18,8 +18,10 @@ class VolumeData(object):
             scalar_key: str = None, terrain_level_key: str = 'z_surf_o1280', model_level_key: str = 'z_model_levels'
     ):
         self.field_data = field_data
+        if isinstance(field_data, xr.Dataset) and 'hybrid' in field_data.dims.keys():
+            self.field_data['model_level_3d'] = (('hybrid', 'values'), np.tile(np.arange(118, 138)[:, None], (1, len(self.field_data['longitude'].values))))
         self.terrain_data = terrain_data
-        self.terrain_data['t2m_default'] = ('values', np.round(terrain_data['lsm'].values))
+        # self.terrain_data['t2m_default'] = ('values', np.round(terrain_data['lsm'].values))
         self.terrain_data['lsm_bin'] = ('values', np.round(terrain_data['lsm'].values))
 
         self.scalar_key = scalar_key
@@ -41,6 +43,8 @@ class VolumeData(object):
         return self
 
     def _get_data_for_key(self, key: str):
+        if key == 'z_difference':
+            return self.terrain_data['z_surf'].values[None, :] - self.terrain_data['z_surf_o1280'].values[None, :]
         z = None
         try:
             z = self.field_data[key].values
