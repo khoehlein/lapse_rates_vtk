@@ -471,7 +471,7 @@ def make_elevation_offset_lookup():
 def make_elevation_lookup():
     return AsymmetricDivergentColorLookup(
         AsymmetricDivergentColorLookup.Properties(
-            'gist_earth', 0.3, -100., 3000., 0., 58, 'black', 'white',
+            'gist_earth', 0.25, -100., 3000., 0., 29, 'black', 'white',
             CustomOpacityProperties(opacity_center=1.)
         )
     )
@@ -481,13 +481,22 @@ def make_temperature_lookup():
     return ECMWFColors()
 
 
+# def make_lapse_rate_lookup():
+#     return AsymmetricDivergentColorLookup(
+#         AsymmetricDivergentColorLookup.Properties(
+#             'PuOr_r', 0.5, -12, 50, -6.5, 256, '#55007f', '#713900',
+#             CustomOpacityProperties()
+#         )
+#     )
+
 def make_lapse_rate_lookup():
     return AsymmetricDivergentColorLookup(
         AsymmetricDivergentColorLookup.Properties(
-            'PuOr_r', 0.5, -12, 50, -6.5, 256, '#55007f', '#713900',
+            'Spectral_r', 0.5, -12, 50, -6.5, 256, 'blue', 'red',
             CustomOpacityProperties()
         )
     )
+
 
 
 def make_temperature_difference_lookup():

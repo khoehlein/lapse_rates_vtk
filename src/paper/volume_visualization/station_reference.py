@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QWidget, QComboBox, QDoubleSpinBox, QCheckBox, QForm
 
 from src.interaction.visualizations.geometry_settings_view import SurfaceSettingsView
 from src.paper.volume_visualization.plotter_slot import StationSiteReferenceProperties, \
-    StationOnTerrainReferenceProperties
+    StationOnTerrainReferenceProperties, CullingMethod
 from src.paper.volume_visualization.station_data_representation import StationDataRepresentation
 from src.widgets import SelectColorButton
 
@@ -197,6 +197,10 @@ class StationTerrainLinkReferenceSettingsView(QWidget):
         self.spinner_opacity.setRange(0., 1.)
         self.spinner_opacity.setSingleStep(0.05)
         self.button_edge_color = SelectColorButton(parent=self)
+        self.combo_culling = QComboBox(self)
+        self.combo_culling.addItem('front', CullingMethod.FRONT)
+        self.combo_culling.addItem('back', CullingMethod.BACK)
+        self.combo_culling.addItem('none', CullingMethod.NONE)
         self.checkbox_lighting = QCheckBox(self)
         self.checkbox_visibility = QCheckBox(self)
         self.checkbox_visibility.setText('show')
@@ -214,6 +218,7 @@ class StationTerrainLinkReferenceSettingsView(QWidget):
         self.spinner_opacity.valueChanged.connect(self.settings_changed)
         self.button_edge_color.color_changed.connect(self.settings_changed)
         self.checkbox_lighting.stateChanged.connect(self.settings_changed)
+        self.combo_culling.currentTextChanged.connect(self.settings_changed)
 
     def _set_layout(self):
         layout = self._build_form_layout()
@@ -234,6 +239,7 @@ class StationTerrainLinkReferenceSettingsView(QWidget):
         layout.addRow("Specular:", self.spinner_specular)
         layout.addRow("Specular power:", self.spinner_specular_power)
         layout.addRow("Lighting:", self.checkbox_lighting)
+        layout.addRow("Culling:", self.combo_culling)
         outer_layout.addLayout(layout)
         return outer_layout
 
@@ -249,6 +255,7 @@ class StationTerrainLinkReferenceSettingsView(QWidget):
         self.spinner_opacity.setValue(settings.opacity)
         self.button_edge_color.set_current_color(QColor(*settings.color))
         self.checkbox_lighting.setChecked(settings.lighting)
+        self.combo_culling.setCurrentText(settings.culling.value)
         return self
 
     def get_settings(self):
@@ -264,6 +271,7 @@ class StationTerrainLinkReferenceSettingsView(QWidget):
             self.spinner_specular.value(),
             self.spinner_specular_power.value(),
             self.checkbox_lighting.isChecked(),
+            self.combo_culling.currentData()
         )
 
     def apply_visibility(self, visible: bool):

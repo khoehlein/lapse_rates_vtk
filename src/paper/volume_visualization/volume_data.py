@@ -43,6 +43,8 @@ class VolumeData(object):
         return self
 
     def _get_data_for_key(self, key: str):
+        if key == 'z_difference':
+            return self.terrain_data['z_surf'].values[None, :] - self.terrain_data['z_surf_o1280'].values[None, :]
         z = None
         try:
             z = self.field_data[key].values

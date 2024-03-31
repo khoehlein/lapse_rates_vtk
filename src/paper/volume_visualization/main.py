@@ -2,9 +2,6 @@ import sys
 
 # Setting the Qt bindings for QtPy
 import os
-from typing import List, Union
-
-import numpy as np
 from PyQt5 import QtCore
 
 from src.interaction.plotter_controls.controller import PlotterController
@@ -251,11 +248,10 @@ class MyMainWindow(MainWindow):
             PlotterSlot(self.plotter),
             VolumeData(model_data, terrain_data_o8000, scalar_key=None, model_level_key='z_surf')
         )
-
         self._build_grid_visual(
             'lsm_o1280',
             PlotterSlot(self.plotter, 'LSM (O1280)'),
-            VolumeData(model_data, terrain_data_o1280, scalar_key='lsm', model_level_key='z_surf'),
+            VolumeData(model_data, terrain_data_o1280, scalar_key='lsm_bin', model_level_key='z_surf'),
             SurfaceProperties(),
             make_lsm_lookup(),
         )
@@ -279,6 +275,20 @@ class MyMainWindow(MainWindow):
             VolumeData(model_data, terrain_data_o8000, scalar_key='z_surf', model_level_key='z_surf'),
             SurfaceProperties(),
             make_elevation_lookup(),
+        )
+        self._build_grid_visual(
+            'z_difference_o1280',
+            PlotterSlot(self.plotter, 'Z difference (O1280)'),
+            VolumeData(model_data, terrain_data_o8000, scalar_key='z_difference', model_level_key='z_surf_o1280'),
+            SurfaceProperties(),
+            make_elevation_offset_lookup(),
+        )
+        self._build_grid_visual(
+            'z_difference_o8000',
+            PlotterSlot(self.plotter, 'Z difference (O8000)'),
+            VolumeData(model_data, terrain_data_o8000, scalar_key='z_difference', model_level_key='z_surf'),
+            SurfaceProperties(),
+            make_elevation_offset_lookup(),
         )
         self._build_grid_visual(
             'z_model_level',

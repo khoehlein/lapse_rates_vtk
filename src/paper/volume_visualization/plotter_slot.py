@@ -144,6 +144,7 @@ class StationOnTerrainProperties(SurfaceProperties):
             specular: float = pv.global_theme.lighting_params.specular,
             specular_power: float = pv.global_theme.lighting_params.specular_power,
             lighting: bool = pv.global_theme.lighting,
+            culling: CullingMethod = CullingMethod.NONE
     ):
         super().__init__(
             style=SurfaceStyle.WIREFRAME,
@@ -158,6 +159,7 @@ class StationOnTerrainProperties(SurfaceProperties):
             specular_power=specular_power,
             show_edges=True,
             lighting=lighting,
+            culling=culling
         )
 
 
@@ -178,8 +180,9 @@ class StationOnTerrainReferenceProperties(StationOnTerrainProperties):
             specular: float = pv.global_theme.lighting_params.specular,
             specular_power: float = pv.global_theme.lighting_params.specular_power,
             lighting: bool = pv.global_theme.lighting,
+            culling: CullingMethod = CullingMethod.NONE
     ):
-        super().__init__(line_width, render_lines_as_tubes, metallic, roughness, opacity, ambient, diffuse, specular, specular_power, lighting)
+        super().__init__(line_width, render_lines_as_tubes, metallic, roughness, opacity, ambient, diffuse, specular, specular_power, lighting, culling)
         self.color = color
 
 

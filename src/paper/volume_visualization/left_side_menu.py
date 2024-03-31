@@ -139,6 +139,8 @@ class RightDockMenu(QDockWidget):
         self._build_lsm_o1280_tab()
         self._build_z_o8000_tab()
         self._build_lsm_o8000_tab()
+        self._build_dz_o1280_tab()
+        self._build_dz_o8000_tab()
         self._build_z_model_level_tab()
         layout = QVBoxLayout()
         layout.addWidget(self.terrain_data_tabs)
@@ -385,6 +387,28 @@ class RightDockMenu(QDockWidget):
             key, volume_settings, color_settings,
             'Surface properties',
             self.terrain_data_tabs, 'Z (O8000)'
+        )
+
+    def _build_dz_o1280_tab(self):
+        key = 'z_difference_o1280'
+        color_settings = ADCLSettingsView(self.scroll_area_contents)
+        volume_settings = VolumeScalarSettingsView(parent=self.scroll_area_contents, use_dvr=False, use_contours=True)
+        volume_settings.representation_views[VolumeRepresentationMode.ISO_CONTOURS].set_contour_keys(['lsm', 'z_surf', 'latitude', 'longitude'])
+        self._make_tab_with_color_lookup(
+            key, volume_settings, color_settings,
+            'Surface properties',
+            self.terrain_data_tabs, 'Z difference (O1280)'
+        )
+
+    def _build_dz_o8000_tab(self):
+        key = 'z_difference_o8000'
+        color_settings = ADCLSettingsView(self.scroll_area_contents)
+        volume_settings = VolumeScalarSettingsView(parent=self.scroll_area_contents, use_dvr=False, use_contours=True)
+        volume_settings.representation_views[VolumeRepresentationMode.ISO_CONTOURS].set_contour_keys(['lsm', 'z_surf', 'latitude', 'longitude'])
+        self._make_tab_with_color_lookup(
+            key, volume_settings, color_settings,
+            'Surface properties',
+            self.terrain_data_tabs, 'Z difference (O8000)'
         )
 
     def _build_z_model_level_tab(self):
