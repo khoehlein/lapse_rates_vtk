@@ -29,19 +29,10 @@ def plot_scores(input_file: str, train=False):
 
     print('Computing')
     scores = pred['score'].values
-    score_bin = np.digitize(np.fmax(scores, 0.), np.linspace(0, 1, 5))
+    bin_bounds = np.linspace(0, 1, 5)
+    score_bin = np.digitize(np.fmax(scores, 0.), bin_bounds)
     dz = pred['elevation_difference'].values
     dz_bin = np.digitize(dz, np.array([np.min(dz) - 1, -50., 50., np.max(dz) + 1]))
-
-    res_default = np.abs(obs['value_0'].values - (pred['hres'].values - 0.0065 * dz))
-
-    scores_per_bin = pd.DataFrame({
-        'score_bin': score_bin,
-        'dz_bin': dz_bin,
-        'score': scores,
-        'dz': dz,
-    }).groupby(['score_bin', 'dz_bin']).agg(['mean', 'min', 'max', 'count'])
-    scores_per_bin.columns = ['_'.join(c) for c in scores_per_bin.columns]
 
     lapsrate_settings = LapseRateProperties()
     min_clip = RampMinClip(lapsrate_settings.min_clip)
@@ -62,15 +53,17 @@ def plot_scores(input_file: str, train=False):
 
     bins = np.linspace(gamma_min, gamma_max, 27)
 
-    fig, axs = plt.subplots(4, 1, sharex='col', figsize=(8, 5))
+    fig, axs = plt.subplots(4, 1, sharex='col', figsize=(8, 5), gridspec_kw={'hspace': 0})
     for i, ax in enumerate(axs):
-        ax.hist(lapse_rates[score_bin == (i + 1)], bins)
-        ax.set(ylabel='R2 = {}% - {}%'.format(i * 25, (i + 1) * 25))
+
+        ax.hist(lapse_rates[score_bin == (i + 1)], bins, log=True)
+        ax.set(ylabel='{}% - {}%'.format(int(bin_bounds[i] * 100), int(bin_bounds[i + 1] * 100)))
+        ax.axvline(-6.5, linestyle='--', color='k')
 
     axs[-1].set(xlabel='Lapse rate (K/km)')
     plt.tight_layout()
     label = 'train' if train else 'eval'
-    plt.savefig(os.path.join(os.path.dirname(input_file), f'scores_final_{label}.pdf'))
+    plt.savefig(os.path.join(os.path.dirname(input_file), f'histograms_final_{label}.pdf'))
     plt.show()
     plt.close()
 
