@@ -57,6 +57,7 @@ def plot_scores(input_file: str, train=False):
     }).loc[extremes].groupby(['score_bin', 'dz_bin']).agg(['mean', 'min', 'max', 'count'])
     scores_per_bin.columns = ['_'.join(c) for c in scores_per_bin.columns]
 
+    dz = dz[extremes]
 
     pred_adaptive = pred['hres'].values + lapse_rates / 1000 * dz
     res_adaptive = np.abs(obs['value_0'].values - pred_adaptive)
@@ -118,9 +119,9 @@ def plot_scores(input_file: str, train=False):
 
     fig, ax = plt.subplots(2, 1, sharex='all', gridspec_kw={'hspace': 0, 'height_ratios': [1, 3]}, figsize=(8, 5))
     labels = {
-        1: 'valley stations',
+        1: 'concave stations',
         2: 'neutral stations',
-        3: 'mountain stations',
+        3: 'convex stations',
     }
 
     for x in np.arange(0, 100, 20):
@@ -133,7 +134,11 @@ def plot_scores(input_file: str, train=False):
 
     bins = np.linspace(0, 100, 11)
     entries = np.arange(5, 100, 10)
-    ax[0].hist([entries] * 3, bins=bins, weights=[group['score_count'].values for _, group in groups])
+    weights = [
+        group['score_count'].values
+        for _, group in groups
+    ]
+    ax[0].hist([entries] * len(weights), bins=bins, weights=weights)
 
     for key, group in groups:
         group_label = labels[key]
@@ -148,7 +153,7 @@ def plot_scores(input_file: str, train=False):
         # ax[2].plot((group.index.values - 0.5) * 10, max_score, label=f'{group_label} (default)', linestyle='--', color=lines[0].get_color())
 
     ax[1].legend()
-    ax[1].set(xlabel='R2 score (%)', ylabel='RMSE (K)', xlim=(0, 100), ylim=(1.25, 4.75))
+    ax[1].set(xlabel='R2 score (%)', ylabel='RMSE (K)', xlim=(0, 100), ylim=(1.75, 5.75))
     # ax[2].legend()
     # ax[2].set(xlabel='R2 score (%)', ylabel='Max. error (K)')
     ax[0].set(ylabel='observations', yscale='log')
