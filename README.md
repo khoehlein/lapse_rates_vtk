@@ -2,7 +2,7 @@
 
 Visualization of near-surface temperatures and lapse rates using VTK
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11550984.svg)](https://doi.org/10.5281/zenodo.11550984) 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11550983.svg)](https://zenodo.org/doi/10.5281/zenodo.11550983) 
 
 ![image](img/example.png)
 
