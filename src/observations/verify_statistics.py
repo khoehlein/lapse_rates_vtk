@@ -1,3 +1,4 @@
+import argparse
 import os
 import time
 
@@ -12,9 +13,11 @@ from src.model.geometry import DomainBoundingBox, LocationBatch, Coordinates
 
 PARQUET_PATH = '/mnt/ssd4tb/ECMWF/Obs/observations_filtered.parquet'
 CONFIG_FILE_PATH = '/home/hoehlein/PycharmProjects/local/lapse_rates_vtk/cfg/data/2021121906_ubuntu.json'
+
 _data = None
 _parquet_path = None
 _metadata = None
+
 metadata_keys = [
     'stnid', 'latitude', 'longitude', 'elevation', 'num_obs',
     'elevation_o1280', 'elevation_o8000',

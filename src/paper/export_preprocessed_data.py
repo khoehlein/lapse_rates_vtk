@@ -9,6 +9,14 @@ from src.model.level_heights import compute_standard_surface_pressure, compute_f
     compute_approximate_level_height
 import networkx as nx
 
+LSM_O1280_GRIB = "/mnt/ssd4tb/ECMWF/LSM_HRES_Sep2022.grib"
+HRES_OGOR_O8000_GRIB = "/mnt/ssd4tb/ECMWF/orog_reduced_gaussian_grid_1km.grib"
+LSM_O8000_NC = "/mnt/ssd4tb/ECMWF/lsm_from_watermask.nc"
+PATTERN_T3D_GRIB = "/mnt/ssd4tb/ECMWF/HRES_Model_Level_temp_{}.grib"
+PATTERN_T2M_GRIB = "/mnt/ssd4tb/ECMWF/HRES_2m_temp_{}.grib"
+HRES_OROG_O1280_GRIB = "/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib"
+META_DATA_CSV = '/mnt/ssd4tb/ECMWF/Obs/station_locations_nearest.csv'
+STATION_DATA_PARQUET = '/mnt/ssd4tb/ECMWF/Vis/station_data_europe_hres-const-lapse.parquet'
 
 DOMAIN_NAME = 'detailed_alps'
 DEFAULT_DOMAIN = DomainLimits(43., 47., 6., 12.)
@@ -41,8 +49,8 @@ def compute_gradients(z_surf, z_model_levels, t2m, t):
 
 
 def extract_station_data(bbox: DomainBoundingBox, timestamp):
-    station_data = pd.read_parquet('/mnt/ssd4tb/ECMWF/Vis/station_data_europe_hres-const-lapse.parquet')
-    station_metadata = pd.read_csv('/mnt/ssd4tb/ECMWF/Obs/station_locations_nearest.csv', index_col=0)
+    station_data = pd.read_parquet(STATION_DATA_PARQUET)
+    station_metadata = pd.read_csv(META_DATA_CSV, index_col=0)
     station_metadata = station_metadata.set_index('stnid')
     locations = LocationBatch(Coordinates.from_xarray(station_metadata))
     valid_stnids = station_metadata.index.values[bbox.contains(locations)]
@@ -92,7 +100,7 @@ def extract_terrain_data(bbox, mesh, paths):
     bbox_safe = DomainBoundingBox(bbox.bounds.plus_safety_margin())
     mesh_o1280 = OctahedralGrid(1280).get_mesh_for_subdomain(bbox_safe)
     nodes_o1280 = mesh_o1280.source_reference
-    z_surf_o1280 = xr.open_dataset("/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib").z.isel(values=nodes_o1280)
+    z_surf_o1280 = xr.open_dataset(HRES_OROG_O1280_GRIB).z.isel(values=nodes_o1280)
     mesh_o1280 = mesh_o1280.to_polydata()
     mesh_o1280['elevation'] = z_surf_o1280.values.ravel()
 
@@ -114,10 +122,10 @@ def extract_terrain_data(bbox, mesh, paths):
 
 def extract_model_data(mesh, date, time, step):
     node_ids = mesh.source_reference
-    path_to_t2m = "/mnt/ssd4tb/ECMWF/HRES_2m_temp_{}.grib".format(date.replace('-', ''))
-    path_to_t = "/mnt/ssd4tb/ECMWF/HRES_Model_Level_temp_{}.grib".format(date.replace('-', ''))
+    path_to_t2m = PATTERN_T2M_GRIB.format(date.replace('-', ''))
+    path_to_t = PATTERN_T3D_GRIB.format(date.replace('-', ''))
     t2m = xr.open_dataset(path_to_t2m).t2m.isel(time=time, step=step, values=node_ids)
-    z_surf = xr.open_dataset("/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib").z.isel(values=node_ids)
+    z_surf = xr.open_dataset(HRES_OROG_O1280_GRIB).z.isel(values=node_ids)
     z_model_levels = compute_level_heights(z_surf, t2m)
     model_data = xr.open_dataset(path_to_t).isel(time=time, step=step, values=node_ids)
     model_data = model_data.assign({
@@ -166,8 +174,8 @@ def export(name, bbox, date, time, step):
 
 def _extract_from_highres(bbox):
     paths_o8000 = {
-        'lsm': "/mnt/ssd4tb/ECMWF/lsm_from_watermask.nc",
-        'z': "/mnt/ssd4tb/ECMWF/orog_reduced_gaussian_grid_1km.grib"
+        'lsm': LSM_O8000_NC,
+        'z': HRES_OGOR_O8000_GRIB,
     }
     mesh = OctahedralGrid(8000).get_mesh_for_subdomain(bbox)
     surface_data = extract_terrain_data(bbox, mesh, paths_o8000)
@@ -176,8 +184,8 @@ def _extract_from_highres(bbox):
 
 def _extract_from_lowres(bbox, date, step, time):
     paths_o1280 = {
-        'lsm': "/mnt/ssd4tb/ECMWF/LSM_HRES_Sep2022.grib",
-        'z': "/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib"
+        'lsm': LSM_O1280_GRIB,
+        'z': HRES_OROG_O1280_GRIB,
     }
     mesh = OctahedralGrid(1280).get_mesh_for_subdomain(bbox)
     surface_data = extract_terrain_data(bbox, mesh, paths_o1280)
