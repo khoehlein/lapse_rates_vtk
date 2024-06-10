@@ -49,4 +49,4 @@ t2 = time.time()
 print('Time required: {} seconds per station'.format((t2-t1) / len(metadata)))
 
 outputs = pd.DataFrame(outputs)
-outputs.to_csv('/mnt/ssd4tb/ECMWF/Evaluation/reliability_metrics.csv')
+outputs.to_csv('/path/to/data/Evaluation/reliability_metrics.csv')

@@ -90,7 +90,7 @@ class GeopointsReader(object):
 
 
 def _test():
-    path = '/mnt/ssd4tb/ECMWF/Observations/2t_obs_2021121906_elev.geo'
+    path = '/path/to/data/Observations/2t_obs_2021121906_elev.geo'
     reader = GeopointsReader()
     data = reader.read(path)
 

@@ -60,8 +60,8 @@ def detrend(y, predictors):
     return predicted , timestamps, stats, ~model.inlier_mask_
 
 
-obs = pd.read_parquet('/mnt/data2/ECMWF/Obs/observations_filtered.parquet')
-pred = pd.read_parquet('/mnt/data2/ECMWF/Predictions/predictions_hres.parquet')
+obs = pd.read_parquet('/path/to/data/Obs/observations_filtered.parquet')
+pred = pd.read_parquet('/path/to/data/Predictions/predictions_hres.parquet')
 
 grouped = obs.groupby('stnid')
 
@@ -84,11 +84,11 @@ for stnid in tqdm(grouped.groups.keys()):
 label = 'ransac-{:.2f}'.format(CONFIDENCE * 100)
 
 data = pd.DataFrame(data)
-data.to_csv(f'/mnt/data2/ECMWF/Predictions/{label}_statistics.csv')
+data.to_csv(f'/path/to/data/Predictions/{label}_statistics.csv')
 
 outliers = pd.concat(outliers, axis=0).sort_index()
-outliers.to_parquet(f'/mnt/data2/ECMWF/Predictions/{label}_outliers.parquet')
+outliers.to_parquet(f'/path/to/data/Predictions/{label}_outliers.parquet')
 
 postprocessed = pd.concat(postprocessed, axis=0).sort_index()
-postprocessed.to_parquet(f'/mnt/data2/ECMWF/Predictions/predictions_hres-{label}.parquet')
+postprocessed.to_parquet(f'/path/to/data/Predictions/predictions_hres-{label}.parquet')
 

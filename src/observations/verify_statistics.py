@@ -11,8 +11,8 @@ from matplotlib.axes import Axes
 from src.model.domain_selection import DEFAULT_DOMAIN
 from src.model.geometry import DomainBoundingBox, LocationBatch, Coordinates
 
-PARQUET_PATH = '/mnt/ssd4tb/ECMWF/Obs/observations_filtered.parquet'
-CONFIG_FILE_PATH = '/home/hoehlein/PycharmProjects/local/lapse_rates_vtk/cfg/data/2021121906_ubuntu.json'
+PARQUET_PATH = '/path/to/data/Obs/observations_filtered.parquet'
+CONFIG_FILE_PATH = '/path/to/project/cfg/data/2021121906_ubuntu.json'
 
 _data = None
 _parquet_path = None

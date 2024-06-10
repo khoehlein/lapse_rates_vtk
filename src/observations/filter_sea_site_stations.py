@@ -8,9 +8,9 @@ from sklearn.neighbors import NearestNeighbors
 from src.model.downscaling.neighborhood_graphs import RadialNeighborhoodGraph
 from src.model.geometry import LocationBatch, Coordinates
 
-path_to_station_data = "C:\\Users\\kevin\\PycharmProjects\\lapse_rates_vtk\\station_locations_nearest.csv"
-path_to_lsm_o1280 = "C:\\Users\\kevin\\data\\ECMWF\\LSM_HRES_Sep2022.grib"
-path_to_lsm_o8000 = "C:\\Users\\kevin\\data\\ECMWF\\lsm_from_watermask.nc"
+path_to_station_data = "C:\\path\\to\\project\\station_locations_nearest.csv"
+path_to_lsm_o1280 = "C:\\path\\to\\data\\ECMWF\\LSM_HRES_Sep2022.grib"
+path_to_lsm_o8000 = "C:\\path\\to\\data\\ECMWF\\lsm_from_watermask.nc"
 
 station_data = pd.read_csv(path_to_station_data)
 data_o1280 = xr.open_dataset(path_to_lsm_o1280, engine='cfgrib').lsm

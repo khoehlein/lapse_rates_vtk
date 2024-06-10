@@ -63,12 +63,12 @@ class LapseRateEstimator(object):
         return lr
 
 
-temp_data_root_path = '/mnt/data2/ECMWF/Temp_Data'
+temp_data_root_path = '/path/to/data/Temp_Data'
 temp_file_pattern = 'HRES_2m_temp_{}.grib'
-raw_elevation_path = '/mnt/data2/ECMWF/Orog_Data/HRES_orog_o1279_2021-2022.grib'
-cache_path = '/mnt/data2/ECMWF/Cache/predictions_by_day'
-output_path = '/mnt/data2/ECMWF/Predictions'
-observation_path = '/mnt/data2/ECMWF/Obs/observations_masked.parquet'
+raw_elevation_path = '/path/to/data/Orog_Data/HRES_orog_o1279_2021-2022.grib'
+cache_path = '/path/to/data/Cache/predictions_by_day'
+output_path = '/path/to/data/Predictions'
+observation_path = '/path/to/data/Obs/observations_masked.parquet'
 
 
 if cache_path is not None:

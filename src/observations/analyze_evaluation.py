@@ -13,8 +13,8 @@ from tqdm import tqdm
 
 from src.observations.verify_statistics import load_data
 
-pred_path = '/mnt/ssd4tb/ECMWF/Predictions'
-eval_path = '/mnt/ssd4tb/ECMWF/Evaluation'
+pred_path = '/path/to/data/Predictions'
+eval_path = '/path/to/data/Evaluation'
 
 experiment = 'predictions_hres'
 

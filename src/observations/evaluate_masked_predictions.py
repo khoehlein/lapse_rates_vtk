@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--input-file', type=str, required=True)
 args = vars(parser.parse_args())
 
-observations = pd.read_parquet('/mnt/data2/ECMWF/Obs/observations_masked.parquet', columns=['value_0', 'valid', 'stnid'])
+observations = pd.read_parquet('/path/to/data/Obs/observations_masked.parquet', columns=['value_0', 'valid', 'stnid'])
 mask = observations['valid'].values
 stnids = observations['stnid'].values
 predictions = pd.read_parquet(args['input_file'], columns=['value_0', 'stnid', 'hres', 'elevation_difference', 'lapse_rate'])

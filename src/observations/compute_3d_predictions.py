@@ -12,14 +12,14 @@ from src.model.level_heights import (
 )
 
 
-temp_data_root_path = '/mnt/data2/ECMWF/Temp_Data'
+temp_data_root_path = '/path/to/data/Temp_Data'
 t2m_file_pattern = 'HRES_2m_temp_{}.grib'
 t3d_file_pattern = 'HRES_Model_Level_temp_{}.grib'
 
-raw_elevation_path = '/mnt/data2/ECMWF/Orog_Data/HRES_orog_o1279_2021-2022.grib'
-raw_lsm_path = '/mnt/data2/ECMWF/LSM_Data/LSM_HRES_Sep2022.grib'
-output_path = '/mnt/data2/ECMWF/Predictions'
-observation_path = '/mnt/data2/ECMWF/Obs/observations_masked.parquet'
+raw_elevation_path = '/path/to/data/Orog_Data/HRES_orog_o1279_2021-2022.grib'
+raw_lsm_path = '/path/to/data/LSM_Data/LSM_HRES_Sep2022.grib'
+output_path = '/path/to/data/Predictions'
+observation_path = '/path/to/data/Obs/observations_masked.parquet'
 
 observation_data = pd.read_parquet(observation_path, columns=['stnid', 'date', 'time'])
 metadata = pd.read_csv(os.path.join(os.path.dirname(observation_path), 'station_locations_nearest.csv')).set_index('stnid')

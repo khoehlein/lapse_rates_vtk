@@ -9,13 +9,13 @@ from src.observations.helpers import compute_outlier_threshold
 RANSAC_VERSION = 'ransac-95.00'
 MIN_RESIDUAL = 20.
 THRESHOLD_PROBABILITY = 0.999
-output_path = '/mnt/data2/ECMWF/Cache'
+output_path = '/path/to/data/Cache'
 
 
 def main():
     print('Loading data')
-    observations = pd.read_parquet('/mnt/data2/ECMWF/Obs/observations_filtered.parquet')
-    residuals = pd.read_parquet(f'/mnt/data2/ECMWF/Predictions/predictions_hres-{RANSAC_VERSION}.parquet', columns=['residual', 'stnid'])
+    observations = pd.read_parquet('/path/to/data/Obs/observations_filtered.parquet')
+    residuals = pd.read_parquet(f'/path/to/data/Predictions/predictions_hres-{RANSAC_VERSION}.parquet', columns=['residual', 'stnid'])
     blacklist = read_blacklist()
 
     print(f'Stations on blacklist: {len(blacklist)}')
@@ -49,7 +49,7 @@ def main():
     print('Number valid observations: {} of {} ({:.2f}%)'.format(np.sum(valid), len(valid), np.mean(valid) * 100))
 
     print('Writing')
-    mask_data.to_parquet('/mnt/data2/ECMWF/Obs/observations_masked.parquet')
+    mask_data.to_parquet('/path/to/data/Obs/observations_masked.parquet')
 
 
 if __name__ == '__main__':

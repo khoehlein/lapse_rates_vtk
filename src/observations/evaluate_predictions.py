@@ -9,7 +9,7 @@ from src.observations.verify_statistics import load_metadata, load_data
 observations = load_data()
 metadata = load_metadata().set_index('stnid')
 
-eval_path = '/mnt/ssd4tb/ECMWF/Evaluation'
+eval_path = '/path/to/data/Evaluation'
 os.makedirs(eval_path, exist_ok=True)
 
 
@@ -73,6 +73,6 @@ def evaluate(predictions: pd.DataFrame, label: str):
 
 
 if __name__ == '__main__':
-    prediction_path = '/mnt/ssd4tb/ECMWF/Predictions/predictions_hres.parquet'
+    prediction_path = '/path/to/data/Predictions/predictions_hres.parquet'
     predictions = pd.read_parquet(prediction_path)
     evaluate(predictions, 'predictions_hres')

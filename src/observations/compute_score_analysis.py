@@ -73,8 +73,8 @@ def export_scores(input_file: str, train=False):
 
 
 def load_predictions(input_file, train=False):
-    train_split = pd.read_csv('/mnt/data2/ECMWF/Obs/train_stations.csv')
-    obs = pd.read_parquet('/mnt/data2/ECMWF/Obs/observations_masked.parquet',
+    train_split = pd.read_csv('/path/to/data/Obs/train_stations.csv')
+    obs = pd.read_parquet('/path/to/data/Obs/observations_masked.parquet',
                           columns=['value_0', 'valid', 'elevation', 'stnid'])
     pred = pd.read_parquet(input_file)
     split_mask = obs['stnid'].isin(train_split['stnid'].values)

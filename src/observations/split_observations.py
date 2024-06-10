@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 
-obs = pd.read_parquet('/mnt/data2/ECMWF/Obs/observations_masked.parquet', columns=['valid', 'stnid'])
+obs = pd.read_parquet('/path/to/data/Obs/observations_masked.parquet', columns=['valid', 'stnid'])
 obs_counts = obs.groupby('stnid')['valid'].sum()
 obs_counts = obs_counts.loc[obs_counts.values > 0].sort_values(ascending=False)
 
@@ -12,4 +12,4 @@ selected = selected + gen.integers(0, 5, size=(len(selected),))
 
 obs_train = obs_counts.iloc[selected].reset_index()
 
-obs_train.to_csv('/mnt/data2/ECMWF/Obs/train_stations.csv')
+obs_train.to_csv('/path/to/data/Obs/train_stations.csv')

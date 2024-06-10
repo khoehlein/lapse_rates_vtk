@@ -3,11 +3,11 @@ import numpy as np
 from tqdm import tqdm
 import pandas as pd
 
-observations = pd.read_parquet('/mnt/data2/ECMWF/Obs/observations_masked.parquet', columns=['value_0', 'valid', 'stnid'])
+observations = pd.read_parquet('/path/to/data/Obs/observations_masked.parquet', columns=['value_0', 'valid', 'stnid'])
 mask = observations['valid'].values
 stnids = observations['stnid'].values[mask]
 obs = observations['value_0'].values[mask]
-predictions = pd.read_parquet('/mnt/data2/ECMWF/Predictions/20240318031830/predictions.parquet', columns=['value_0', 'stnid', 'hres', 'elevation_difference', 'lapse_rate'])
+predictions = pd.read_parquet('/path/to/data/Predictions/20240318031830/predictions.parquet', columns=['value_0', 'stnid', 'hres', 'elevation_difference', 'lapse_rate'])
 
 t0 = predictions['hres'].values[mask]
 dz = predictions['elevation_difference'].values[mask] / 1000.

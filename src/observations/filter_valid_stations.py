@@ -25,8 +25,8 @@ RADIUS_LSM = 18
 THRESHOLD_LSM = 0.1
 
 
-# PARQUET_PATH = '/mnt/data2/ECMWF/Obs/observations.parquet'
-# CONFIG_FILE_PATH = '/home/hoehlein/PycharmProjects/production/lapse_rates_vtk/cfg/data/2021121906_ubuntu.json'
+# PARQUET_PATH = '/path/to/data/Obs/observations.parquet'
+# CONFIG_FILE_PATH = '/path/to/project/cfg/data/2021121906_ubuntu.json'
 
 data = pd.read_parquet(PARQUET_PATH)
 

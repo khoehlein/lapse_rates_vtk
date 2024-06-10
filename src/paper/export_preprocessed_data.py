@@ -9,14 +9,14 @@ from src.model.level_heights import compute_standard_surface_pressure, compute_f
     compute_approximate_level_height
 import networkx as nx
 
-LSM_O1280_GRIB = "/mnt/ssd4tb/ECMWF/LSM_HRES_Sep2022.grib"
-HRES_OGOR_O8000_GRIB = "/mnt/ssd4tb/ECMWF/orog_reduced_gaussian_grid_1km.grib"
-LSM_O8000_NC = "/mnt/ssd4tb/ECMWF/lsm_from_watermask.nc"
-PATTERN_T3D_GRIB = "/mnt/ssd4tb/ECMWF/HRES_Model_Level_temp_{}.grib"
-PATTERN_T2M_GRIB = "/mnt/ssd4tb/ECMWF/HRES_2m_temp_{}.grib"
-HRES_OROG_O1280_GRIB = "/mnt/ssd4tb/ECMWF/HRES_orog_o1279_2021-2022.grib"
-META_DATA_CSV = '/mnt/ssd4tb/ECMWF/Obs/station_locations_nearest.csv'
-STATION_DATA_PARQUET = '/mnt/ssd4tb/ECMWF/Vis/station_data_europe_hres-const-lapse.parquet'
+LSM_O1280_GRIB = "/path/to/data/LSM_HRES_Sep2022.grib"
+HRES_OGOR_O8000_GRIB = "/path/to/data/orog_reduced_gaussian_grid_1km.grib"
+LSM_O8000_NC = "/path/to/data/lsm_from_watermask.nc"
+PATTERN_T3D_GRIB = "/path/to/data/HRES_Model_Level_temp_{}.grib"
+PATTERN_T2M_GRIB = "/path/to/data/HRES_2m_temp_{}.grib"
+HRES_OROG_O1280_GRIB = "/path/to/data/HRES_orog_o1279_2021-2022.grib"
+META_DATA_CSV = '/path/to/data/Obs/station_locations_nearest.csv'
+STATION_DATA_PARQUET = '/path/to/data/Vis/station_data_europe_hres-const-lapse.parquet'
 
 DOMAIN_NAME = 'detailed_alps'
 DEFAULT_DOMAIN = DomainLimits(43., 47., 6., 12.)
@@ -146,7 +146,7 @@ def extract_model_data(mesh, date, time, step):
 
 def export(name, bbox, date, time, step):
 
-    output_path = '/mnt/ssd4tb/ECMWF/Vis/{}'.format(name)
+    output_path = '/path/to/data/Vis/{}'.format(name)
     os.makedirs(output_path, exist_ok=True)
 
     print('Exporting regular lowres')

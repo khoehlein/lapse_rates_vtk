@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-observation_path = '/mnt/data2/ECMWF/Obs/observations_masked.parquet'
+observation_path = '/path/to/data/Obs/observations_masked.parquet'
 
 observations = pd.read_parquet(observation_path, columns=['stnid', 'valid'])
 
