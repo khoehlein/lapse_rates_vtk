@@ -1,5 +1,8 @@
 # Topographic Visualization of Near-Surface Temperatures for Improved Lapse Rate Estimation
+
 Visualization of near-surface temperatures and lapse rates using VTK
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11550984.svg)](https://doi.org/10.5281/zenodo.11550984) 
 
 ![image](img/example.png)
 
