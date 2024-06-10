@@ -1,8 +1,0 @@
-All valid after blacklist: 13581
-All valid after blacklist: 16539
-All valid after blacklist: 3896
-All valid after blacklist: 39001124
-All valid after blacklist: 60621
-All valid after blacklist: 63882
-All valid after blacklist: 68353
-All valid after blacklist: 68361

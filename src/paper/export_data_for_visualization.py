@@ -11,17 +11,17 @@ from src.model.geometry import DomainLimits, DomainBoundingBox, LocationBatch, C
 DOMAIN_LIMITS = DomainLimits(34.5, 71.5, -11, 40)
 MAX_RADIUS = 200
 
-
 parser = argparse.ArgumentParser()
-parser.add_argument('--obs-path', type=str)
-parser.add_argument('--pred-path', type=str)
-parser.add_argument('--out-path', type=str)
+parser.add_argument('--obs-path', type=str, help='path to observation data (Obs/observations_masked.parquet)')
+parser.add_argument('--pred-path', type=str, help='path to prediction data, corrected by const lapse rate (predictions_hres-const-lapse.parquet)')
+parser.add_argument('--out-path', type=str, help='output file name (station_data_europe_hres-const-lapse.parquet)')
+parser.add_argument('--meta-path', type=str, help='path to station meta data (Obs/station_locations_nearest.csv)')
 args = vars(parser.parse_args())
 
 obs_path = args['obs_path']
 pred_path = args['pred_path']
 out_path = args['out_path']
-meta_path = "/mnt/ssd4tb/ECMWF/Obs/station_locations_nearest.csv"
+meta_path = args['meta_path']
 
 os.makedirs(os.path.dirname(out_path), exist_ok=True)
 

@@ -51,11 +51,12 @@ DATA_DIR = args['data_dir']
 
 
 VERTICAL_SCALE = 4000.
+USE_SAFETY_MARGINS = False
+safety_suffix = '_safe' if USE_SAFETY_MARGINS else ''
 
-
-terrain_data_o1280 = xr.open_dataset(os.path.join(DATA_DIR, 'terrain_data_o1280.nc'))
+terrain_data_o1280 = xr.open_dataset(os.path.join(DATA_DIR, f'terrain_data_o1280{safety_suffix}.nc'))
 coords_o1280 = Coordinates.from_xarray(terrain_data_o1280)
-model_data = xr.open_dataset(os.path.join(DATA_DIR, 'model_data_o1280.nc'))
+model_data = xr.open_dataset(os.path.join(DATA_DIR, f'model_data_o1280{safety_suffix}.nc'))
 station_data = pd.read_parquet(os.path.join(DATA_DIR, 'station_data.parquet'))
 
 terrain_data_o8000 = xr.open_dataset(os.path.join(DATA_DIR, 'terrain_data_o8000.nc'))
