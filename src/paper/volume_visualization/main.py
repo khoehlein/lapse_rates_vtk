@@ -14,13 +14,13 @@ from src.paper.volume_visualization.color_lookup import (
 from src.paper.volume_visualization.elevation_summary import ElevationSummary, ElevationSummaryProperties, \
     ElevationSummaryController
 from src.paper.volume_visualization.lapse_rates.algorithm import LapseRateData
-from src.paper.volume_visualization.lapse_rates.lapse_rate_visualization import LapseRateVisualization, SiteMode, \
+from src.paper.volume_visualization.lapse_rates.lapse_rate_visualization import LapseRateVisualization, \
     LapseRateProperties, LapseRateController
-from src.paper.volume_visualization.left_side_menu import RightDockMenu
+from src.paper.volume_visualization.right_dock_menu import RightDockMenu
 from src.paper.volume_visualization.multi_method_visualization import MultiMethodVisualizationController
 from src.paper.volume_visualization.plotter_slot import SurfaceProperties, \
     PlotterSlot, VolumeProperties, StationSiteProperties, StationSiteReferenceProperties, \
-    StationOnTerrainReferenceProperties, IsocontourProperties, ContourParameters
+    StationOnTerrainReferenceProperties, IsocontourProperties
 from src.paper.volume_visualization.station import StationScalarVisualization
 from src.paper.volume_visualization.volume import VolumeScalarVisualization
 from src.paper.volume_visualization.volume_data import VolumeData
